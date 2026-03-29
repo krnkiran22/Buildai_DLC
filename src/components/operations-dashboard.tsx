@@ -6,7 +6,7 @@ import { AdminInventoryPanel } from "@/components/admin-inventory-panel";
 import {
   closeTicket,
   createTicket,
-  createTicketPackage,
+  createTicketPackagesBatch,
   getQrPackageDetail,
   openTicketStream,
   qrSvgUrl,
@@ -23,9 +23,10 @@ import type {
   DashboardSnapshot,
   IngestionReconciliationInput,
   LiveTicketEvent,
+  MeritScore,
+  PackageBatchCreateInput,
   PackageRecord,
-  PackageCreateInput,
-  PackageMetadataPatch,
+  PublicQrPackagePatch,
   QrPackageDetail,
   RoleCapability,
   RequestItem,
@@ -318,9 +319,9 @@ function PackageCard({
         </div>
         <div>
           <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-            Items
+            SD Cards
           </dt>
-          <dd className="mt-1 font-medium text-[color:var(--foreground)]">{pkg.itemCount}</dd>
+          <dd className="mt-1 font-medium text-[color:var(--foreground)]">{pkg.sdCardsCount}</dd>
         </div>
       </dl>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -329,7 +330,7 @@ function PackageCard({
           onClick={() => onSelectQr(pkg)}
           className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)]"
         >
-          {canEditQr ? "Open QR Editor" : "View QR"}
+          {canEditQr ? "Open QR Detail" : "View QR"}
         </button>
         {canUpdateStatus
           ? availableActions.map((action) => (
@@ -346,6 +347,67 @@ function PackageCard({
           : null}
       </div>
     </article>
+  );
+}
+
+function MeritPanel({ scores }: { scores: MeritScore[] }) {
+  return (
+    <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
+            Team merit
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
+            Return discipline scoreboard
+          </h2>
+        </div>
+        <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
+          SD 50 / Devices 25 / Accessories 25
+        </span>
+      </div>
+      <div className="mt-5 grid gap-3">
+        {scores.map((score) => (
+          <article key={score.teamName} className="border border-[color:var(--border)] bg-[color:var(--muted)] p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[color:var(--foreground)]">{score.teamName}</h3>
+                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                  Updated {formatDateTime(score.updatedAt)}
+                </p>
+              </div>
+              <span
+                className={`inline-flex items-center border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                  score.score >= 95 ? "status-success" : score.score >= 85 ? "status-warning" : "status-error"
+                }`}
+              >
+                Score {score.score.toFixed(2)}
+              </span>
+            </div>
+            <dl className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
+              <div className="flex items-center justify-between gap-3">
+                <dt>SD card shortfall</dt>
+                <dd className="font-medium text-[color:var(--foreground)]">
+                  {score.sdCardShortfall} / penalty {score.sdCardPenalty.toFixed(2)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Device shortfall</dt>
+                <dd className="font-medium text-[color:var(--foreground)]">
+                  {score.deviceShortfall} / penalty {score.devicePenalty.toFixed(2)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Accessory shortfall</dt>
+                <dd className="font-medium text-[color:var(--foreground)]">
+                  {score.accessoryShortfall} / penalty {score.accessoryPenalty.toFixed(2)}
+                </dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -479,17 +541,17 @@ export function OperationsDashboard({
   const [packageActionNote, setPackageActionNote] = useState("");
   const [packagePending, setPackagePending] = useState(false);
   const [packageFeedback, setPackageFeedback] = useState("");
-  const [packageDraft, setPackageDraft] = useState<PackageCreateInput>({
-    direction: "outbound",
-    itemCount: 1,
-    note: "",
+  const [packageDraft, setPackageDraft] = useState<PackageBatchCreateInput>({
+    direction: "return",
+    labelCount: 1,
+    packages: [{ sdCardsCount: 0, note: "" }],
   });
   const [packageCreatePending, setPackageCreatePending] = useState(false);
   const [packageCreateFeedback, setPackageCreateFeedback] = useState("");
   const [qrLookup, setQrLookup] = useState("");
   const [prefilledQrToken, setPrefilledQrToken] = useState("");
   const [qrDetail, setQrDetail] = useState<QrPackageDetail | null>(null);
-  const [qrDraft, setQrDraft] = useState<PackageMetadataPatch>({});
+  const [qrDraft, setQrDraft] = useState<PublicQrPackagePatch>({});
   const [qrPending, setQrPending] = useState(false);
   const [qrFeedback, setQrFeedback] = useState("");
   const [streamStatus, setStreamStatus] = useState("Live sync idle");
@@ -557,12 +619,12 @@ export function OperationsDashboard({
 
     const unchanged =
       qrDetail.title === ticket.title &&
-      qrDetail.teamName === ticket.teamName &&
-      qrDetail.factoryName === ticket.factoryName &&
-      qrDetail.deploymentDate === ticket.deploymentDate &&
+      qrDetail.teamName === (nextPackage.teamName ?? ticket.teamName) &&
+      qrDetail.factoryName === (nextPackage.factoryName ?? ticket.factoryName) &&
+      qrDetail.deploymentDate === (nextPackage.deploymentDate ?? "") &&
       qrDetail.package.status === nextPackage.status &&
       qrDetail.package.note === nextPackage.note &&
-      qrDetail.package.itemCount === nextPackage.itemCount &&
+      qrDetail.package.sdCardsCount === nextPackage.sdCardsCount &&
       qrDetail.package.direction === nextPackage.direction;
     if (unchanged) {
       return;
@@ -571,9 +633,9 @@ export function OperationsDashboard({
     setQrDetail({
       ...qrDetail,
       title: ticket.title,
-      teamName: ticket.teamName,
-      factoryName: ticket.factoryName,
-      deploymentDate: ticket.deploymentDate,
+      teamName: nextPackage.teamName ?? ticket.teamName,
+      factoryName: nextPackage.factoryName ?? ticket.factoryName,
+      deploymentDate: nextPackage.deploymentDate ?? "",
       package: nextPackage,
     });
   });
@@ -698,16 +760,22 @@ export function OperationsDashboard({
   }
 
   function localQrDetail(pkg: PackageRecord): QrPackageDetail {
+    const editWindowExpiresAt = pkg.editWindowExpiresAt ?? null;
+    const editable =
+      !editWindowExpiresAt || new Date(editWindowExpiresAt).getTime() >= Date.now();
     return {
       ticketId: selectedTicket?.id ?? "",
       title: selectedTicket?.title ?? "",
-      teamName: selectedTicket?.teamName ?? "",
-      factoryName: selectedTicket?.factoryName ?? "",
-      deploymentDate: selectedTicket?.deploymentDate ?? "",
+      teamName: pkg.teamName ?? selectedTicket?.teamName ?? "",
+      factoryName: pkg.factoryName ?? selectedTicket?.factoryName ?? "",
+      deploymentDate: pkg.deploymentDate ?? "",
       package: pkg,
-      scanUrl: typeof window !== "undefined" ? `${window.location.origin}/?qr=${pkg.qrToken}` : "",
+      scanUrl: typeof window !== "undefined" ? `${window.location.origin}/qr/${pkg.qrToken}` : "",
       qrSvgPath: "",
-      editable: canEditPackages,
+      editable,
+      publicAccess: true,
+      editWindowExpiresAt,
+      lockedReason: editable ? null : "Edit window closed after end of the first saved day.",
     };
   }
 
@@ -932,30 +1000,37 @@ export function OperationsDashboard({
     setPackageCreatePending(true);
     setPackageCreateFeedback("");
     try {
-      const updated = await createTicketPackage(selectedTicket.id, packageDraft, session);
+      const updated = await createTicketPackagesBatch(selectedTicket.id, packageDraft, session);
       if (updated) {
         upsertTicket(updated);
       } else {
-        const nextPackage: PackageRecord = {
-          packageCode: `PKG-${packageDraft.direction === "outbound" ? "OUT" : "RET"}-${selectedTicket.id.slice(-4).toUpperCase()}${String.fromCharCode(65 + selectedTicket.packages.length)}`,
-          qrToken: `qr_local_${Date.now()}`,
+        const nextPackages: PackageRecord[] = packageDraft.packages.map((entry, index) => ({
+          packageCode: `PKG-${packageDraft.direction === "outbound" ? "OUT" : "RET"}-${selectedTicket.id.slice(-4).toUpperCase()}${String.fromCharCode(65 + selectedTicket.packages.length + index)}`,
+          qrToken: `qr_local_${Date.now()}_${index}`,
           direction: packageDraft.direction,
           status: selectedTicket.status,
-          itemCount: packageDraft.itemCount,
-          note: packageDraft.note,
+          itemCount: 1,
+          sdCardsCount: entry.sdCardsCount,
+          note: entry.note,
           teamName: selectedTicket.teamName,
           factoryName: selectedTicket.factoryName,
-          deploymentDate: selectedTicket.deploymentDate,
+          deploymentDate: null,
           updatedAt: new Date().toISOString(),
           updatedBy: viewer.name,
-        };
+          firstEditAt: null,
+          editWindowExpiresAt: null,
+        }));
         upsertTicket({
           ...selectedTicket,
-          packages: [...selectedTicket.packages, nextPackage],
+          packages: [...selectedTicket.packages, ...nextPackages],
         });
       }
-      setPackageCreateFeedback("Packet created.");
-      setPackageDraft({ direction: "outbound", itemCount: 1, note: "" });
+      setPackageCreateFeedback("QR labels generated.");
+      setPackageDraft({
+        direction: "return",
+        labelCount: 1,
+        packages: [{ sdCardsCount: 0, note: "" }],
+      });
     } catch (error) {
       if (error instanceof Error && /401|403/i.test(error.message)) {
         onSessionChange(null);
@@ -974,10 +1049,10 @@ export function OperationsDashboard({
       return;
     }
 
-    setQrPending(true);
+      setQrPending(true);
     setQrFeedback("");
     try {
-      const detail = await getQrPackageDetail(resolvedToken, session);
+      const detail = await getQrPackageDetail(resolvedToken);
       if (detail) {
         if (detail.ticketId !== selectedTicket?.id) {
           setSelectedTicketId(detail.ticketId);
@@ -987,8 +1062,7 @@ export function OperationsDashboard({
           teamName: detail.teamName,
           factoryName: detail.factoryName,
           deploymentDate: detail.deploymentDate,
-          direction: detail.package.direction,
-          itemCount: detail.package.itemCount,
+          sdCardsCount: detail.package.sdCardsCount,
           note: detail.package.note,
         });
       } else if (selectedTicket) {
@@ -1000,8 +1074,7 @@ export function OperationsDashboard({
             teamName: detail.teamName,
             factoryName: detail.factoryName,
             deploymentDate: detail.deploymentDate,
-            direction: detail.package.direction,
-            itemCount: detail.package.itemCount,
+            sdCardsCount: detail.package.sdCardsCount,
             note: detail.package.note,
           });
         }
@@ -1024,7 +1097,7 @@ export function OperationsDashboard({
     setQrPending(true);
     setQrFeedback("");
     try {
-      const updated = await updateQrPackageDetail(qrDetail.package.qrToken, qrDraft, session);
+      const updated = await updateQrPackageDetail(qrDetail.package.qrToken, qrDraft);
       if (updated) {
         setQrDetail(updated);
         setQrFeedback("QR detail updated.");
@@ -1222,6 +1295,9 @@ export function OperationsDashboard({
                   viewerRole={currentSnapshot.viewer.role}
                   roleMatrix={currentSnapshot.roleMatrix}
                 />
+                {viewer.role !== "factory_operator" ? (
+                  <MeritPanel scores={currentSnapshot.meritScores} />
+                ) : null}
                 <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
                   <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                     Session
@@ -1718,23 +1794,23 @@ export function OperationsDashboard({
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                Generate packet
+                                Generate labels
                               </p>
                               <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
-                                Create QR label
+                                Create QR batch
                               </h3>
                             </div>
                             <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                               {viewerRoleLabel(viewer.role)}
                             </span>
                           </div>
-                          <div className="grid gap-3 sm:grid-cols-3">
+                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                             <select
                               value={packageDraft.direction}
                               onChange={(event) =>
                                 setPackageDraft((current) => ({
                                   ...current,
-                                  direction: event.target.value as PackageCreateInput["direction"],
+                                  direction: event.target.value as PackageBatchCreateInput["direction"],
                                 }))
                               }
                               className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
@@ -1745,43 +1821,86 @@ export function OperationsDashboard({
                             <input
                               type="number"
                               min={1}
-                              value={packageDraft.itemCount || ""}
+                              value={packageDraft.labelCount || ""}
                               onChange={(event) =>
                                 setPackageDraft((current) => ({
                                   ...current,
-                                  itemCount: Number(event.target.value),
+                                  labelCount: Number(event.target.value),
+                                  packages: Array.from(
+                                    { length: Math.max(Number(event.target.value) || 1, 1) },
+                                    (_, index) =>
+                                      current.packages[index] ?? {
+                                        sdCardsCount: 0,
+                                        note: "",
+                                      },
+                                  ),
                                 }))
                               }
-                              placeholder="Item count"
+                              placeholder="Number of QR labels"
                               className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                             />
-                            <input
-                              value={packageDraft.note}
-                              onChange={(event) =>
-                                setPackageDraft((current) => ({
-                                  ...current,
-                                  note: event.target.value,
-                                }))
-                              }
-                              placeholder="Packet note"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] sm:col-span-2"
-                            />
+                            <div className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                              Logistics sets team and factory from the ticket.
+                            </div>
+                          </div>
+                          <div className="grid gap-3">
+                            {packageDraft.packages.map((entry, index) => (
+                              <div
+                                key={`label-${index}`}
+                                className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3 sm:grid-cols-[0.32fr_1fr]"
+                              >
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={entry.sdCardsCount || ""}
+                                  onChange={(event) =>
+                                    setPackageDraft((current) => ({
+                                      ...current,
+                                      packages: current.packages.map((pkg, packageIndex) =>
+                                        packageIndex === index
+                                          ? { ...pkg, sdCardsCount: Number(event.target.value) }
+                                          : pkg,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder="SD card count"
+                                  className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                                />
+                                <input
+                                  value={entry.note}
+                                  onChange={(event) =>
+                                    setPackageDraft((current) => ({
+                                      ...current,
+                                      packages: current.packages.map((pkg, packageIndex) =>
+                                        packageIndex === index
+                                          ? { ...pkg, note: event.target.value }
+                                          : pkg,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder={`Label ${index + 1} note`}
+                                  className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                                />
+                              </div>
+                            ))}
                           </div>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              QR tokens open the editable packet page for operators and logistics.
+                              QR labels open the public packet page. Factory and ingestion can scan without login.
                             </span>
                             <button
                               type="button"
                               onClick={() => void handleCreatePackage()}
                               disabled={
                                 packageCreatePending ||
-                                !packageDraft.note.trim() ||
-                                packageDraft.itemCount <= 0
+                                packageDraft.labelCount <= 0 ||
+                                packageDraft.packages.some(
+                                  (entry) => entry.sdCardsCount < 0 || !entry.note.trim(),
+                                )
                               }
                               className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                             >
-                              {packageCreatePending ? "Creating..." : "Create Packet"}
+                              {packageCreatePending ? "Generating..." : "Generate QR Labels"}
                             </button>
                           </div>
                           {packageCreateFeedback ? (
@@ -1877,6 +1996,14 @@ export function OperationsDashboard({
                               <p className="mt-3 text-[color:var(--muted-foreground)]">
                                 Scan URL: {qrDetail.scanUrl}
                               </p>
+                              <a
+                                href={qrDetail.scanUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-3 inline-flex border border-[color:var(--border)] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)]"
+                              >
+                                Open public page
+                              </a>
                             </div>
                           </div>
 
@@ -1920,31 +2047,18 @@ export function OperationsDashboard({
                               />
                               <input
                                 type="number"
-                                value={qrDraft.itemCount ?? qrDetail.package.itemCount}
+                                value={qrDraft.sdCardsCount ?? qrDetail.package.sdCardsCount}
                                 onChange={(event) =>
                                   setQrDraft((current) => ({
                                     ...current,
-                                    itemCount: Number(event.target.value),
+                                    sdCardsCount: Number(event.target.value),
                                   }))
                                 }
                                 disabled={!qrDetail.editable || qrPending}
+                                placeholder="SD card count"
                                 className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
                               />
                             </div>
-                            <select
-                              value={qrDraft.direction ?? qrDetail.package.direction}
-                              onChange={(event) =>
-                                setQrDraft((current) => ({
-                                  ...current,
-                                  direction: event.target.value as PackageMetadataPatch["direction"],
-                                }))
-                              }
-                              disabled={!qrDetail.editable || qrPending}
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                            >
-                              <option value="outbound">Outbound</option>
-                              <option value="return">Return</option>
-                            </select>
                             <textarea
                               value={qrDraft.note ?? qrDetail.package.note}
                               onChange={(event) =>
@@ -1958,11 +2072,18 @@ export function OperationsDashboard({
                               className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
                             />
                             <div className="flex items-center justify-between gap-3">
-                              <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                {qrDetail.editable
-                                  ? "Editable by admin, logistics, and factory operators."
-                                  : "Read only for this role."}
-                              </span>
+                              <div className="space-y-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                <p>
+                                  {qrDetail.editable
+                                    ? "Public edit window is open for this QR label."
+                                    : qrDetail.lockedReason ?? "Public edit window is closed."}
+                                </p>
+                                {qrDetail.editWindowExpiresAt ? (
+                                  <p>Editable until {formatDateTime(qrDetail.editWindowExpiresAt)}</p>
+                                ) : (
+                                  <p>Window starts on the first successful save.</p>
+                                )}
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => void handleSaveQrDetail()}

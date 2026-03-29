@@ -68,12 +68,15 @@ export type PackageRecord = {
   direction: "outbound" | "return";
   status: TicketStatus;
   itemCount: number;
+  sdCardsCount: number;
   note: string;
   teamName?: string | null;
   factoryName?: string | null;
   deploymentDate?: string | null;
   updatedAt?: string | null;
   updatedBy?: string | null;
+  firstEditAt?: string | null;
+  editWindowExpiresAt?: string | null;
 };
 
 export type IngestionReport = {
@@ -136,6 +139,18 @@ export type AdminInventoryItem = {
   status: InventoryStatus;
 };
 
+export type MeritScore = {
+  teamName: string;
+  score: number;
+  sdCardPenalty: number;
+  devicePenalty: number;
+  accessoryPenalty: number;
+  sdCardShortfall: number;
+  deviceShortfall: number;
+  accessoryShortfall: number;
+  updatedAt: string;
+};
+
 export type AdminInventoryPatch = {
   totalUnits?: number;
   availableUnits?: number;
@@ -185,6 +200,7 @@ export type DashboardSnapshot = {
   highlightedTicketId: string;
   ingestionQueue: IngestionQueueItem[];
   inventoryItems: AdminInventoryItem[];
+  meritScores: MeritScore[];
 };
 
 export type AuthUser = {
@@ -221,6 +237,9 @@ export type QrPackageDetail = {
   scanUrl: string;
   qrSvgPath: string;
   editable: boolean;
+  publicAccess: boolean;
+  editWindowExpiresAt?: string | null;
+  lockedReason?: string | null;
 };
 
 export type TicketCreateInput = {
@@ -241,15 +260,26 @@ export type TicketStatusUpdateInput = {
 export type PackageCreateInput = {
   direction: "outbound" | "return";
   itemCount: number;
+  sdCardsCount: number;
   note: string;
 };
 
-export type PackageMetadataPatch = {
+export type PackageBatchItemInput = {
+  sdCardsCount: number;
+  note: string;
+};
+
+export type PackageBatchCreateInput = {
+  direction: "outbound" | "return";
+  labelCount: number;
+  packages: PackageBatchItemInput[];
+};
+
+export type PublicQrPackagePatch = {
   teamName?: string;
   factoryName?: string;
   deploymentDate?: string;
-  direction?: "outbound" | "return";
-  itemCount?: number;
+  sdCardsCount?: number;
   note?: string;
 };
 

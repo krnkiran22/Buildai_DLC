@@ -7,8 +7,9 @@ import type {
   DashboardSnapshot,
   IngestionReconciliationInput,
   LiveTicketEvent,
+  PackageBatchCreateInput,
   PackageCreateInput,
-  PackageMetadataPatch,
+  PublicQrPackagePatch,
   PackageStatusUpdateInput,
   QrPackageDetail,
   RegistrationChallenge,
@@ -58,6 +59,10 @@ function requestHeaders(session?: AuthSession | null): HeadersInit {
   };
 }
 
+function publicRequestHeaders(): HeadersInit {
+  return {};
+}
+
 function normalizeSnapshot(
   snapshot: Partial<DashboardSnapshot> | undefined,
 ): DashboardSnapshot {
@@ -76,6 +81,7 @@ function normalizeSnapshot(
     tickets: snapshot.tickets ?? fallback.tickets,
     ingestionQueue: snapshot.ingestionQueue ?? fallback.ingestionQueue,
     inventoryItems: snapshot.inventoryItems ?? fallback.inventoryItems,
+    meritScores: snapshot.meritScores ?? fallback.meritScores,
   };
 }
 
@@ -284,6 +290,25 @@ export async function createTicketPackage(
   });
 }
 
+export async function createTicketPackagesBatch(
+  ticketId: string,
+  payload: PackageBatchCreateInput,
+  session?: AuthSession | null,
+): Promise<TicketRecord | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  return requestJson<TicketRecord>(`/api/v1/tickets/${ticketId}/packages/batch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...requestHeaders(session),
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function updateTicketPackageStatus(
   ticketId: string,
   packageCode: string,
@@ -306,21 +331,19 @@ export async function updateTicketPackageStatus(
 
 export async function getQrPackageDetail(
   qrToken: string,
-  session?: AuthSession | null,
 ): Promise<QrPackageDetail | null> {
   if (!API_BASE_URL) {
     return null;
   }
 
   return requestJson<QrPackageDetail>(`/api/v1/qr/${qrToken}`, {
-    headers: requestHeaders(session),
+    headers: publicRequestHeaders(),
   });
 }
 
 export async function updateQrPackageDetail(
   qrToken: string,
-  payload: PackageMetadataPatch,
-  session?: AuthSession | null,
+  payload: PublicQrPackagePatch,
 ): Promise<QrPackageDetail | null> {
   if (!API_BASE_URL) {
     return null;
@@ -330,7 +353,7 @@ export async function updateQrPackageDetail(
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      ...requestHeaders(session),
+      ...publicRequestHeaders(),
     },
     body: JSON.stringify(payload),
   });

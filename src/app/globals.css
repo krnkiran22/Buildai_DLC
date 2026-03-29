@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --font-ui: "Avenir Next", "Segoe UI", "Helvetica Neue", "IBM Plex Sans", Arial, sans-serif;
+  --font-code: "JetBrains Mono", "SFMono-Regular", "IBM Plex Mono", Menlo, Monaco, Consolas, monospace;
   --radius: 0;
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.15 0 0);
