@@ -1,26 +1,149 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --radius: 0;
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.15 0 0);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.92 0.01 210);
+  --secondary-foreground: oklch(0.22 0.01 210);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.46 0 0);
+  --accent: oklch(0.58 0.14 240);
+  --accent-soft: oklch(0.96 0.02 240);
+  --border: oklch(0.9 0 0);
+  --ring: oklch(0.15 0 0);
+  --success: oklch(0.6 0.18 145);
+  --success-muted: oklch(0.96 0.05 145);
+  --success-foreground: oklch(0.34 0.14 145);
+  --warning: oklch(0.74 0.16 75);
+  --warning-muted: oklch(0.97 0.04 75);
+  --warning-foreground: oklch(0.43 0.12 75);
+  --error: oklch(0.62 0.18 25);
+  --error-muted: oklch(0.97 0.03 25);
+  --error-foreground: oklch(0.44 0.14 25);
+  --info: oklch(0.58 0.14 240);
+  --info-muted: oklch(0.96 0.02 240);
+  --info-foreground: oklch(0.4 0.1 240);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --font-display: var(--font-ui), "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-sans: var(--font-ui), "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: var(--font-code), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(36, 81, 255, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(15, 23, 42, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 252, 0.96)),
+    var(--background);
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background: transparent;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--info) 18%, white);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.status-success {
+  background: var(--success-muted);
+  color: var(--success-foreground);
+  border-color: var(--success);
+}
+
+.status-warning {
+  background: var(--warning-muted);
+  color: var(--warning-foreground);
+  border-color: var(--warning);
+}
+
+.status-error {
+  background: var(--error-muted);
+  color: var(--error-foreground);
+  border-color: var(--error);
+}
+
+.status-info {
+  background: var(--info-muted);
+  color: var(--info-foreground);
+  border-color: var(--info);
+}
+
+.status-neutral {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border-color: var(--border);
+}
+
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.panel-shell {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.72) inset,
+    0 18px 54px rgba(15, 23, 42, 0.06);
+}
+
+.metric-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-glow::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -80% auto;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(65, 105, 255, 0.12), transparent 60%);
+  pointer-events: none;
 }
