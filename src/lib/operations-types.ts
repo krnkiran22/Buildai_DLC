@@ -20,8 +20,11 @@ export type PermissionName =
   | "ticket.view"
   | "ticket.message"
   | "ticket.close"
+  | "ticket.create"
+  | "ticket.status.update"
   | "inventory.view"
-  | "inventory.edit";
+  | "inventory.edit"
+  | "user.manage";
 
 export type DashboardMetric = {
   label: string;
@@ -142,11 +145,14 @@ export type BackendHealth = {
   service: string;
   environment: string;
   baseUrl: string;
+  dependencies?: Record<string, { configured: boolean; ready: boolean }>;
 };
 
 export type ViewerContext = {
+  userId?: string | null;
   role: UserRole;
   name: string;
+  email?: string | null;
   permissions: PermissionName[];
 };
 
@@ -156,6 +162,8 @@ export type RoleCapability = {
   closeTickets: boolean;
   editInventory: boolean;
   canChat: boolean;
+  canCreateTickets: boolean;
+  canUpdateStatus: boolean;
 };
 
 export type DashboardSnapshot = {
@@ -168,4 +176,43 @@ export type DashboardSnapshot = {
   highlightedTicketId: string;
   ingestionQueue: IngestionQueueItem[];
   inventoryItems: AdminInventoryItem[];
+};
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type AuthSession = {
+  token: string;
+  expiresAt: string;
+  user: AuthUser;
+  permissions: PermissionName[];
+};
+
+export type RegistrationChallenge = {
+  email: string;
+  role: UserRole;
+  expiresAt: string;
+  deliveryMode: "email" | "development_log";
+  otpDebugCode?: string | null;
+};
+
+export type TicketCreateInput = {
+  teamName: string;
+  factoryName: string;
+  deploymentDate: string;
+  workerCount: number;
+  devicesRequested: number;
+  sdCardsRequested: number;
+  priority: Priority;
+};
+
+export type TicketStatusUpdateInput = {
+  status: TicketStatus;
+  note?: string;
 };

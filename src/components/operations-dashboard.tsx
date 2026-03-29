@@ -2,14 +2,21 @@
 
 import { startTransition, useDeferredValue, useEffect, useState } from "react";
 import { AdminInventoryPanel } from "@/components/admin-inventory-panel";
-import { closeTicket, sendTicketMessage } from "@/lib/backend";
+import {
+  closeTicket,
+  createTicket,
+  sendTicketMessage,
+  updateTicketStatus,
+} from "@/lib/backend";
 import type {
+  AuthSession,
   BackendHealth,
   ChatMessage,
   DashboardSnapshot,
   PackageRecord,
   RoleCapability,
   RequestItem,
+  TicketCreateInput,
   TicketStatus,
   TimelineEvent,
   Tone,
@@ -28,6 +35,38 @@ const statusOptions: Array<{ value: TicketStatus | "all"; label: string }> = [
   { value: "ingestion_completed", label: "Ingestion Done" },
   { value: "closed", label: "Closed" },
 ];
+
+const roleStatusTargets: Record<UserRole, TicketStatus[]> = {
+  admin: [
+    "accepted",
+    "rejected",
+    "outbound_shipped",
+    "factory_received",
+    "return_shipped",
+    "hq_received",
+    "transferred_to_ingestion",
+    "ingestion_processing",
+    "ingestion_completed",
+    "closed",
+  ],
+  logistics: ["accepted", "rejected", "outbound_shipped", "factory_received"],
+  factory_operator: ["return_shipped", "hq_received"],
+  ingestion: ["transferred_to_ingestion", "ingestion_processing", "ingestion_completed"],
+};
+
+const transitionMap: Record<TicketStatus, TicketStatus[]> = {
+  open: ["accepted", "rejected"],
+  accepted: ["outbound_shipped"],
+  rejected: [],
+  outbound_shipped: ["factory_received"],
+  factory_received: ["return_shipped"],
+  return_shipped: ["hq_received"],
+  hq_received: ["transferred_to_ingestion"],
+  transferred_to_ingestion: ["ingestion_processing"],
+  ingestion_processing: ["ingestion_completed"],
+  ingestion_completed: ["closed"],
+  closed: [],
+};
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -363,9 +402,15 @@ function RoleMatrixPanel({
 export function OperationsDashboard({
   snapshot,
   health,
+  session,
+  onSessionChange,
+  onLogout,
 }: {
   snapshot: DashboardSnapshot;
   health: BackendHealth;
+  session: AuthSession;
+  onSessionChange: (session: AuthSession | null) => void;
+  onLogout: () => void;
 }) {
   const [currentSnapshot, setCurrentSnapshot] = useState(snapshot);
   const [query, setQuery] = useState("");
@@ -377,6 +422,20 @@ export function OperationsDashboard({
   const [closeFeedback, setCloseFeedback] = useState("");
   const [messagePending, setMessagePending] = useState(false);
   const [closePending, setClosePending] = useState(false);
+  const [statusNote, setStatusNote] = useState("");
+  const [statusPending, setStatusPending] = useState(false);
+  const [statusFeedback, setStatusFeedback] = useState("");
+  const [createPending, setCreatePending] = useState(false);
+  const [createFeedback, setCreateFeedback] = useState("");
+  const [ticketDraft, setTicketDraft] = useState<TicketCreateInput>({
+    teamName: "",
+    factoryName: "",
+    deploymentDate: "",
+    workerCount: 0,
+    devicesRequested: 0,
+    sdCardsRequested: 0,
+    priority: "medium",
+  });
   const deferredQuery = useDeferredValue(query);
 
   const filteredTickets = currentSnapshot.tickets.filter((ticket) => {
@@ -389,6 +448,11 @@ export function OperationsDashboard({
 
     return queryMatch && statusMatch;
   });
+
+  useEffect(() => {
+    setCurrentSnapshot(snapshot);
+    setSelectedTicketId(snapshot.highlightedTicketId);
+  }, [snapshot]);
 
   useEffect(() => {
     if (filteredTickets.some((ticket) => ticket.id === selectedTicketId)) {
@@ -409,6 +473,14 @@ export function OperationsDashboard({
   const viewer = currentSnapshot.viewer;
   const canCloseTicket = viewer.permissions.includes("ticket.close");
   const canChat = viewer.permissions.includes("ticket.message");
+  const canCreateTicket = viewer.permissions.includes("ticket.create");
+  const canUpdateStatus = viewer.permissions.includes("ticket.status.update");
+  const availableStatusActions =
+    selectedTicket && canUpdateStatus
+      ? transitionMap[selectedTicket.status].filter((status) =>
+          roleStatusTargets[viewer.role].includes(status),
+        )
+      : [];
 
   function upsertTicket(updatedTicket: (typeof currentSnapshot.tickets)[number]) {
     setCurrentSnapshot((current) => ({
@@ -436,7 +508,7 @@ export function OperationsDashboard({
     setMessageFeedback("");
 
     try {
-      const updated = await sendTicketMessage(selectedTicket.id, message);
+      const updated = await sendTicketMessage(selectedTicket.id, message, session);
       if (updated) {
         upsertTicket(updated);
       } else {
@@ -458,11 +530,67 @@ export function OperationsDashboard({
       setMessageDraft("");
       setMessageFeedback("Message sent.");
     } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
       setMessageFeedback(
         error instanceof Error ? error.message : "Failed to send message.",
       );
     } finally {
       setMessagePending(false);
+    }
+  }
+
+  async function handleStatusUpdate(nextStatus: TicketStatus) {
+    if (!selectedTicket || !canUpdateStatus) {
+      return;
+    }
+
+    setStatusPending(true);
+    setStatusFeedback("");
+
+    try {
+      const updated = await updateTicketStatus(
+        selectedTicket.id,
+        {
+          status: nextStatus,
+          note: statusNote.trim() || undefined,
+        },
+        session,
+      );
+      if (updated) {
+        upsertTicket(updated);
+        setStatusFeedback(`Moved ticket to ${statusLabel(nextStatus)}.`);
+        setStatusNote("");
+      } else {
+        upsertTicket({
+          ...selectedTicket,
+          status: nextStatus,
+          summary: statusNote.trim() || `Status changed to ${statusLabel(nextStatus)}.`,
+          nextAction: "Next operational step should be completed by the assigned team.",
+          timeline: [
+            ...selectedTicket.timeline,
+            {
+              id: `evt_${String(selectedTicket.timeline.length + 1).padStart(2, "0")}`,
+              label: statusLabel(nextStatus),
+              detail: statusNote.trim() || `Moved to ${statusLabel(nextStatus)}.`,
+              occurredAt: new Date().toISOString(),
+              actor: viewer.name,
+              tone: toneForStatus(nextStatus),
+            },
+          ],
+        });
+        setStatusFeedback(`Moved ticket to ${statusLabel(nextStatus)} locally.`);
+      }
+    } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
+      setStatusFeedback(
+        error instanceof Error ? error.message : "Failed to update status.",
+      );
+    } finally {
+      setStatusPending(false);
     }
   }
 
@@ -475,7 +603,7 @@ export function OperationsDashboard({
     setCloseFeedback("");
 
     try {
-      const updated = await closeTicket(selectedTicket.id, closeNote.trim());
+      const updated = await closeTicket(selectedTicket.id, closeNote.trim(), session);
       if (updated) {
         upsertTicket(updated);
       } else {
@@ -509,11 +637,53 @@ export function OperationsDashboard({
       }
       setCloseFeedback("Ticket closed.");
     } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
       setCloseFeedback(
         error instanceof Error ? error.message : "Failed to close ticket.",
       );
     } finally {
       setClosePending(false);
+    }
+  }
+
+  async function handleCreateTicket() {
+    if (!canCreateTicket) {
+      return;
+    }
+
+    setCreatePending(true);
+    setCreateFeedback("");
+
+    try {
+      const updated = await createTicket(ticketDraft, session);
+      if (!updated) {
+        throw new Error("Backend API is not configured.");
+      }
+      setCurrentSnapshot((current) => ({
+        ...current,
+        tickets: [updated, ...current.tickets],
+        highlightedTicketId: updated.id,
+      }));
+      setSelectedTicketId(updated.id);
+      setCreateFeedback("Ticket created.");
+      setTicketDraft({
+        teamName: "",
+        factoryName: "",
+        deploymentDate: "",
+        workerCount: 0,
+        devicesRequested: 0,
+        sdCardsRequested: 0,
+        priority: "medium",
+      });
+    } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
+      setCreateFeedback(error instanceof Error ? error.message : "Failed to create ticket.");
+    } finally {
+      setCreatePending(false);
     }
   }
 
@@ -533,7 +703,7 @@ export function OperationsDashboard({
               </div>
               <div className="space-y-3">
                 <h1 className="max-w-4xl font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-5xl">
-                  {snapshot.productName}
+                  {currentSnapshot.productName}
                 </h1>
                 <p className="max-w-3xl text-base leading-7 text-[color:var(--muted-foreground)] sm:text-lg">
                   One surface for factory operators, logistics, and ingestion staff to
@@ -597,15 +767,40 @@ export function OperationsDashboard({
                 </ol>
               </div>
 
-              <RoleMatrixPanel
-                viewerRole={currentSnapshot.viewer.role}
-                roleMatrix={currentSnapshot.roleMatrix}
-              />
+              <div className="grid gap-4">
+                <RoleMatrixPanel
+                  viewerRole={currentSnapshot.viewer.role}
+                  roleMatrix={currentSnapshot.roleMatrix}
+                />
+                <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                    Session
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
+                    {session.user.displayName}
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                    {session.user.email}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
+                      {viewerRoleLabel(session.user.role)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onLogout}
+                      className="border border-[color:var(--border)] bg-white px-3 py-2 text-sm font-semibold text-[color:var(--foreground)]"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="grid gap-4 px-5 py-5 md:grid-cols-2 xl:grid-cols-5 lg:px-7">
-            {snapshot.metrics.map((metric) => (
+            {currentSnapshot.metrics.map((metric) => (
               <article
                 key={metric.label}
                 className="panel-shell metric-glow min-h-[154px] p-4"
@@ -639,6 +834,124 @@ export function OperationsDashboard({
             />
 
             <div className="grid gap-3 border-b border-[color:var(--border)] p-5">
+              {canCreateTicket ? (
+                <div className="grid gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                        Raise ticket
+                      </p>
+                      <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
+                        Factory-side request form
+                      </h3>
+                    </div>
+                    <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                      {viewerRoleLabel(viewer.role)}
+                    </span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      value={ticketDraft.teamName}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({ ...current, teamName: event.target.value }))
+                      }
+                      placeholder="Team name"
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    />
+                    <input
+                      value={ticketDraft.factoryName}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({
+                          ...current,
+                          factoryName: event.target.value,
+                        }))
+                      }
+                      placeholder="Factory name"
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    />
+                    <input
+                      type="date"
+                      value={ticketDraft.deploymentDate}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({
+                          ...current,
+                          deploymentDate: event.target.value,
+                        }))
+                      }
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    />
+                    <input
+                      type="number"
+                      value={ticketDraft.workerCount || ""}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({
+                          ...current,
+                          workerCount: Number(event.target.value),
+                        }))
+                      }
+                      placeholder="Workers"
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    />
+                    <input
+                      type="number"
+                      value={ticketDraft.devicesRequested || ""}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({
+                          ...current,
+                          devicesRequested: Number(event.target.value),
+                        }))
+                      }
+                      placeholder="Devices requested"
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    />
+                    <input
+                      type="number"
+                      value={ticketDraft.sdCardsRequested || ""}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({
+                          ...current,
+                          sdCardsRequested: Number(event.target.value),
+                        }))
+                      }
+                      placeholder="SD cards requested"
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <select
+                      value={ticketDraft.priority}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({
+                          ...current,
+                          priority: event.target.value as TicketCreateInput["priority"],
+                        }))
+                      }
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    >
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateTicket()}
+                      disabled={
+                        createPending ||
+                        !ticketDraft.teamName ||
+                        !ticketDraft.factoryName ||
+                        !ticketDraft.deploymentDate ||
+                        ticketDraft.workerCount <= 0
+                      }
+                      className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      {createPending ? "Creating..." : "Create Ticket"}
+                    </button>
+                  </div>
+                  {createFeedback ? (
+                    <p className="text-sm text-[color:var(--muted-foreground)]">{createFeedback}</p>
+                  ) : null}
+                </div>
+              ) : null}
               <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
                 Search tickets
                 <input
@@ -850,9 +1163,45 @@ export function OperationsDashboard({
                         Control actions
                       </p>
                       <p className="mt-3 text-sm leading-6 text-[color:var(--foreground)]">
-                        Admin and logistics can close tickets. Factory operators and
-                        ingestion can chat and track, but they cannot close the workflow.
+                        Status actions are role-driven. Logistics controls outbound flow,
+                        factory operator handles return shipment steps, ingestion controls
+                        receipt and processing, and admin can override when required.
                       </p>
+                      <label className="mt-4 grid gap-2 text-sm text-[color:var(--foreground)]">
+                        Status note
+                        <textarea
+                          value={statusNote}
+                          onChange={(event) => setStatusNote(event.target.value)}
+                          rows={3}
+                          disabled={!canUpdateStatus || statusPending}
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                          placeholder="Add the operational note for this transition"
+                        />
+                      </label>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {availableStatusActions.length > 0 ? (
+                          availableStatusActions.map((action) => (
+                            <button
+                              key={action}
+                              type="button"
+                              onClick={() => void handleStatusUpdate(action)}
+                              disabled={statusPending}
+                              className="border border-[color:var(--foreground)] bg-white px-3 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:opacity-60"
+                            >
+                              {statusPending ? "Updating..." : statusLabel(action)}
+                            </button>
+                          ))
+                        ) : (
+                          <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                            No status actions available for this role at the current step.
+                          </span>
+                        )}
+                      </div>
+                      {statusFeedback ? (
+                        <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">
+                          {statusFeedback}
+                        </p>
+                      ) : null}
                       <label className="mt-4 grid gap-2 text-sm text-[color:var(--foreground)]">
                         Closure note
                         <textarea
@@ -1000,7 +1349,7 @@ export function OperationsDashboard({
             helper="This queue is what the ingestion team sees after logistics hands off the return packet from HQ."
           />
           <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
-            {snapshot.ingestionQueue.map((packet) => (
+            {currentSnapshot.ingestionQueue.map((packet) => (
               <article
                 key={packet.id}
                 className="border border-[color:var(--border)] bg-white/78 p-4"
@@ -1038,7 +1387,13 @@ export function OperationsDashboard({
           </div>
         </section>
 
-        <AdminInventoryPanel initialItems={snapshot.inventoryItems} health={health} />
+        {viewer.permissions.includes("inventory.view") ? (
+          <AdminInventoryPanel
+            initialItems={currentSnapshot.inventoryItems}
+            health={health}
+            session={session}
+          />
+        ) : null}
       </div>
     </main>
   );

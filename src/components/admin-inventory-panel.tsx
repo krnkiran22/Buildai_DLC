@@ -5,6 +5,7 @@ import { updateAdminInventoryItem } from "@/lib/backend";
 import type {
   AdminInventoryItem,
   AdminInventoryPatch,
+  AuthSession,
   BackendHealth,
   InventoryStatus,
 } from "@/lib/operations-types";
@@ -81,9 +82,11 @@ function deriveStatus(item: AdminInventoryItem): InventoryStatus {
 export function AdminInventoryPanel({
   initialItems,
   health,
+  session,
 }: {
   initialItems: AdminInventoryItem[];
   health: BackendHealth;
+  session: AuthSession | null;
 }) {
   const [items, setItems] = useState(initialItems);
   const [selectedId, setSelectedId] = useState(initialItems[0]?.id ?? "");
@@ -94,6 +97,13 @@ export function AdminInventoryPanel({
   const [feedback, setFeedback] = useState<string>("");
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
+
+  useEffect(() => {
+    setItems(initialItems);
+    if (!initialItems.some((item) => item.id === selectedId)) {
+      setSelectedId(initialItems[0]?.id ?? "");
+    }
+  }, [initialItems, selectedId]);
 
   useEffect(() => {
     if (!selectedItem) {
@@ -129,7 +139,7 @@ export function AdminInventoryPanel({
     setFeedback("");
 
     try {
-      const updated = await updateAdminInventoryItem(selectedItem.id, patch);
+      const updated = await updateAdminInventoryItem(selectedItem.id, patch, session);
 
       const nextItem: AdminInventoryItem = updated ?? {
         ...selectedItem,

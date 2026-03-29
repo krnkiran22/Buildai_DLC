@@ -1,13 +1,7 @@
-import { OperationsDashboard } from "@/components/operations-dashboard";
-import { getBackendHealth, getOperationsSnapshot } from "@/lib/backend";
+import { OperationsApp } from "@/components/operations-app";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const [snapshot, health] = await Promise.all([
-    getOperationsSnapshot(),
-    getBackendHealth(),
-  ]);
-
-  return <OperationsDashboard snapshot={snapshot} health={health} />;
+export default function Home() {
+  return <OperationsApp />;
 }
