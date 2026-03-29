@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Moto Ops Control",
   description:
-    "Operations dashboard for deployment requests, shipment tracking, return handling, and SD card injection flow.",
+    "Operations dashboard for deployment requests, shipment tracking, return handling, and SD card ingestion flow.",
 };
 
 export default function RootLayout({

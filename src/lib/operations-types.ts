@@ -8,14 +8,14 @@ export type TicketStatus =
   | "factory_received"
   | "return_shipped"
   | "hq_received"
-  | "transferred_to_injection"
-  | "injection_processing"
-  | "injection_completed"
+  | "transferred_to_ingestion"
+  | "ingestion_processing"
+  | "ingestion_completed"
   | "closed";
 
 export type Priority = "high" | "medium" | "low";
 export type InventoryStatus = "healthy" | "low_stock" | "critical";
-export type UserRole = "admin" | "logistics" | "factory_operator" | "injection";
+export type UserRole = "admin" | "logistics" | "factory_operator" | "ingestion";
 export type PermissionName =
   | "ticket.view"
   | "ticket.message"
@@ -41,7 +41,7 @@ export type RequestItem = {
 export type ChatMessage = {
   id: string;
   author: string;
-  role: "admin" | "operator" | "logistics" | "injection";
+  role: "admin" | "operator" | "logistics" | "ingestion";
   sentAt: string;
   message: string;
 };
@@ -64,7 +64,7 @@ export type PackageRecord = {
   note: string;
 };
 
-export type InjectionReport = {
+export type IngestionReport = {
   station: string;
   startedAt: string;
   expectedSdCards: number;
@@ -93,10 +93,10 @@ export type TicketRecord = {
   packages: PackageRecord[];
   messages: ChatMessage[];
   timeline: TimelineEvent[];
-  injectionReport: InjectionReport | null;
+  ingestionReport: IngestionReport | null;
 };
 
-export type InjectionQueueItem = {
+export type IngestionQueueItem = {
   id: string;
   packageCode: string;
   teamName: string;
@@ -114,7 +114,7 @@ export type AdminInventoryItem = {
   availableUnits: number;
   allocatedUnits: number;
   inTransitUnits: number;
-  injectionUnits: number;
+  ingestionUnits: number;
   missingUnits: number;
   reorderPoint: number;
   location: string;
@@ -129,7 +129,7 @@ export type AdminInventoryPatch = {
   availableUnits?: number;
   allocatedUnits?: number;
   inTransitUnits?: number;
-  injectionUnits?: number;
+  ingestionUnits?: number;
   missingUnits?: number;
   reorderPoint?: number;
   location?: string;
@@ -166,6 +166,6 @@ export type DashboardSnapshot = {
   metrics: DashboardMetric[];
   tickets: TicketRecord[];
   highlightedTicketId: string;
-  injectionQueue: InjectionQueueItem[];
+  ingestionQueue: IngestionQueueItem[];
   inventoryItems: AdminInventoryItem[];
 };

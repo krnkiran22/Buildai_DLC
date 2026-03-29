@@ -23,9 +23,9 @@ const statusOptions: Array<{ value: TicketStatus | "all"; label: string }> = [
   { value: "outbound_shipped", label: "Outbound" },
   { value: "return_shipped", label: "Return Shipped" },
   { value: "hq_received", label: "HQ Received" },
-  { value: "transferred_to_injection", label: "To Injection" },
-  { value: "injection_processing", label: "Injection" },
-  { value: "injection_completed", label: "Injection Done" },
+  { value: "transferred_to_ingestion", label: "To Ingestion" },
+  { value: "ingestion_processing", label: "Ingestion" },
+  { value: "ingestion_completed", label: "Ingestion Done" },
   { value: "closed", label: "Closed" },
 ];
 
@@ -62,12 +62,12 @@ function statusLabel(status: TicketStatus) {
       return "Return Shipped";
     case "hq_received":
       return "HQ Received";
-    case "transferred_to_injection":
-      return "Sent To Injection";
-    case "injection_processing":
-      return "Injection Processing";
-    case "injection_completed":
-      return "Injection Completed";
+    case "transferred_to_ingestion":
+      return "Sent To Ingestion";
+    case "ingestion_processing":
+      return "Ingestion Processing";
+    case "ingestion_completed":
+      return "Ingestion Completed";
     case "closed":
       return "Closed";
   }
@@ -77,17 +77,17 @@ function toneForStatus(status: TicketStatus): Tone {
   switch (status) {
     case "accepted":
     case "factory_received":
-    case "injection_completed":
+    case "ingestion_completed":
       return "success";
     case "open":
     case "outbound_shipped":
-    case "transferred_to_injection":
+    case "transferred_to_ingestion":
       return "info";
     case "rejected":
       return "error";
     case "return_shipped":
     case "hq_received":
-    case "injection_processing":
+    case "ingestion_processing":
       return "warning";
     case "closed":
       return "neutral";
@@ -127,7 +127,7 @@ function RoleBadge({ role }: { role: ChatMessage["role"] }) {
       ? "success"
       : role === "logistics"
         ? "info"
-        : role === "injection"
+        : role === "ingestion"
           ? "warning"
           : "neutral";
 
@@ -148,8 +148,8 @@ function viewerRoleLabel(role: UserRole) {
       return "Logistics";
     case "factory_operator":
       return "Factory Operator";
-    case "injection":
-      return "Injection";
+    case "ingestion":
+      return "Ingestion";
   }
 }
 
@@ -536,7 +536,7 @@ export function OperationsDashboard({
                   {snapshot.productName}
                 </h1>
                 <p className="max-w-3xl text-base leading-7 text-[color:var(--muted-foreground)] sm:text-lg">
-                  One surface for factory operators, logistics, and injection staff to
+                  One surface for factory operators, logistics, and ingestion staff to
                   track requests, packets, returns, and SD card reconciliation without
                   relying on marker-written pouches or manual follow-ups.
                 </p>
@@ -551,7 +551,7 @@ export function OperationsDashboard({
                       Flow locked
                     </p>
                     <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-                      Ticket to injection
+                      Ticket to ingestion
                     </h2>
                   </div>
                   <div className="text-right">
@@ -580,8 +580,8 @@ export function OperationsDashboard({
                     "Factory received",
                     "Return shipped",
                     "HQ received",
-                    "Transfer to injection",
-                    "Injection processing",
+                    "Transfer to ingestion",
+                    "Ingestion processing",
                     "Close with counts",
                   ].map((step, index) => (
                     <li
@@ -851,7 +851,7 @@ export function OperationsDashboard({
                       </p>
                       <p className="mt-3 text-sm leading-6 text-[color:var(--foreground)]">
                         Admin and logistics can close tickets. Factory operators and
-                        injection can chat and track, but they cannot close the workflow.
+                        ingestion can chat and track, but they cannot close the workflow.
                       </p>
                       <label className="mt-4 grid gap-2 text-sm text-[color:var(--foreground)]">
                         Closure note
@@ -911,7 +911,7 @@ export function OperationsDashboard({
                     <PanelHeader
                       eyebrow="Packet Identity"
                       title="QR-linked packets"
-                      helper="Each shipment packet keeps a digital identity so injection never depends on handwritten pouch labels."
+                      helper="Each shipment packet keeps a digital identity so ingestion never depends on handwritten pouch labels."
                     />
                     <div className="grid gap-4 p-5">
                       {selectedTicket.packages.map((pkg) => (
@@ -922,35 +922,35 @@ export function OperationsDashboard({
 
                   <section className="panel-shell overflow-hidden">
                     <PanelHeader
-                      eyebrow="Injection"
+                      eyebrow="Ingestion"
                       title="Reconciliation"
                       helper="Count what arrived, what processed successfully, and what is missing or red-marked."
                     />
                     <div className="grid gap-4 p-5">
-                      {selectedTicket.injectionReport ? (
+                      {selectedTicket.ingestionReport ? (
                         <>
                           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                             {[
                               {
                                 label: "Expected",
-                                value: selectedTicket.injectionReport.expectedSdCards,
+                                value: selectedTicket.ingestionReport.expectedSdCards,
                               },
                               {
                                 label: "Received",
                                 value:
-                                  selectedTicket.injectionReport.actualSdCardsReceived,
+                                  selectedTicket.ingestionReport.actualSdCardsReceived,
                               },
                               {
                                 label: "Processed",
-                                value: selectedTicket.injectionReport.processedSdCards,
+                                value: selectedTicket.ingestionReport.processedSdCards,
                               },
                               {
                                 label: "Missing",
-                                value: selectedTicket.injectionReport.missingSdCards,
+                                value: selectedTicket.ingestionReport.missingSdCards,
                               },
                               {
                                 label: "Faulty",
-                                value: selectedTicket.injectionReport.faultySdCards,
+                                value: selectedTicket.ingestionReport.faultySdCards,
                               },
                             ].map((item) => (
                               <div
@@ -968,17 +968,17 @@ export function OperationsDashboard({
                           </div>
                           <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                             <p className="text-sm font-semibold text-[color:var(--foreground)]">
-                              Station {selectedTicket.injectionReport.station} started{" "}
-                              {formatDateTime(selectedTicket.injectionReport.startedAt)}
+                              Station {selectedTicket.ingestionReport.station} started{" "}
+                              {formatDateTime(selectedTicket.ingestionReport.startedAt)}
                             </p>
                             <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                              {selectedTicket.injectionReport.note}
+                              {selectedTicket.ingestionReport.note}
                             </p>
                           </div>
                         </>
                       ) : (
                         <div className="border border-[color:var(--border)] bg-white/78 p-4 text-sm text-[color:var(--muted-foreground)]">
-                          Injection has not started for this ticket yet.
+                          Ingestion has not started for this ticket yet.
                         </div>
                       )}
                     </div>
@@ -995,12 +995,12 @@ export function OperationsDashboard({
 
         <section className="panel-shell overflow-hidden">
           <PanelHeader
-            eyebrow="Injection Room"
-            title="Packets visible to injection"
-            helper="This queue is what the injection team sees after logistics hands off the return packet from HQ."
+            eyebrow="Ingestion Room"
+            title="Packets visible to ingestion"
+            helper="This queue is what the ingestion team sees after logistics hands off the return packet from HQ."
           />
           <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
-            {snapshot.injectionQueue.map((packet) => (
+            {snapshot.ingestionQueue.map((packet) => (
               <article
                 key={packet.id}
                 className="border border-[color:var(--border)] bg-white/78 p-4"

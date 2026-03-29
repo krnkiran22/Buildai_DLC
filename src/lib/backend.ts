@@ -44,7 +44,7 @@ function normalizeSnapshot(
     roleMatrix: snapshot.roleMatrix ?? fallback.roleMatrix,
     metrics: snapshot.metrics ?? fallback.metrics,
     tickets: snapshot.tickets ?? fallback.tickets,
-    injectionQueue: snapshot.injectionQueue ?? fallback.injectionQueue,
+    ingestionQueue: snapshot.ingestionQueue ?? fallback.ingestionQueue,
     inventoryItems: snapshot.inventoryItems ?? fallback.inventoryItems,
   };
 }

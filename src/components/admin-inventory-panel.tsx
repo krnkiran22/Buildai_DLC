@@ -14,7 +14,7 @@ type InventoryFormState = {
   availableUnits: string;
   allocatedUnits: string;
   inTransitUnits: string;
-  injectionUnits: string;
+  ingestionUnits: string;
   missingUnits: string;
   reorderPoint: string;
   location: string;
@@ -59,7 +59,7 @@ function buildForm(item: AdminInventoryItem): InventoryFormState {
     availableUnits: String(item.availableUnits),
     allocatedUnits: String(item.allocatedUnits),
     inTransitUnits: String(item.inTransitUnits),
-    injectionUnits: String(item.injectionUnits),
+    ingestionUnits: String(item.ingestionUnits),
     missingUnits: String(item.missingUnits),
     reorderPoint: String(item.reorderPoint),
     location: item.location,
@@ -117,7 +117,7 @@ export function AdminInventoryPanel({
       availableUnits: Number(form.availableUnits),
       allocatedUnits: Number(form.allocatedUnits),
       inTransitUnits: Number(form.inTransitUnits),
-      injectionUnits: Number(form.injectionUnits),
+      ingestionUnits: Number(form.ingestionUnits),
       missingUnits: Number(form.missingUnits),
       reorderPoint: Number(form.reorderPoint),
       location: form.location,
@@ -143,7 +143,7 @@ export function AdminInventoryPanel({
           availableUnits: patch.availableUnits ?? selectedItem.availableUnits,
           allocatedUnits: patch.allocatedUnits ?? selectedItem.allocatedUnits,
           inTransitUnits: patch.inTransitUnits ?? selectedItem.inTransitUnits,
-          injectionUnits: patch.injectionUnits ?? selectedItem.injectionUnits,
+          ingestionUnits: patch.ingestionUnits ?? selectedItem.ingestionUnits,
           missingUnits: patch.missingUnits ?? selectedItem.missingUnits,
           reorderPoint: patch.reorderPoint ?? selectedItem.reorderPoint,
           location: patch.location ?? selectedItem.location,
@@ -281,7 +281,7 @@ export function AdminInventoryPanel({
                 ["availableUnits", "Available"],
                 ["allocatedUnits", "Allocated"],
                 ["inTransitUnits", "In transit"],
-                ["injectionUnits", "In injection"],
+                ["ingestionUnits", "In ingestion"],
                 ["missingUnits", "Missing"],
                 ["reorderPoint", "Reorder point"],
               ].map(([field, label]) => (
