@@ -1,11 +1,19 @@
 "use client";
 
-import { startTransition, useDeferredValue, useEffect, useState } from "react";
+import Image from "next/image";
+import { startTransition, useDeferredValue, useEffect, useEffectEvent, useState } from "react";
 import { AdminInventoryPanel } from "@/components/admin-inventory-panel";
 import {
   closeTicket,
   createTicket,
+  createTicketPackage,
+  getQrPackageDetail,
+  openTicketStream,
+  qrSvgUrl,
+  saveIngestionReconciliation,
   sendTicketMessage,
+  updateQrPackageDetail,
+  updateTicketPackageStatus,
   updateTicketStatus,
 } from "@/lib/backend";
 import type {
@@ -13,7 +21,12 @@ import type {
   BackendHealth,
   ChatMessage,
   DashboardSnapshot,
+  IngestionReconciliationInput,
+  LiveTicketEvent,
   PackageRecord,
+  PackageCreateInput,
+  PackageMetadataPatch,
+  QrPackageDetail,
   RoleCapability,
   RequestItem,
   TicketCreateInput,
@@ -260,7 +273,23 @@ function ItemTable({ items }: { items: RequestItem[] }) {
   );
 }
 
-function PackageCard({ pkg }: { pkg: PackageRecord }) {
+function PackageCard({
+  pkg,
+  canEditQr,
+  canUpdateStatus,
+  availableActions,
+  onSelectQr,
+  onUpdateStatus,
+  pending,
+}: {
+  pkg: PackageRecord;
+  canEditQr: boolean;
+  canUpdateStatus: boolean;
+  availableActions: TicketStatus[];
+  onSelectQr: (pkg: PackageRecord) => void;
+  onUpdateStatus: (pkg: PackageRecord, nextStatus: TicketStatus) => void;
+  pending: boolean;
+}) {
   return (
     <article className="border border-[color:var(--border)] bg-white/78 p-4">
       <div className="flex items-start justify-between gap-4">
@@ -294,6 +323,28 @@ function PackageCard({ pkg }: { pkg: PackageRecord }) {
           <dd className="mt-1 font-medium text-[color:var(--foreground)]">{pkg.itemCount}</dd>
         </div>
       </dl>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onSelectQr(pkg)}
+          className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)]"
+        >
+          {canEditQr ? "Open QR Editor" : "View QR"}
+        </button>
+        {canUpdateStatus
+          ? availableActions.map((action) => (
+              <button
+                key={`${pkg.packageCode}-${action}`}
+                type="button"
+                onClick={() => onUpdateStatus(pkg, action)}
+                disabled={pending}
+                className="border border-[color:var(--foreground)] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)] disabled:opacity-60"
+              >
+                {statusLabel(action)}
+              </button>
+            ))
+          : null}
+      </div>
     </article>
   );
 }
@@ -425,6 +476,35 @@ export function OperationsDashboard({
   const [statusNote, setStatusNote] = useState("");
   const [statusPending, setStatusPending] = useState(false);
   const [statusFeedback, setStatusFeedback] = useState("");
+  const [packageActionNote, setPackageActionNote] = useState("");
+  const [packagePending, setPackagePending] = useState(false);
+  const [packageFeedback, setPackageFeedback] = useState("");
+  const [packageDraft, setPackageDraft] = useState<PackageCreateInput>({
+    direction: "outbound",
+    itemCount: 1,
+    note: "",
+  });
+  const [packageCreatePending, setPackageCreatePending] = useState(false);
+  const [packageCreateFeedback, setPackageCreateFeedback] = useState("");
+  const [qrLookup, setQrLookup] = useState("");
+  const [prefilledQrToken, setPrefilledQrToken] = useState("");
+  const [qrDetail, setQrDetail] = useState<QrPackageDetail | null>(null);
+  const [qrDraft, setQrDraft] = useState<PackageMetadataPatch>({});
+  const [qrPending, setQrPending] = useState(false);
+  const [qrFeedback, setQrFeedback] = useState("");
+  const [streamStatus, setStreamStatus] = useState("Live sync idle");
+  const [reconciliationDraft, setReconciliationDraft] = useState<IngestionReconciliationInput>({
+    station: "",
+    expectedSdCards: 0,
+    actualSdCardsReceived: 0,
+    processedSdCards: 0,
+    missingSdCards: 0,
+    faultySdCards: 0,
+    note: "",
+    markCompleted: false,
+  });
+  const [reconciliationPending, setReconciliationPending] = useState(false);
+  const [reconciliationFeedback, setReconciliationFeedback] = useState("");
   const [createPending, setCreatePending] = useState(false);
   const [createFeedback, setCreateFeedback] = useState("");
   const [ticketDraft, setTicketDraft] = useState<TicketCreateInput>({
@@ -448,6 +528,66 @@ export function OperationsDashboard({
 
     return queryMatch && statusMatch;
   });
+  const selectedTicket =
+    filteredTickets.find((ticket) => ticket.id === selectedTicketId) ?? filteredTickets[0];
+  const seedSelectedTicketPanels = useEffectEvent((ticket: typeof selectedTicket) => {
+    if (!ticket) {
+      setQrDetail(null);
+      return;
+    }
+
+    const firstPackage = ticket.packages[0];
+    if (!qrLookup && firstPackage) {
+      setQrLookup(firstPackage.qrToken);
+      setQrDetail(localQrDetail(firstPackage));
+    } else if (firstPackage && qrLookup === firstPackage.qrToken && !qrDetail) {
+      setQrDetail(localQrDetail(firstPackage));
+    }
+    hydrateReconciliationDraft();
+  });
+  const syncQrDetailFromTicket = useEffectEvent((ticket: typeof selectedTicket) => {
+    if (!ticket || !qrDetail) {
+      return;
+    }
+
+    const nextPackage = ticket.packages.find((pkg) => pkg.qrToken === qrDetail.package.qrToken);
+    if (!nextPackage) {
+      return;
+    }
+
+    const unchanged =
+      qrDetail.title === ticket.title &&
+      qrDetail.teamName === ticket.teamName &&
+      qrDetail.factoryName === ticket.factoryName &&
+      qrDetail.deploymentDate === ticket.deploymentDate &&
+      qrDetail.package.status === nextPackage.status &&
+      qrDetail.package.note === nextPackage.note &&
+      qrDetail.package.itemCount === nextPackage.itemCount &&
+      qrDetail.package.direction === nextPackage.direction;
+    if (unchanged) {
+      return;
+    }
+
+    setQrDetail({
+      ...qrDetail,
+      title: ticket.title,
+      teamName: ticket.teamName,
+      factoryName: ticket.factoryName,
+      deploymentDate: ticket.deploymentDate,
+      package: nextPackage,
+    });
+  });
+  const handleStreamEvent = useEffectEvent((event: LiveTicketEvent) => {
+    if (event.ticket) {
+      upsertTicket(event.ticket);
+      if (event.ticket.id === selectedTicket?.id) {
+        setStreamStatus(`Live sync: ${event.eventType}`);
+      }
+    }
+  });
+  const handlePrefilledQrLoad = useEffectEvent((token: string) => {
+    void handleLoadQrDetail(token);
+  });
 
   useEffect(() => {
     setCurrentSnapshot(snapshot);
@@ -468,13 +608,72 @@ export function OperationsDashboard({
     });
   }, [filteredTickets, selectedTicketId]);
 
-  const selectedTicket =
-    filteredTickets.find((ticket) => ticket.id === selectedTicketId) ?? filteredTickets[0];
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const token = new URLSearchParams(window.location.search).get("qr");
+    if (!token) {
+      return;
+    }
+    setQrLookup(token);
+    setPrefilledQrToken(token);
+  }, []);
+
+  useEffect(() => {
+    seedSelectedTicketPanels(selectedTicket);
+  }, [selectedTicket]);
+
+  useEffect(() => {
+    syncQrDetailFromTicket(selectedTicket);
+  }, [selectedTicket, qrDetail]);
+
+  useEffect(() => {
+    if (!selectedTicket || !session.token) {
+      return;
+    }
+
+    const socket = openTicketStream(selectedTicket.id, session, handleStreamEvent);
+
+    if (!socket) {
+      return;
+    }
+
+    setStreamStatus("Live sync connecting");
+    socket.onopen = () => setStreamStatus("Live sync connected");
+    socket.onerror = () => setStreamStatus("Live sync error");
+    socket.onclose = () => setStreamStatus("Live sync disconnected");
+
+    const interval = window.setInterval(() => {
+      if (socket.readyState === window.WebSocket.OPEN) {
+        socket.send("ping");
+      }
+    }, 15000);
+
+    return () => {
+      window.clearInterval(interval);
+      socket.close();
+    };
+  }, [selectedTicket, session]);
+
+  useEffect(() => {
+    if (!prefilledQrToken || !selectedTicket) {
+      return;
+    }
+    handlePrefilledQrLoad(prefilledQrToken);
+    setPrefilledQrToken("");
+  }, [prefilledQrToken, selectedTicket]);
+
   const viewer = currentSnapshot.viewer;
   const canCloseTicket = viewer.permissions.includes("ticket.close");
   const canChat = viewer.permissions.includes("ticket.message");
   const canCreateTicket = viewer.permissions.includes("ticket.create");
   const canUpdateStatus = viewer.permissions.includes("ticket.status.update");
+  const canEditPackages = viewer.permissions.includes("package.edit");
+  const canUpdatePackageStatus = viewer.permissions.includes("package.status.update");
+  const canViewPackages = viewer.permissions.includes("package.view");
+  const canReconcileIngestion = viewer.permissions.includes("ingestion.reconcile");
   const availableStatusActions =
     selectedTicket && canUpdateStatus
       ? transitionMap[selectedTicket.status].filter((status) =>
@@ -496,6 +695,44 @@ export function OperationsDashboard({
       return "operator";
     }
     return role;
+  }
+
+  function localQrDetail(pkg: PackageRecord): QrPackageDetail {
+    return {
+      ticketId: selectedTicket?.id ?? "",
+      title: selectedTicket?.title ?? "",
+      teamName: selectedTicket?.teamName ?? "",
+      factoryName: selectedTicket?.factoryName ?? "",
+      deploymentDate: selectedTicket?.deploymentDate ?? "",
+      package: pkg,
+      scanUrl: typeof window !== "undefined" ? `${window.location.origin}/?qr=${pkg.qrToken}` : "",
+      qrSvgPath: "",
+      editable: canEditPackages,
+    };
+  }
+
+  function hydrateReconciliationDraft() {
+    if (!selectedTicket) {
+      return;
+    }
+
+    setReconciliationDraft({
+      station: selectedTicket.ingestionReport?.station ?? "",
+      expectedSdCards:
+        selectedTicket.ingestionReport?.expectedSdCards ?? selectedTicket.sdCardsRequested,
+      actualSdCardsReceived:
+        selectedTicket.ingestionReport?.actualSdCardsReceived ??
+        selectedTicket.sdCardsRequested,
+      processedSdCards:
+        selectedTicket.ingestionReport?.processedSdCards ??
+        selectedTicket.ingestionReport?.actualSdCardsReceived ??
+        selectedTicket.sdCardsRequested,
+      missingSdCards: selectedTicket.ingestionReport?.missingSdCards ?? 0,
+      faultySdCards: selectedTicket.ingestionReport?.faultySdCards ?? 0,
+      note: selectedTicket.ingestionReport?.note ?? "",
+      startedAt: selectedTicket.ingestionReport?.startedAt,
+      markCompleted: selectedTicket.status === "ingestion_completed",
+    });
   }
 
   async function handleSendMessage() {
@@ -684,6 +921,219 @@ export function OperationsDashboard({
       setCreateFeedback(error instanceof Error ? error.message : "Failed to create ticket.");
     } finally {
       setCreatePending(false);
+    }
+  }
+
+  async function handleCreatePackage() {
+    if (!selectedTicket || !canEditPackages) {
+      return;
+    }
+
+    setPackageCreatePending(true);
+    setPackageCreateFeedback("");
+    try {
+      const updated = await createTicketPackage(selectedTicket.id, packageDraft, session);
+      if (updated) {
+        upsertTicket(updated);
+      } else {
+        const nextPackage: PackageRecord = {
+          packageCode: `PKG-${packageDraft.direction === "outbound" ? "OUT" : "RET"}-${selectedTicket.id.slice(-4).toUpperCase()}${String.fromCharCode(65 + selectedTicket.packages.length)}`,
+          qrToken: `qr_local_${Date.now()}`,
+          direction: packageDraft.direction,
+          status: selectedTicket.status,
+          itemCount: packageDraft.itemCount,
+          note: packageDraft.note,
+          teamName: selectedTicket.teamName,
+          factoryName: selectedTicket.factoryName,
+          deploymentDate: selectedTicket.deploymentDate,
+          updatedAt: new Date().toISOString(),
+          updatedBy: viewer.name,
+        };
+        upsertTicket({
+          ...selectedTicket,
+          packages: [...selectedTicket.packages, nextPackage],
+        });
+      }
+      setPackageCreateFeedback("Packet created.");
+      setPackageDraft({ direction: "outbound", itemCount: 1, note: "" });
+    } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
+      setPackageCreateFeedback(
+        error instanceof Error ? error.message : "Failed to create packet.",
+      );
+    } finally {
+      setPackageCreatePending(false);
+    }
+  }
+
+  async function handleLoadQrDetail(token?: string) {
+    const resolvedToken = (token ?? qrLookup).trim();
+    if (!resolvedToken) {
+      return;
+    }
+
+    setQrPending(true);
+    setQrFeedback("");
+    try {
+      const detail = await getQrPackageDetail(resolvedToken, session);
+      if (detail) {
+        if (detail.ticketId !== selectedTicket?.id) {
+          setSelectedTicketId(detail.ticketId);
+        }
+        setQrDetail(detail);
+        setQrDraft({
+          teamName: detail.teamName,
+          factoryName: detail.factoryName,
+          deploymentDate: detail.deploymentDate,
+          direction: detail.package.direction,
+          itemCount: detail.package.itemCount,
+          note: detail.package.note,
+        });
+      } else if (selectedTicket) {
+        const localPackage = selectedTicket.packages.find((pkg) => pkg.qrToken === resolvedToken);
+        if (localPackage) {
+          const detail = localQrDetail(localPackage);
+          setQrDetail(detail);
+          setQrDraft({
+            teamName: detail.teamName,
+            factoryName: detail.factoryName,
+            deploymentDate: detail.deploymentDate,
+            direction: detail.package.direction,
+            itemCount: detail.package.itemCount,
+            note: detail.package.note,
+          });
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
+      setQrFeedback(error instanceof Error ? error.message : "Failed to load QR detail.");
+    } finally {
+      setQrPending(false);
+    }
+  }
+
+  async function handleSaveQrDetail() {
+    if (!qrDetail || !qrDetail.editable) {
+      return;
+    }
+
+    setQrPending(true);
+    setQrFeedback("");
+    try {
+      const updated = await updateQrPackageDetail(qrDetail.package.qrToken, qrDraft, session);
+      if (updated) {
+        setQrDetail(updated);
+        setQrFeedback("QR detail updated.");
+      }
+    } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
+      setQrFeedback(error instanceof Error ? error.message : "Failed to save QR detail.");
+    } finally {
+      setQrPending(false);
+    }
+  }
+
+  async function handlePackageStatusAction(pkg: PackageRecord, nextStatus: TicketStatus) {
+    if (!selectedTicket || !canUpdatePackageStatus) {
+      return;
+    }
+
+    setPackagePending(true);
+    setPackageFeedback("");
+    try {
+      const updated = await updateTicketPackageStatus(
+        selectedTicket.id,
+        pkg.packageCode,
+        {
+          status: nextStatus,
+          note: packageActionNote.trim() || undefined,
+        },
+        session,
+      );
+      if (updated) {
+        upsertTicket(updated);
+      } else {
+        upsertTicket({
+          ...selectedTicket,
+          packages: selectedTicket.packages.map((entry) =>
+            entry.packageCode === pkg.packageCode
+              ? {
+                  ...entry,
+                  status: nextStatus,
+                  note: packageActionNote.trim() || entry.note,
+                  updatedAt: new Date().toISOString(),
+                  updatedBy: viewer.name,
+                }
+              : entry,
+          ),
+        });
+      }
+      setPackageActionNote("");
+      setPackageFeedback(`${pkg.packageCode} moved to ${statusLabel(nextStatus)}.`);
+    } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
+      setPackageFeedback(
+        error instanceof Error ? error.message : "Failed to update packet status.",
+      );
+    } finally {
+      setPackagePending(false);
+    }
+  }
+
+  async function handleSaveReconciliation() {
+    if (!selectedTicket || !canReconcileIngestion) {
+      return;
+    }
+
+    setReconciliationPending(true);
+    setReconciliationFeedback("");
+    try {
+      const updated = await saveIngestionReconciliation(
+        selectedTicket.id,
+        reconciliationDraft,
+        session,
+      );
+      if (updated) {
+        upsertTicket(updated);
+      } else {
+        const nextStatus = reconciliationDraft.markCompleted
+          ? "ingestion_completed"
+          : selectedTicket.status === "transferred_to_ingestion"
+            ? "ingestion_processing"
+            : selectedTicket.status;
+        upsertTicket({
+          ...selectedTicket,
+          status: nextStatus,
+          ingestionReport: {
+            station: reconciliationDraft.station,
+            startedAt: reconciliationDraft.startedAt ?? new Date().toISOString(),
+            expectedSdCards: reconciliationDraft.expectedSdCards,
+            actualSdCardsReceived: reconciliationDraft.actualSdCardsReceived,
+            processedSdCards: reconciliationDraft.processedSdCards,
+            missingSdCards: reconciliationDraft.missingSdCards,
+            faultySdCards: reconciliationDraft.faultySdCards,
+            note: reconciliationDraft.note,
+          },
+        });
+      }
+      setReconciliationFeedback("Ingestion reconciliation saved.");
+    } catch (error) {
+      if (error instanceof Error && /401|403/i.test(error.message)) {
+        onSessionChange(null);
+      }
+      setReconciliationFeedback(
+        error instanceof Error ? error.message : "Failed to save reconciliation.",
+      );
+    } finally {
+      setReconciliationPending(false);
     }
   }
 
@@ -1099,7 +1549,7 @@ export function OperationsDashboard({
                           Ticket chat
                         </h3>
                         <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                          Logistics thread
+                          {streamStatus}
                         </span>
                       </div>
                       <div className="mt-4 space-y-3">
@@ -1262,10 +1712,274 @@ export function OperationsDashboard({
                       title="QR-linked packets"
                       helper="Each shipment packet keeps a digital identity so ingestion never depends on handwritten pouch labels."
                     />
-                    <div className="grid gap-4 p-5">
+                    <div className="grid gap-5 p-5">
+                      {canEditPackages && (viewer.role === "admin" || viewer.role === "logistics") ? (
+                        <div className="grid gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                                Generate packet
+                              </p>
+                              <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
+                                Create QR label
+                              </h3>
+                            </div>
+                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                              {viewerRoleLabel(viewer.role)}
+                            </span>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <select
+                              value={packageDraft.direction}
+                              onChange={(event) =>
+                                setPackageDraft((current) => ({
+                                  ...current,
+                                  direction: event.target.value as PackageCreateInput["direction"],
+                                }))
+                              }
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            >
+                              <option value="outbound">Outbound</option>
+                              <option value="return">Return</option>
+                            </select>
+                            <input
+                              type="number"
+                              min={1}
+                              value={packageDraft.itemCount || ""}
+                              onChange={(event) =>
+                                setPackageDraft((current) => ({
+                                  ...current,
+                                  itemCount: Number(event.target.value),
+                                }))
+                              }
+                              placeholder="Item count"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                            <input
+                              value={packageDraft.note}
+                              onChange={(event) =>
+                                setPackageDraft((current) => ({
+                                  ...current,
+                                  note: event.target.value,
+                                }))
+                              }
+                              placeholder="Packet note"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] sm:col-span-2"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                              QR tokens open the editable packet page for operators and logistics.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleCreatePackage()}
+                              disabled={
+                                packageCreatePending ||
+                                !packageDraft.note.trim() ||
+                                packageDraft.itemCount <= 0
+                              }
+                              className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                            >
+                              {packageCreatePending ? "Creating..." : "Create Packet"}
+                            </button>
+                          </div>
+                          {packageCreateFeedback ? (
+                            <p className="text-sm text-[color:var(--muted-foreground)]">
+                              {packageCreateFeedback}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
+                        QR lookup
+                        <div className="flex gap-2">
+                          <input
+                            value={qrLookup}
+                            onChange={(event) => setQrLookup(event.target.value)}
+                            placeholder="Paste or scan QR token"
+                            className="flex-1 border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void handleLoadQrDetail()}
+                            disabled={!canViewPackages || qrPending || !qrLookup.trim()}
+                            className="border border-[color:var(--foreground)] bg-white px-4 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:opacity-60"
+                          >
+                            {qrPending ? "Loading..." : "Open"}
+                          </button>
+                        </div>
+                      </label>
+
                       {selectedTicket.packages.map((pkg) => (
-                        <PackageCard key={pkg.packageCode} pkg={pkg} />
+                        <PackageCard
+                          key={pkg.packageCode}
+                          pkg={pkg}
+                          canEditQr={canEditPackages}
+                          canUpdateStatus={canUpdatePackageStatus}
+                          availableActions={transitionMap[pkg.status].filter((status) =>
+                            roleStatusTargets[viewer.role].includes(status),
+                          )}
+                          onSelectQr={(entry) => {
+                            setQrLookup(entry.qrToken);
+                            void handleLoadQrDetail(entry.qrToken);
+                          }}
+                          onUpdateStatus={(entry, nextStatus) =>
+                            void handlePackageStatusAction(entry, nextStatus)
+                          }
+                          pending={packagePending}
+                        />
                       ))}
+
+                      <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
+                        Packet lifecycle note
+                        <textarea
+                          value={packageActionNote}
+                          onChange={(event) => setPackageActionNote(event.target.value)}
+                          rows={3}
+                          disabled={!canUpdatePackageStatus || packagePending}
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                          placeholder="Add a note before moving a specific packet"
+                        />
+                      </label>
+                      {packageFeedback ? (
+                        <p className="text-sm text-[color:var(--muted-foreground)]">
+                          {packageFeedback}
+                        </p>
+                      ) : null}
+
+                      {qrDetail ? (
+                        <div className="grid gap-4 border border-[color:var(--border)] bg-white/78 p-4 lg:grid-cols-[0.9fr_1.1fr]">
+                          <div className="space-y-3">
+                            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                              QR detail
+                            </p>
+                            {qrDetail.qrSvgPath ? (
+                              <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                                <Image
+                                  src={qrSvgUrl(qrDetail.package.qrToken)}
+                                  alt={`${qrDetail.package.packageCode} QR`}
+                                  width={192}
+                                  height={192}
+                                  className="mx-auto h-48 w-48"
+                                  unoptimized
+                                />
+                              </div>
+                            ) : null}
+                            <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4 text-sm">
+                              <p className="font-semibold text-[color:var(--foreground)]">
+                                {qrDetail.package.packageCode}
+                              </p>
+                              <p className="mt-2 break-all font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                {qrDetail.package.qrToken}
+                              </p>
+                              <p className="mt-3 text-[color:var(--muted-foreground)]">
+                                Scan URL: {qrDetail.scanUrl}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <input
+                                value={qrDraft.teamName ?? qrDetail.teamName}
+                                onChange={(event) =>
+                                  setQrDraft((current) => ({
+                                    ...current,
+                                    teamName: event.target.value,
+                                  }))
+                                }
+                                disabled={!qrDetail.editable || qrPending}
+                                placeholder="Team name"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              />
+                              <input
+                                value={qrDraft.factoryName ?? qrDetail.factoryName}
+                                onChange={(event) =>
+                                  setQrDraft((current) => ({
+                                    ...current,
+                                    factoryName: event.target.value,
+                                  }))
+                                }
+                                disabled={!qrDetail.editable || qrPending}
+                                placeholder="Factory name"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              />
+                              <input
+                                type="date"
+                                value={qrDraft.deploymentDate ?? qrDetail.deploymentDate}
+                                onChange={(event) =>
+                                  setQrDraft((current) => ({
+                                    ...current,
+                                    deploymentDate: event.target.value,
+                                  }))
+                                }
+                                disabled={!qrDetail.editable || qrPending}
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              />
+                              <input
+                                type="number"
+                                value={qrDraft.itemCount ?? qrDetail.package.itemCount}
+                                onChange={(event) =>
+                                  setQrDraft((current) => ({
+                                    ...current,
+                                    itemCount: Number(event.target.value),
+                                  }))
+                                }
+                                disabled={!qrDetail.editable || qrPending}
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              />
+                            </div>
+                            <select
+                              value={qrDraft.direction ?? qrDetail.package.direction}
+                              onChange={(event) =>
+                                setQrDraft((current) => ({
+                                  ...current,
+                                  direction: event.target.value as PackageMetadataPatch["direction"],
+                                }))
+                              }
+                              disabled={!qrDetail.editable || qrPending}
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                            >
+                              <option value="outbound">Outbound</option>
+                              <option value="return">Return</option>
+                            </select>
+                            <textarea
+                              value={qrDraft.note ?? qrDetail.package.note}
+                              onChange={(event) =>
+                                setQrDraft((current) => ({
+                                  ...current,
+                                  note: event.target.value,
+                                }))
+                              }
+                              rows={4}
+                              disabled={!qrDetail.editable || qrPending}
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                            />
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                {qrDetail.editable
+                                  ? "Editable by admin, logistics, and factory operators."
+                                  : "Read only for this role."}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveQrDetail()}
+                                disabled={!qrDetail.editable || qrPending}
+                                className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                              >
+                                {qrPending ? "Saving..." : "Save QR Detail"}
+                              </button>
+                            </div>
+                            {qrFeedback ? (
+                              <p className="text-sm text-[color:var(--muted-foreground)]">
+                                {qrFeedback}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </section>
 
@@ -1330,6 +2044,148 @@ export function OperationsDashboard({
                           Ingestion has not started for this ticket yet.
                         </div>
                       )}
+
+                      {canReconcileIngestion ? (
+                        <div className="grid gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                                Reconciliation form
+                              </p>
+                              <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
+                                Record ingestion counts
+                              </h3>
+                            </div>
+                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                              {viewerRoleLabel(viewer.role)}
+                            </span>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <input
+                              value={reconciliationDraft.station}
+                              onChange={(event) =>
+                                setReconciliationDraft((current) => ({
+                                  ...current,
+                                  station: event.target.value,
+                                }))
+                              }
+                              placeholder="Station"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                            <input
+                              type="number"
+                              value={reconciliationDraft.expectedSdCards || ""}
+                              onChange={(event) =>
+                                setReconciliationDraft((current) => ({
+                                  ...current,
+                                  expectedSdCards: Number(event.target.value),
+                                }))
+                              }
+                              placeholder="Expected"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                            <input
+                              type="number"
+                              value={reconciliationDraft.actualSdCardsReceived || ""}
+                              onChange={(event) =>
+                                setReconciliationDraft((current) => ({
+                                  ...current,
+                                  actualSdCardsReceived: Number(event.target.value),
+                                  missingSdCards: Math.max(
+                                    current.expectedSdCards - Number(event.target.value),
+                                    0,
+                                  ),
+                                }))
+                              }
+                              placeholder="Received"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                            <input
+                              type="number"
+                              value={reconciliationDraft.processedSdCards || ""}
+                              onChange={(event) =>
+                                setReconciliationDraft((current) => ({
+                                  ...current,
+                                  processedSdCards: Number(event.target.value),
+                                }))
+                              }
+                              placeholder="Processed"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                            <input
+                              type="number"
+                              value={reconciliationDraft.missingSdCards || ""}
+                              onChange={(event) =>
+                                setReconciliationDraft((current) => ({
+                                  ...current,
+                                  missingSdCards: Number(event.target.value),
+                                }))
+                              }
+                              placeholder="Missing"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                            <input
+                              type="number"
+                              value={reconciliationDraft.faultySdCards || ""}
+                              onChange={(event) =>
+                                setReconciliationDraft((current) => ({
+                                  ...current,
+                                  faultySdCards: Number(event.target.value),
+                                }))
+                              }
+                              placeholder="Faulty"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                          </div>
+                          <textarea
+                            value={reconciliationDraft.note}
+                            onChange={(event) =>
+                              setReconciliationDraft((current) => ({
+                                ...current,
+                                note: event.target.value,
+                              }))
+                            }
+                            rows={4}
+                            placeholder="Counts summary and red-mark note"
+                            className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                          />
+                          <label className="flex items-center gap-3 text-sm text-[color:var(--foreground)]">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(reconciliationDraft.markCompleted)}
+                              onChange={(event) =>
+                                setReconciliationDraft((current) => ({
+                                  ...current,
+                                  markCompleted: event.target.checked,
+                                }))
+                              }
+                            />
+                            Mark ingestion completed after saving
+                          </label>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                              Missing should equal expected minus received.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleSaveReconciliation()}
+                              disabled={
+                                reconciliationPending ||
+                                !reconciliationDraft.station.trim() ||
+                                !reconciliationDraft.note.trim()
+                              }
+                              className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                            >
+                              {reconciliationPending ? "Saving..." : "Save Counts"}
+                            </button>
+                          </div>
+                          {reconciliationFeedback ? (
+                            <p className="text-sm text-[color:var(--muted-foreground)]">
+                              {reconciliationFeedback}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   </section>
                 </section>

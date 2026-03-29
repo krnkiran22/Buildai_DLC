@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { AuthPortal } from "@/components/auth-portal";
 import { OperationsDashboard } from "@/components/operations-dashboard";
-import { getBackendHealth, getOperationsSnapshot } from "@/lib/backend";
+import {
+  getBackendHealth,
+  getCurrentSession,
+  getOperationsSnapshot,
+  logoutCurrentSession,
+} from "@/lib/backend";
 import type { AuthSession, BackendHealth, DashboardSnapshot } from "@/lib/operations-types";
 
 const SESSION_STORAGE_KEY = "moto_ops_session";
@@ -36,13 +41,27 @@ export function OperationsApp() {
 
     let active = true;
 
-    Promise.all([getOperationsSnapshot(session), getBackendHealth()])
-      .then(([nextSnapshot, nextHealth]) => {
+    Promise.resolve()
+      .then(async () => {
+        const verifiedSession = await getCurrentSession(session).catch(() => session);
+        const [nextSnapshot, nextHealth] = await Promise.all([
+          getOperationsSnapshot(verifiedSession),
+          getBackendHealth(),
+        ]);
         if (!active) {
           return;
         }
+        window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(verifiedSession));
+        setSession(verifiedSession);
         setSnapshot(nextSnapshot);
         setHealth(nextHealth);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+        setSession(null);
       })
       .finally(() => {
         if (active) {
@@ -62,6 +81,9 @@ export function OperationsApp() {
   }
 
   function handleLogout() {
+    if (session) {
+      void logoutCurrentSession(session).catch(() => undefined);
+    }
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     setLoading(false);
     setSession(null);

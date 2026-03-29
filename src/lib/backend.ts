@@ -5,6 +5,12 @@ import type {
   AuthSession,
   BackendHealth,
   DashboardSnapshot,
+  IngestionReconciliationInput,
+  LiveTicketEvent,
+  PackageCreateInput,
+  PackageMetadataPatch,
+  PackageStatusUpdateInput,
+  QrPackageDetail,
   RegistrationChallenge,
   TicketCreateInput,
   TicketRecord,
@@ -27,6 +33,16 @@ const ACTOR_NAME = process.env.NEXT_PUBLIC_ACTOR_NAME ?? "Admin Console";
 
 function apiBaseUrl() {
   return API_BASE_URL;
+}
+
+function websocketBaseUrl() {
+  if (!API_BASE_URL) {
+    return "";
+  }
+
+  const url = new URL(API_BASE_URL);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString().replace(/\/+$/, "");
 }
 
 function requestHeaders(session?: AuthSession | null): HeadersInit {
@@ -109,6 +125,23 @@ export async function getOperationsSnapshot(
   } catch {
     return getMockOperationsSnapshot();
   }
+}
+
+export async function getCurrentSession(session: AuthSession): Promise<AuthSession> {
+  return requestJson<AuthSession>("/api/v1/auth/me", {
+    headers: requestHeaders(session),
+  });
+}
+
+export async function logoutCurrentSession(session: AuthSession): Promise<void> {
+  if (!API_BASE_URL) {
+    return;
+  }
+
+  await requestJson<{ loggedOut: boolean }>("/api/v1/auth/logout", {
+    method: "POST",
+    headers: requestHeaders(session),
+  });
 }
 
 export async function getBackendHealth(): Promise<BackendHealth> {
@@ -232,6 +265,96 @@ export async function updateTicketStatus(
   });
 }
 
+export async function createTicketPackage(
+  ticketId: string,
+  payload: PackageCreateInput,
+  session?: AuthSession | null,
+): Promise<TicketRecord | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  return requestJson<TicketRecord>(`/api/v1/tickets/${ticketId}/packages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...requestHeaders(session),
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTicketPackageStatus(
+  ticketId: string,
+  packageCode: string,
+  payload: PackageStatusUpdateInput,
+  session?: AuthSession | null,
+): Promise<TicketRecord | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  return requestJson<TicketRecord>(`/api/v1/tickets/${ticketId}/packages/${packageCode}/status`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...requestHeaders(session),
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getQrPackageDetail(
+  qrToken: string,
+  session?: AuthSession | null,
+): Promise<QrPackageDetail | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  return requestJson<QrPackageDetail>(`/api/v1/qr/${qrToken}`, {
+    headers: requestHeaders(session),
+  });
+}
+
+export async function updateQrPackageDetail(
+  qrToken: string,
+  payload: PackageMetadataPatch,
+  session?: AuthSession | null,
+): Promise<QrPackageDetail | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  return requestJson<QrPackageDetail>(`/api/v1/qr/${qrToken}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...requestHeaders(session),
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveIngestionReconciliation(
+  ticketId: string,
+  payload: IngestionReconciliationInput,
+  session?: AuthSession | null,
+): Promise<TicketRecord | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  return requestJson<TicketRecord>(`/api/v1/tickets/${ticketId}/ingestion/reconciliation`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...requestHeaders(session),
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function requestRegistrationOtp(payload: {
   email: string;
   password: string;
@@ -271,6 +394,43 @@ export async function loginUser(payload: {
     },
     body: JSON.stringify(payload),
   });
+}
+
+export function qrSvgUrl(qrToken: string) {
+  if (!API_BASE_URL) {
+    return "";
+  }
+  return `${API_BASE_URL}/api/v1/qr/${encodeURIComponent(qrToken)}/svg`;
+}
+
+export function ticketStreamUrl(ticketId: string, session: AuthSession | null) {
+  if (!session?.token || !API_BASE_URL) {
+    return null;
+  }
+  return `${websocketBaseUrl()}/api/v1/tickets/${encodeURIComponent(ticketId)}/stream?token=${encodeURIComponent(session.token)}`;
+}
+
+export type TicketStreamHandler = (event: LiveTicketEvent) => void;
+
+export function openTicketStream(
+  ticketId: string,
+  session: AuthSession,
+  onEvent: TicketStreamHandler,
+) {
+  const streamUrl = ticketStreamUrl(ticketId, session);
+  if (!streamUrl || typeof window === "undefined") {
+    return null;
+  }
+
+  const socket = new window.WebSocket(streamUrl);
+  socket.onmessage = (event) => {
+    try {
+      onEvent(JSON.parse(event.data) as LiveTicketEvent);
+    } catch {
+      // Ignore malformed stream events.
+    }
+  };
+  return socket;
 }
 
 export { apiBaseUrl };

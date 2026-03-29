@@ -22,6 +22,10 @@ export type PermissionName =
   | "ticket.close"
   | "ticket.create"
   | "ticket.status.update"
+  | "package.view"
+  | "package.edit"
+  | "package.status.update"
+  | "ingestion.reconcile"
   | "inventory.view"
   | "inventory.edit"
   | "user.manage";
@@ -65,6 +69,11 @@ export type PackageRecord = {
   status: TicketStatus;
   itemCount: number;
   note: string;
+  teamName?: string | null;
+  factoryName?: string | null;
+  deploymentDate?: string | null;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
 };
 
 export type IngestionReport = {
@@ -202,6 +211,18 @@ export type RegistrationChallenge = {
   otpDebugCode?: string | null;
 };
 
+export type QrPackageDetail = {
+  ticketId: string;
+  title: string;
+  teamName: string;
+  factoryName: string;
+  deploymentDate: string;
+  package: PackageRecord;
+  scanUrl: string;
+  qrSvgPath: string;
+  editable: boolean;
+};
+
 export type TicketCreateInput = {
   teamName: string;
   factoryName: string;
@@ -215,4 +236,60 @@ export type TicketCreateInput = {
 export type TicketStatusUpdateInput = {
   status: TicketStatus;
   note?: string;
+};
+
+export type PackageCreateInput = {
+  direction: "outbound" | "return";
+  itemCount: number;
+  note: string;
+};
+
+export type PackageMetadataPatch = {
+  teamName?: string;
+  factoryName?: string;
+  deploymentDate?: string;
+  direction?: "outbound" | "return";
+  itemCount?: number;
+  note?: string;
+};
+
+export type PackageStatusUpdateInput = {
+  status: TicketStatus;
+  note?: string;
+};
+
+export type IngestionReconciliationInput = {
+  station: string;
+  expectedSdCards: number;
+  actualSdCardsReceived: number;
+  processedSdCards: number;
+  missingSdCards: number;
+  faultySdCards: number;
+  note: string;
+  startedAt?: string;
+  markCompleted?: boolean;
+};
+
+export type LiveTicketEvent = {
+  ticketId: string;
+  eventType: string;
+  occurredAt?: string | null;
+  actor?: string;
+  role?: UserRole | ChatMessage["role"];
+  status?: TicketStatus;
+  detail?: string;
+  note?: string;
+  ticket?: TicketRecord;
+  package?: PackageRecord;
+  ingestionReport?: IngestionReport;
+  messageRecord?: {
+    id: string;
+    author: string;
+    role: ChatMessage["role"];
+    sentAt?: string;
+    sent_at?: string;
+    message: string;
+  };
+  timelineEvent?: TimelineEvent;
+  viewer?: ViewerContext;
 };
