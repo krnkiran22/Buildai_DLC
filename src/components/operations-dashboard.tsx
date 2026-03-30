@@ -338,9 +338,9 @@ function PanelHeader({
 
 function ItemTable({ items }: { items: RequestItem[] }) {
   return (
-    <div className="overflow-x-auto rounded-3xl border border-[#223038]">
+    <div className="overflow-x-auto rounded-3xl border border-[color:var(--border)]">
       <table className="min-w-[640px] w-full border-collapse text-left text-sm">
-        <thead className="bg-[#172229] text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+        <thead className="bg-[color:var(--muted)] text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
           <tr>
             <th className="px-4 py-3 font-medium">Item</th>
             <th className="px-4 py-3 font-medium">Requested</th>
@@ -353,21 +353,21 @@ function ItemTable({ items }: { items: RequestItem[] }) {
           {items.map((item) => (
             <tr
               key={item.itemType}
-              className="border-t border-[#223038] bg-[#111b21]"
+              className="border-t border-[color:var(--border)] bg-[color:var(--card)]"
             >
-              <td className="px-4 py-3 font-medium text-white">
+              <td className="px-4 py-3 font-medium text-[color:var(--foreground)]">
                 {item.itemType}
               </td>
-              <td className="px-4 py-3 text-[#aebac1]">
+              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
                 {item.requestedQty}
               </td>
-              <td className="px-4 py-3 text-[#aebac1]">
+              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
                 {item.approvedQty}
               </td>
-              <td className="px-4 py-3 text-[#aebac1]">
+              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
                 {item.returnedQty}
               </td>
-              <td className="px-4 py-3 text-[#aebac1]">
+              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
                 {item.receivedAtHqQty}
               </td>
             </tr>
@@ -396,36 +396,36 @@ function PackageCard({
   pending: boolean;
 }) {
   return (
-    <article className="rounded-3xl border border-[#223038] bg-[#111b21] p-4">
+    <article className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <div className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#8696a0]">
+          <div className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
             {pkg.packageCode}
           </div>
-          <p className="text-sm text-white">{pkg.note}</p>
+          <p className="text-sm text-[color:var(--foreground)]">{pkg.note}</p>
         </div>
         <StatusBadge status={pkg.status} />
       </div>
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
         <div>
-          <dt className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+          <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
             Packet
           </dt>
-          <dd className="mt-1 font-medium text-white">
+          <dd className="mt-1 font-medium text-[color:var(--foreground)]">
             {pkg.packageCode}
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+          <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
             QR Token
           </dt>
-          <dd className="mt-1 break-all font-mono text-white">{pkg.qrToken}</dd>
+          <dd className="mt-1 break-all font-mono text-[color:var(--foreground)]">{pkg.qrToken}</dd>
         </div>
         <div>
-          <dt className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+          <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
             Packed / Received
           </dt>
-          <dd className="mt-1 font-medium text-white">
+          <dd className="mt-1 font-medium text-[color:var(--foreground)]">
             SD {pkg.shippedSdCardsCount} / {pkg.receivedSdCardsCount ?? "-"}
           </dd>
         </div>
@@ -434,7 +434,7 @@ function PackageCard({
         <button
           type="button"
           onClick={() => onSelectQr(pkg)}
-          className="rounded-full border border-[#31444e] bg-[#202c33] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#d1d7db]"
+          className="rounded-full border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)]"
         >
           {canEditQr ? "Open QR Detail" : "View QR"}
         </button>
@@ -445,7 +445,7 @@ function PackageCard({
                 type="button"
                 onClick={() => onUpdateStatus(pkg, action)}
                 disabled={pending}
-                className="rounded-full border border-[#31444e] bg-[#202c33] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#d1d7db] disabled:opacity-60"
+                className="rounded-full border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)] disabled:opacity-60"
               >
                 {statusLabel(action)}
               </button>
@@ -458,27 +458,27 @@ function PackageCard({
 
 function MeritPanel({ scores }: { scores: MeritScore[] }) {
   return (
-    <div className="rounded-[28px] border border-[#223038] bg-[#111b21] p-4 sm:p-5">
+    <div className="rounded-[28px] border border-[color:var(--border)] bg-[color:var(--card)] p-4 sm:p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8696a0]">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
             Team merit
           </p>
-          <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
+          <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
             Return discipline scoreboard
           </h2>
         </div>
-        <span className="rounded-full border border-[#223038] bg-[#202c33] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d1d7db]">
+        <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
           SD 50 / Devices 25 / Accessories 25
         </span>
       </div>
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {scores.map((score) => (
-          <article key={score.teamName} className="rounded-3xl border border-[#223038] bg-[#0f171c] p-3">
+          <article key={score.teamName} className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-white">{score.teamName}</h3>
-                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[#8696a0]">
+                <h3 className="text-sm font-semibold text-[color:var(--foreground)]">{score.teamName}</h3>
+                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                   SD {score.sdCardShortfall} • Devices {score.deviceShortfall} • Accessories {score.accessoryShortfall}
                 </p>
               </div>
@@ -490,22 +490,22 @@ function MeritPanel({ scores }: { scores: MeritScore[] }) {
                 Score {score.score.toFixed(2)}
               </span>
             </div>
-            <dl className="mt-4 grid gap-2 text-sm text-[#8696a0]">
+            <dl className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
               <div className="flex items-center justify-between gap-3">
                 <dt>SD card penalty</dt>
-                <dd className="font-medium text-white">
+                <dd className="font-medium text-[color:var(--foreground)]">
                   {score.sdCardPenalty.toFixed(2)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Device penalty</dt>
-                <dd className="font-medium text-white">
+                <dd className="font-medium text-[color:var(--foreground)]">
                   {score.devicePenalty.toFixed(2)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Accessory penalty</dt>
-                <dd className="font-medium text-white">
+                <dd className="font-medium text-[color:var(--foreground)]">
                   {score.accessoryPenalty.toFixed(2)}
                 </dd>
               </div>
@@ -568,7 +568,7 @@ function MovementLedgerPanel({
         {movements.map((movement) => (
           <article
             key={movement.id}
-            className="rounded-3xl border border-[#223038] bg-[#111b21] p-4"
+            className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 space-y-2">
@@ -576,55 +576,55 @@ function MovementLedgerPanel({
                   <TicketTypeBadge ticketType={movement.ticketType} />
                   <StatusBadge status={movement.status} />
                 </div>
-                <h3 className="break-words text-base font-semibold text-white">
+                <h3 className="break-words text-base font-semibold text-[color:var(--foreground)]">
                   {movement.routeSummary}
                 </h3>
               </div>
-              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#8696a0]">
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                 {formatDateTime(movement.lastEventAt)}
               </span>
             </div>
-            <dl className="mt-4 grid gap-2 text-sm text-[#8696a0]">
+            <dl className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
               <div className="flex items-start justify-between gap-3">
                 <dt>Source</dt>
-                <dd className="max-w-[65%] text-right font-medium text-white">
+                <dd className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
                   {movement.sourceLabel}
                 </dd>
               </div>
               <div className="flex items-start justify-between gap-3">
                 <dt>Destination</dt>
-                <dd className="max-w-[65%] text-right font-medium text-white">
+                <dd className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
                   {movement.destinationLabel}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Devices / SD</dt>
-                <dd className="font-medium text-white">
+                <dd className="font-medium text-[color:var(--foreground)]">
                   {movement.devicesCount} / {movement.sdCardsCount}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Hubs / Cables</dt>
-                <dd className="font-medium text-white">
+                <dd className="font-medium text-[color:var(--foreground)]">
                   {movement.usbHubsCount} / {movement.cablesCount}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Packets</dt>
-                <dd className="font-medium text-white">
+                <dd className="font-medium text-[color:var(--foreground)]">
                   {movement.packageCount}
                 </dd>
               </div>
               {movement.relatedTicketId ? (
                 <div className="flex items-center justify-between gap-3">
                   <dt>Linked ticket</dt>
-                  <dd className="font-mono text-white">
+                  <dd className="font-mono text-[color:var(--foreground)]">
                     {movement.relatedTicketId}
                   </dd>
                 </div>
               ) : null}
             </dl>
-            <p className="mt-4 text-sm leading-6 text-[#aebac1]">
+            <p className="mt-4 text-sm leading-6 text-[color:var(--muted-foreground)]">
               {movement.note}
             </p>
           </article>
@@ -1543,11 +1543,11 @@ export function OperationsDashboard({
   }
 
   return (
-    <main className="ops-dark min-h-screen bg-[#0b141a] text-[color:var(--foreground)] lg:h-screen">
+    <main className="min-h-screen bg-[color:var(--background)] text-[color:var(--foreground)] lg:h-screen">
       <div className="flex min-h-screen lg:h-screen">
-        <aside className="hidden w-[76px] shrink-0 border-r border-[#223038] bg-[#111b21] lg:flex lg:flex-col">
-          <div className="flex h-18 items-center justify-center border-b border-[#223038]">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#202c33] text-sm font-semibold tracking-[0.24em] text-white">
+        <aside className="hidden w-[76px] shrink-0 border-r border-[color:var(--border)] bg-[color:var(--card)] lg:flex lg:flex-col">
+          <div className="flex h-18 items-center justify-center border-b border-[color:var(--border)]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--secondary)] text-sm font-semibold tracking-[0.24em] text-[color:var(--foreground)]">
               BA
             </div>
           </div>
@@ -1562,8 +1562,8 @@ export function OperationsDashboard({
                   onClick={() => setActiveWorkspace(workspace.id)}
                   className={`group relative flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
                     active
-                      ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
-                      : "border-[#223038] bg-[#111b21] text-[#8696a0] hover:border-[#2f4049] hover:bg-[#172229] hover:text-[#e9edef]"
+                      ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
+                      : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted-foreground)] hover:border-[#2f4049] hover:bg-[color:var(--muted)] hover:text-[#e9edef]"
                   }`}
                   title={workspace.label}
                 >
@@ -1577,15 +1577,15 @@ export function OperationsDashboard({
               );
             })}
           </nav>
-          <div className="border-t border-[#223038] px-3 py-4">
+          <div className="border-t border-[color:var(--border)] px-3 py-4">
             <div className="flex flex-col items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#202c33] text-sm font-semibold text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--secondary)] text-sm font-semibold text-[color:var(--foreground)]">
                 {userInitials}
               </div>
               <button
                 type="button"
                 onClick={onLogout}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#223038] bg-[#111b21] text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8696a0] transition hover:border-[#2f4049] hover:bg-[#172229] hover:text-[#e9edef]"
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)] transition hover:border-[#2f4049] hover:bg-[color:var(--muted)] hover:text-[#e9edef]"
                 title="Sign out"
               >
                 Out
@@ -1595,18 +1595,18 @@ export function OperationsDashboard({
         </aside>
 
         <div className="min-w-0 flex-1">
-          <div className="border-b border-[#223038] bg-[#111b21] px-4 py-3 lg:hidden">
+          <div className="border-b border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">Build AI</p>
-                <p className="text-xs uppercase tracking-[0.18em] text-[#8696a0]">
+                <p className="text-sm font-semibold text-[color:var(--foreground)]">Build AI</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                   {viewerRoleLabel(session.user.role)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onLogout}
-                className="rounded-full border border-[#223038] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+                className="rounded-full border border-[color:var(--border)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]"
               >
                 Sign Out
               </button>
@@ -1622,8 +1622,8 @@ export function OperationsDashboard({
                     onClick={() => setActiveWorkspace(workspace.id)}
                     className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
                       active
-                        ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
-                        : "border-[#223038] bg-[#111b21] text-[#8696a0]"
+                        ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
+                        : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted-foreground)]"
                     }`}
                   >
                     {workspace.label} {workspace.count > 0 ? `(${workspace.count})` : ""}
@@ -1635,30 +1635,34 @@ export function OperationsDashboard({
 
           {activeWorkspace === "tickets" ? (
             <div className="grid min-h-[calc(100vh-88px)] lg:h-screen lg:min-h-0 lg:grid-cols-[360px_minmax(0,1fr)]">
-              <aside className="flex min-h-0 flex-col border-b border-[#223038] bg-[#111b21] lg:border-b-0 lg:border-r">
-                <div className="border-b border-[#223038] px-4 py-4">
+              <aside className="flex min-h-0 flex-col border-b border-[color:var(--border)] bg-[color:var(--card)] lg:border-b-0 lg:border-r">
+                <div className="border-b border-[color:var(--border)] px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h1 className="text-xl font-semibold tracking-[-0.03em] text-white">
+                      <h1 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
                         Tickets
                       </h1>
-                      <p className="mt-1 text-sm text-[#8696a0]">
-                        Latest requests, transfers, and operator conversations.
+                      <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                        Track requests, shipments, and deployment ops.
                       </p>
                     </div>
                     {canCreateTicket ? (
                       <button
                         type="button"
                         onClick={() => setShowCreateTicketForm((current) => !current)}
-                        className="rounded-full border border-[#223038] bg-[#202c33] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+                        className={`rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
+                          showCreateTicketForm
+                            ? "border-[color:var(--border)] bg-[color:var(--secondary)] text-[color:var(--foreground)]"
+                            : "border-[color:var(--accent)] bg-[color:var(--accent)] text-white"
+                        }`}
                       >
-                        {showCreateTicketForm ? "Hide" : "New"}
+                        {showCreateTicketForm ? "Cancel" : "New Request"}
                       </button>
                     ) : null}
                   </div>
 
                   {canCreateTicket && showCreateTicketForm ? (
-                    <div className="mt-4 grid gap-3 rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                    <div className="mt-4 grid gap-3 rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                       <div className="grid gap-3 sm:grid-cols-2">
                         <select
                           value={ticketDraft.ticketType}
@@ -1668,7 +1672,7 @@ export function OperationsDashboard({
                               ticketType: event.target.value as TicketType,
                             }))
                           }
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         >
                           <option value="deployment">Deployment request</option>
                           <option value="transfer">Factory transfer</option>
@@ -1683,7 +1687,7 @@ export function OperationsDashboard({
                               ? "Destination team name"
                               : "Team name"
                           }
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         />
                         <input
                           value={ticketDraft.factoryName}
@@ -1698,7 +1702,7 @@ export function OperationsDashboard({
                               ? "Destination factory name"
                               : "Factory name"
                           }
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         />
                         <input
                           type="date"
@@ -1709,7 +1713,7 @@ export function OperationsDashboard({
                               deploymentDate: event.target.value,
                             }))
                           }
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         />
                         {ticketDraft.ticketType === "transfer" ? (
                           <>
@@ -1722,7 +1726,7 @@ export function OperationsDashboard({
                                 }))
                               }
                               placeholder="Source team name"
-                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                             />
                             <input
                               value={ticketDraft.sourceFactoryName ?? ""}
@@ -1733,7 +1737,7 @@ export function OperationsDashboard({
                                 }))
                               }
                               placeholder="Source factory name"
-                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                             />
                             <input
                               value={ticketDraft.linkedTicketId ?? ""}
@@ -1744,7 +1748,7 @@ export function OperationsDashboard({
                                 }))
                               }
                               placeholder="Linked ticket ID"
-                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none sm:col-span-2"
+                              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none sm:col-span-2"
                             />
                           </>
                         ) : null}
@@ -1758,7 +1762,7 @@ export function OperationsDashboard({
                             }))
                           }
                           placeholder="Workers"
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         />
                         <input
                           type="number"
@@ -1770,7 +1774,7 @@ export function OperationsDashboard({
                             }))
                           }
                           placeholder="Devices requested"
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         />
                         <input
                           type="number"
@@ -1782,7 +1786,7 @@ export function OperationsDashboard({
                             }))
                           }
                           placeholder="SD cards requested"
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         />
                         <select
                           value={ticketDraft.priority}
@@ -1792,7 +1796,7 @@ export function OperationsDashboard({
                               priority: event.target.value as TicketCreateInput["priority"],
                             }))
                           }
-                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                         >
                           <option value="high">High priority</option>
                           <option value="medium">Medium priority</option>
@@ -1800,7 +1804,7 @@ export function OperationsDashboard({
                         </select>
                       </div>
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                        <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                           Ticket title is generated from team, quantity, and deployment date.
                         </p>
                         <button
@@ -1825,7 +1829,7 @@ export function OperationsDashboard({
                         </button>
                       </div>
                       {createFeedback ? (
-                        <p className="text-sm text-[#8696a0]">{createFeedback}</p>
+                        <p className="text-sm text-[color:var(--muted-foreground)]">{createFeedback}</p>
                       ) : null}
                     </div>
                   ) : null}
@@ -1835,7 +1839,7 @@ export function OperationsDashboard({
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                       placeholder="Search team, factory, or title"
-                      className="w-full rounded-2xl border border-[#223038] bg-[#202c33] px-4 py-3 text-sm text-white outline-none"
+                      className="w-full rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-4 py-3 text-sm text-[color:var(--foreground)] outline-none"
                     />
                   </div>
                   <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -1849,8 +1853,8 @@ export function OperationsDashboard({
                           onClick={() => setStatusFilter(option.value)}
                           className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
                             active
-                              ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
-                              : "border-[#223038] bg-[#111b21] text-[#8696a0]"
+                              ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
+                              : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted-foreground)]"
                           }`}
                         >
                           {option.label}
@@ -1877,35 +1881,35 @@ export function OperationsDashboard({
                         key={ticket.id}
                         type="button"
                         onClick={() => setSelectedTicketId(ticket.id)}
-                        className={`flex w-full items-start gap-3 border-b border-[#1f2b33] px-4 py-3 text-left transition ${
-                          selected ? "bg-[#202c33]" : "bg-[#111b21] hover:bg-[#172229]"
+                        className={`flex w-full items-start gap-3 border-b border-[color:var(--border)] px-4 py-3 text-left transition ${
+                          selected ? "bg-[color:var(--secondary)]" : "bg-[color:var(--card)] hover:bg-[color:var(--muted)]"
                         }`}
                       >
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25323a] text-sm font-semibold text-white">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[color:var(--secondary)] text-sm font-semibold text-[color:var(--foreground)]">
                           {initials}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="truncate text-sm font-semibold text-white">
+                                <p className="truncate text-sm font-semibold text-[color:var(--foreground)]">
                                   {ticket.teamName}
                                 </p>
                                 <TicketTypeBadge ticketType={ticket.ticketType} />
                               </div>
-                              <p className="truncate text-xs text-[#8696a0]">{ticket.factoryName}</p>
+                              <p className="truncate text-xs text-[color:var(--muted-foreground)]">{ticket.factoryName}</p>
                             </div>
-                            <span className="shrink-0 text-xs font-medium text-[#8696a0]">
+                            <span className="shrink-0 text-xs font-medium text-[color:var(--muted-foreground)]">
                               {formatDateTime(new Date(latestActivityAt).toISOString())}
                             </span>
                           </div>
-                          <p className="mt-2 line-clamp-2 text-sm text-[#aebac1]">{latestPreview}</p>
+                          <p className="mt-2 line-clamp-2 text-sm text-[color:var(--muted-foreground)]">{latestPreview}</p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <StatusBadge status={ticket.status} />
-                            <span className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                               SD {ticket.sdCardsRequested}
                             </span>
-                            <span className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                               Devices {ticket.devicesRequested}
                             </span>
                           </div>
@@ -1914,21 +1918,21 @@ export function OperationsDashboard({
                     );
                   })}
                   {orderedTickets.length === 0 ? (
-                    <div className="px-4 py-10 text-sm text-[#8696a0]">
+                    <div className="px-4 py-10 text-sm text-[color:var(--muted-foreground)]">
                       No tickets match the current filter.
                     </div>
                   ) : null}
                 </div>
               </aside>
 
-              <section className="min-w-0 bg-[#0b141a]">
+              <section className="min-w-0 bg-[color:var(--background)]">
                 {selectedTicket ? (
                   <div className="grid min-h-full lg:h-screen lg:grid-cols-[minmax(0,1fr)_360px]">
-                    <div className="flex min-h-0 flex-col lg:border-r lg:border-[#223038]">
-                      <div className="border-b border-[#223038] bg-[#111b21] px-4 py-4 lg:px-5">
+                    <div className="flex min-h-0 flex-col lg:border-r lg:border-[color:var(--border)]">
+                      <div className="border-b border-[color:var(--border)] bg-[color:var(--card)] px-4 py-4 lg:px-5">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#25323a] text-sm font-semibold text-white">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--secondary)] text-sm font-semibold text-[color:var(--foreground)]">
                               {selectedTicket.teamName
                                 .split(/\s+/)
                                 .filter(Boolean)
@@ -1938,19 +1942,19 @@ export function OperationsDashboard({
                             </div>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <h2 className="truncate text-lg font-semibold text-white">
+                                <h2 className="truncate text-lg font-semibold text-[color:var(--foreground)]">
                                   {selectedTicket.teamName}
                                 </h2>
                                 <TicketTypeBadge ticketType={selectedTicket.ticketType} />
                                 <StatusBadge status={selectedTicket.status} />
                               </div>
-                              <p className="mt-1 truncate text-sm text-[#8696a0]">
+                              <p className="mt-1 truncate text-sm text-[color:var(--muted-foreground)]">
                                 {selectedTicket.factoryName} • Deploy {formatDate(selectedTicket.deploymentDate)} • Owner {selectedTicket.requestOwner}
                               </p>
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border border-[#223038] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                            <span className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                               {streamStatus}
                             </span>
                             {quickHeaderActions.map((action) => (
@@ -1962,7 +1966,7 @@ export function OperationsDashboard({
                                 className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
                                   action === "accepted"
                                     ? "bg-[#00a884] text-[#0b141a]"
-                                    : "bg-[#f15c6d] text-white"
+                                    : "bg-[#f15c6d] text-[color:var(--foreground)]"
                                 } disabled:opacity-60`}
                               >
                                 {statusPending ? "Updating..." : statusLabel(action)}
@@ -1990,8 +1994,8 @@ export function OperationsDashboard({
                                   <article
                                     className={`rounded-2xl border px-4 py-3 shadow-sm transition-transform duration-150 ${
                                       isOwnMessage
-                                        ? "border-[#0b7f6a] bg-[#005c4b]"
-                                        : "border-[#223038] bg-[#202c33]"
+                                        ? "border-[color:var(--success)] bg-[color:var(--success-muted)]"
+                                        : "border-[color:var(--border)] bg-[color:var(--secondary)]"
                                     }`}
                                     style={{
                                       transform:
@@ -2013,12 +2017,12 @@ export function OperationsDashboard({
                                   >
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                       <div className="flex items-center gap-2">
-                                        <p className="text-sm font-semibold text-white">
+                                        <p className="text-sm font-semibold text-[color:var(--foreground)]">
                                           {message.author}
                                         </p>
                                         <RoleBadge role={message.role} />
                                       </div>
-                                      <span className="text-[11px] uppercase tracking-[0.14em] text-[#b6c4ca]">
+                                      <span className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                                         {formatDateTime(message.sentAt)}
                                       </span>
                                     </div>
@@ -2031,24 +2035,24 @@ export function OperationsDashboard({
                                           );
                                           target?.scrollIntoView({ behavior: "smooth", block: "center" });
                                         }}
-                                        className="mt-3 block w-full rounded-xl border border-[#31444e] bg-black/10 px-3 py-2 text-left"
+                                        className="mt-3 block w-full rounded-xl border border-[color:var(--border)] bg-black/10 px-3 py-2 text-left"
                                       >
-                                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#b6c4ca]">
+                                        <p className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                           Replying to {message.replyToAuthor ?? "message"}
                                         </p>
-                                        <p className="mt-1 text-sm leading-5 text-white">
+                                        <p className="mt-1 text-sm leading-5 text-[color:var(--foreground)]">
                                           {message.replyToExcerpt}
                                         </p>
                                       </button>
                                     ) : null}
-                                    <p className="mt-3 text-sm leading-6 text-white">
+                                    <p className="mt-3 text-sm leading-6 text-[color:var(--foreground)]">
                                       {message.message}
                                     </p>
                                     <div className="mt-3 flex justify-end">
                                       <button
                                         type="button"
                                         onClick={() => beginReply(message)}
-                                        className="rounded-full border border-[#31444e] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+                                        className="rounded-full border border-[color:var(--border)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]"
                                       >
                                         Reply
                                       </button>
@@ -2061,22 +2065,22 @@ export function OperationsDashboard({
                         </div>
                       </div>
 
-                      <div className="border-t border-[#223038] bg-[#111b21] px-3 py-4 sm:px-4 lg:px-6">
+                      <div className="border-t border-[color:var(--border)] bg-[color:var(--card)] px-3 py-4 sm:px-4 lg:px-6">
                         <div className="mx-auto max-w-4xl">
                           {replyTarget ? (
-                            <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-[#223038] bg-[#1b2a30] px-3 py-2">
+                            <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border)] bg-[#1b2a30] px-3 py-2">
                               <div className="min-w-0">
                                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#53bdeb]">
                                   Replying to {replyTarget.author}
                                 </p>
-                                <p className="truncate text-sm text-white">
+                                <p className="truncate text-sm text-[color:var(--foreground)]">
                                   {replyExcerpt(replyTarget.message)}
                                 </p>
                               </div>
                               <button
                                 type="button"
                                 onClick={clearReplyTarget}
-                                className="rounded-full border border-[#31444e] px-2.5 py-1 text-xs font-semibold text-[#d1d7db]"
+                                className="rounded-full border border-[color:var(--border)] px-2.5 py-1 text-xs font-semibold text-[color:var(--foreground)]"
                               >
                                 Cancel
                               </button>
@@ -2090,15 +2094,15 @@ export function OperationsDashboard({
                                 onChange={(event) => setMessageDraft(event.target.value)}
                                 rows={3}
                                 disabled={!canChat || messagePending}
-                                className="rounded-[22px] border border-[#223038] bg-[#202c33] px-4 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--secondary)] px-4 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                 placeholder="Type a message for this ticket"
                               />
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                   Posting as {viewerRoleLabel(viewer.role)}
                                 </span>
                                 {messageFeedback ? (
-                                  <p className="text-sm text-[#8696a0]">{messageFeedback}</p>
+                                  <p className="text-sm text-[color:var(--muted-foreground)]">{messageFeedback}</p>
                                 ) : null}
                               </div>
                             </div>
@@ -2115,8 +2119,8 @@ export function OperationsDashboard({
                       </div>
                     </div>
 
-                    <aside className="flex min-h-0 flex-col border-t border-[#223038] bg-[#111b21] lg:border-t-0">
-                      <div className="border-b border-[#223038] p-3">
+                    <aside className="flex min-h-0 flex-col border-t border-[color:var(--border)] bg-[color:var(--card)] lg:border-t-0">
+                      <div className="border-b border-[color:var(--border)] p-3">
                         <div className="flex gap-2 overflow-x-auto">
                           {[
                             { id: "tracking" as DetailPanelId, label: "Tracking" },
@@ -2132,8 +2136,8 @@ export function OperationsDashboard({
                                 onClick={() => setDetailPanel(tab.id)}
                                 className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
                                   active
-                                    ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
-                                    : "border-[#223038] bg-[#111b21] text-[#8696a0]"
+                                    ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
+                                    : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted-foreground)]"
                                 }`}
                               >
                                 {tab.label}
@@ -2146,56 +2150,56 @@ export function OperationsDashboard({
                       <div className="min-h-0 flex-1 overflow-y-auto p-4">
                         {detailPanel === "tracking" ? (
                           <div className="grid gap-4">
-                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                               <div className="flex items-center justify-between gap-3">
                                 <div>
-                                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                  <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                     Ticket overview
                                   </p>
-                                  <h3 className="mt-2 text-base font-semibold text-white">
+                                  <h3 className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
                                     {selectedTicket.title}
                                   </h3>
                                 </div>
-                                <span className="rounded-full border border-[#223038] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                <span className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                   {selectedTicket.id}
                                 </span>
                               </div>
-                              <p className="mt-3 text-sm leading-6 text-[#aebac1]">
+                              <p className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]">
                                 {selectedTicket.summary}
                               </p>
-                              <div className="mt-4 grid gap-2 text-sm text-[#8696a0]">
+                              <div className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
                                 <div className="flex items-center justify-between gap-3">
                                   <span>Priority</span>
-                                  <span className="font-medium text-white">{selectedTicket.priority}</span>
+                                  <span className="font-medium text-[color:var(--foreground)]">{selectedTicket.priority}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
                                   <span>Workers</span>
-                                  <span className="font-medium text-white">{selectedTicket.workerCount}</span>
+                                  <span className="font-medium text-[color:var(--foreground)]">{selectedTicket.workerCount}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
                                   <span>Request owner</span>
-                                  <span className="font-medium text-white">{selectedTicket.requestOwner}</span>
+                                  <span className="font-medium text-[color:var(--foreground)]">{selectedTicket.requestOwner}</span>
                                 </div>
                                 {selectedTicket.ticketType === "transfer" ? (
                                   <div className="flex items-start justify-between gap-3">
                                     <span>Source</span>
-                                    <span className="max-w-[65%] text-right font-medium text-white">
+                                    <span className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
                                       {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
                                     </span>
                                   </div>
                                 ) : null}
                               </div>
                             </div>
-                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                 Requested inventory
                               </p>
                               <div className="mt-3">
                                 <ItemTable items={selectedTicket.items} />
                               </div>
                             </div>
-                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                 Tracking history
                               </p>
                               <div className="mt-4">
@@ -2207,18 +2211,18 @@ export function OperationsDashboard({
 
                         {detailPanel === "actions" ? (
                           <div className="grid gap-4">
-                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                 Ticket actions
                               </p>
-                              <label className="mt-3 grid gap-2 text-sm text-[#d1d7db]">
+                              <label className="mt-3 grid gap-2 text-sm text-[color:var(--foreground)]">
                                 Status note
                                 <textarea
                                   value={statusNote}
                                   onChange={(event) => setStatusNote(event.target.value)}
                                   rows={3}
                                   disabled={!canUpdateStatus || statusPending}
-                                  className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                  className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                   placeholder="Add the operational note for this transition"
                                 />
                               </label>
@@ -2230,38 +2234,38 @@ export function OperationsDashboard({
                                       type="button"
                                       onClick={() => void handleStatusUpdate(action)}
                                       disabled={statusPending}
-                                      className="rounded-full border border-[#31444e] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#d1d7db] disabled:opacity-60"
+                                      className="rounded-full border border-[color:var(--border)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)] disabled:opacity-60"
                                     >
                                       {statusPending ? "Updating..." : statusLabel(action)}
                                     </button>
                                   ))
                                 ) : (
-                                  <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                  <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                     No more state changes are available here.
                                   </span>
                                 )}
                               </div>
                               {statusFeedback ? (
-                                <p className="mt-3 text-sm text-[#8696a0]">{statusFeedback}</p>
+                                <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">{statusFeedback}</p>
                               ) : null}
                             </div>
 
-                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                 Close ticket
                               </p>
-                              <label className="mt-3 grid gap-2 text-sm text-[#d1d7db]">
+                              <label className="mt-3 grid gap-2 text-sm text-[color:var(--foreground)]">
                                 Closure note
                                 <textarea
                                   value={closeNote}
                                   onChange={(event) => setCloseNote(event.target.value)}
                                   rows={3}
                                   disabled={!canCloseTicket || closePending}
-                                  className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                  className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                 />
                               </label>
                               <div className="mt-4 flex items-center justify-between gap-3">
-                                <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                   {canCloseTicket
                                     ? `Close available for ${viewerRoleLabel(viewer.role)}`
                                     : `${viewerRoleLabel(viewer.role)} cannot close tickets`}
@@ -2282,7 +2286,7 @@ export function OperationsDashboard({
                                 </button>
                               </div>
                               {closeFeedback ? (
-                                <p className="mt-3 text-sm text-[#8696a0]">{closeFeedback}</p>
+                                <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">{closeFeedback}</p>
                               ) : null}
                             </div>
                           </div>
@@ -2291,17 +2295,17 @@ export function OperationsDashboard({
                         {detailPanel === "packets" ? (
                           <div className="grid gap-4">
                             {canEditPackages && (viewer.role === "admin" || viewer.role === "logistics") ? (
-                              <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
-                                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                    <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                       Generate labels
                                     </p>
-                                    <h3 className="mt-2 text-base font-semibold text-white">
+                                    <h3 className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
                                       Create QR batch
                                     </h3>
                                   </div>
-                                  <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                  <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                     {viewerRoleLabel(viewer.role)}
                                   </span>
                                 </div>
@@ -2317,7 +2321,7 @@ export function OperationsDashboard({
                                       }))
                                     }
                                     placeholder="Number of QR labels"
-                                    className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                    className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                                   />
                                   <div className="grid gap-3 sm:grid-cols-2">
                                     <input
@@ -2331,7 +2335,7 @@ export function OperationsDashboard({
                                         }))
                                       }
                                       placeholder="Shipped SD cards"
-                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                      className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                                     />
                                     <input
                                       type="number"
@@ -2344,7 +2348,7 @@ export function OperationsDashboard({
                                         }))
                                       }
                                       placeholder="Shipped devices"
-                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                      className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                                     />
                                     <input
                                       type="number"
@@ -2357,7 +2361,7 @@ export function OperationsDashboard({
                                         }))
                                       }
                                       placeholder="Shipped USB hubs"
-                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                      className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                                     />
                                     <input
                                       type="number"
@@ -2370,7 +2374,7 @@ export function OperationsDashboard({
                                         }))
                                       }
                                       placeholder="Shipped cables"
-                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                      className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                                     />
                                   </div>
                                   <input
@@ -2382,10 +2386,10 @@ export function OperationsDashboard({
                                       }))
                                     }
                                     placeholder="Shared QR label note"
-                                    className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                    className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                                   />
                                   <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs leading-5 text-[#8696a0]">
+                                    <p className="text-xs leading-5 text-[color:var(--muted-foreground)]">
                                       One shared payload. Build AI generates {packageDraft.labelCount || 0} unique QR IDs for this ticket.
                                     </p>
                                     <button
@@ -2398,27 +2402,27 @@ export function OperationsDashboard({
                                     </button>
                                   </div>
                                   {packageCreateFeedback ? (
-                                    <p className="text-sm text-[#8696a0]">{packageCreateFeedback}</p>
+                                    <p className="text-sm text-[color:var(--muted-foreground)]">{packageCreateFeedback}</p>
                                   ) : null}
                                 </div>
                               </div>
                             ) : null}
 
-                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
-                              <label className="grid gap-2 text-sm text-[#d1d7db]">
+                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                              <label className="grid gap-2 text-sm text-[color:var(--foreground)]">
                                 QR lookup
                                 <div className="flex flex-col gap-2 sm:flex-row">
                                   <input
                                     value={qrLookup}
                                     onChange={(event) => setQrLookup(event.target.value)}
                                     placeholder="Paste or scan QR token"
-                                    className="flex-1 rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                    className="flex-1 rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => void handleLoadQrDetail()}
                                     disabled={!canViewPackages || qrPending || !qrLookup.trim()}
-                                    className="rounded-full border border-[#31444e] px-4 py-3 text-sm font-semibold text-[#d1d7db] disabled:opacity-60"
+                                    className="rounded-full border border-[color:var(--border)] px-4 py-3 text-sm font-semibold text-[color:var(--foreground)] disabled:opacity-60"
                                   >
                                     {qrPending ? "Loading..." : "Open"}
                                   </button>
@@ -2446,28 +2450,28 @@ export function OperationsDashboard({
                                   pending={packagePending}
                                 />
                               ))}
-                              <label className="grid gap-2 text-sm text-[#d1d7db]">
+                              <label className="grid gap-2 text-sm text-[color:var(--foreground)]">
                                 Packet lifecycle note
                                 <textarea
                                   value={packageActionNote}
                                   onChange={(event) => setPackageActionNote(event.target.value)}
                                   rows={3}
                                   disabled={!canUpdatePackageStatus || packagePending}
-                                  className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                  className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                   placeholder="Add a note before moving a specific packet"
                                 />
                               </label>
                               {packageFeedback ? (
-                                <p className="text-sm text-[#8696a0]">{packageFeedback}</p>
+                                <p className="text-sm text-[color:var(--muted-foreground)]">{packageFeedback}</p>
                               ) : null}
                             </div>
 
                             {qrDetail ? (
-                              <div className="grid gap-4 rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <div className="grid gap-4 rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                                 <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
                                   <div className="space-y-3">
                                     {qrDetail.qrSvgPath ? (
-                                      <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4">
+                                      <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
                                         <Image
                                           src={qrSvgUrl(qrDetail.package.qrToken)}
                                           alt={`${qrDetail.package.packageCode} QR`}
@@ -2478,19 +2482,19 @@ export function OperationsDashboard({
                                         />
                                       </div>
                                     ) : null}
-                                    <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm">
-                                      <p className="font-semibold text-white">
+                                    <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 text-sm">
+                                      <p className="font-semibold text-[color:var(--foreground)]">
                                         {qrDetail.package.packageCode}
                                       </p>
-                                      <p className="mt-2 break-all text-[11px] uppercase tracking-[0.14em] text-[#8696a0]">
+                                      <p className="mt-2 break-all text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                                         {qrDetail.package.qrToken}
                                       </p>
-                                      <p className="mt-3 break-all text-[#8696a0]">{qrDetail.scanUrl}</p>
+                                      <p className="mt-3 break-all text-[color:var(--muted-foreground)]">{qrDetail.scanUrl}</p>
                                       <a
                                         href={qrDetail.scanUrl}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="mt-3 inline-flex rounded-full border border-[#31444e] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+                                        className="mt-3 inline-flex rounded-full border border-[color:var(--border)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]"
                                       >
                                         Open public page
                                       </a>
@@ -2499,63 +2503,63 @@ export function OperationsDashboard({
 
                                   <div className="grid gap-3">
                                     <div className="grid gap-3 sm:grid-cols-2">
-                                      <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm">
-                                        <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                      <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 text-sm">
+                                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                           Logistics packed
                                         </p>
-                                        <dl className="mt-3 grid gap-2 text-[#aebac1]">
+                                        <dl className="mt-3 grid gap-2 text-[color:var(--muted-foreground)]">
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>SD cards</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.shippedSdCardsCount}
                                             </dd>
                                           </div>
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>Devices</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.shippedDevicesCount}
                                             </dd>
                                           </div>
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>USB hubs</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.shippedUsbHubsCount}
                                             </dd>
                                           </div>
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>Cables</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.shippedCablesCount}
                                             </dd>
                                           </div>
                                         </dl>
                                       </div>
-                                      <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm">
-                                        <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                      <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 text-sm">
+                                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                           Factory confirmed received
                                         </p>
-                                        <dl className="mt-3 grid gap-2 text-[#aebac1]">
+                                        <dl className="mt-3 grid gap-2 text-[color:var(--muted-foreground)]">
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>SD cards</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.receivedSdCardsCount ?? "-"}
                                             </dd>
                                           </div>
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>Devices</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.receivedDevicesCount ?? "-"}
                                             </dd>
                                           </div>
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>USB hubs</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.receivedUsbHubsCount ?? "-"}
                                             </dd>
                                           </div>
                                           <div className="flex items-center justify-between gap-3">
                                             <dt>Cables</dt>
-                                            <dd className="font-medium text-white">
+                                            <dd className="font-medium text-[color:var(--foreground)]">
                                               {qrDetail.package.receivedCablesCount ?? "-"}
                                             </dd>
                                           </div>
@@ -2573,7 +2577,7 @@ export function OperationsDashboard({
                                         }
                                         disabled={!qrDetail.editable || qrPending}
                                         placeholder="Team name"
-                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                        className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                       />
                                       <input
                                         value={qrDraft.factoryName ?? qrDetail.factoryName}
@@ -2585,7 +2589,7 @@ export function OperationsDashboard({
                                         }
                                         disabled={!qrDetail.editable || qrPending}
                                         placeholder="Factory name"
-                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                        className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                       />
                                       <input
                                         type="date"
@@ -2597,7 +2601,7 @@ export function OperationsDashboard({
                                           }))
                                         }
                                         disabled={!qrDetail.editable || qrPending}
-                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                        className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                       />
                                       <input
                                         type="number"
@@ -2614,7 +2618,7 @@ export function OperationsDashboard({
                                         }
                                         disabled={!qrDetail.editable || qrPending}
                                         placeholder="Received SD card count"
-                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                        className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                       />
                                       <input
                                         type="number"
@@ -2631,7 +2635,7 @@ export function OperationsDashboard({
                                         }
                                         disabled={!qrDetail.editable || qrPending}
                                         placeholder="Received devices"
-                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                        className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                       />
                                       <input
                                         type="number"
@@ -2648,7 +2652,7 @@ export function OperationsDashboard({
                                         }
                                         disabled={!qrDetail.editable || qrPending}
                                         placeholder="Received USB hubs"
-                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                        className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                       />
                                       <input
                                         type="number"
@@ -2665,7 +2669,7 @@ export function OperationsDashboard({
                                         }
                                         disabled={!qrDetail.editable || qrPending}
                                         placeholder="Received cables"
-                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                        className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                       />
                                     </div>
                                     <textarea
@@ -2678,10 +2682,10 @@ export function OperationsDashboard({
                                       }
                                       rows={4}
                                       disabled={!qrDetail.editable || qrPending}
-                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
                                     />
                                     <div className="flex items-center justify-between gap-3">
-                                      <div className="space-y-1 text-xs uppercase tracking-[0.14em] text-[#8696a0]">
+                                      <div className="space-y-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                                         <p>
                                           {qrDetail.editable
                                             ? viewer.role === "admin" && qrDetail.lockedReason
@@ -2705,7 +2709,7 @@ export function OperationsDashboard({
                                       </button>
                                     </div>
                                     {qrFeedback ? (
-                                      <p className="text-sm text-[#8696a0]">{qrFeedback}</p>
+                                      <p className="text-sm text-[color:var(--muted-foreground)]">{qrFeedback}</p>
                                     ) : null}
                                   </div>
                                 </div>
@@ -2717,20 +2721,43 @@ export function OperationsDashboard({
                     </aside>
                   </div>
                 ) : (
-                  <div className="flex min-h-[420px] items-center justify-center p-8 text-sm text-[#8696a0]">
-                    No ticket selected.
+                  <div className="flex min-h-[520px] flex-col items-center justify-center p-8 text-center">
+                    <div className="max-w-md space-y-6">
+                      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[color:var(--accent-soft)] text-[color:var(--accent)]">
+                        <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </div>
+                      <div className="space-y-2">
+                        <h2 className="font-display text-2xl font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
+                          Moto Deployment Tracking
+                        </h2>
+                        <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
+                          Raise a new hardware request or select an existing ticket from the sidebar to track its lifecycle.
+                        </p>
+                      </div>
+                      {canCreateTicket && (
+                        <button
+                          type="button"
+                          onClick={() => setShowCreateTicketForm(true)}
+                          className="rounded-full border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:opacity-90"
+                        >
+                          Raise New Request
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </section>
             </div>
           ) : (
-            <section className="min-h-[calc(100vh-88px)] bg-[#0b141a] p-4 lg:h-screen lg:min-h-0 lg:p-6">
+            <section className="min-h-[calc(100vh-88px)] bg-[color:var(--background)] p-4 lg:h-screen lg:min-h-0 lg:p-6">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                     {currentWorkspace?.label ?? "Workspace"}
                   </p>
-                  <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">
+                  <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[color:var(--foreground)]">
                     {currentWorkspace?.label ?? "Operations"}
                   </h1>
                 </div>
@@ -2742,7 +2769,7 @@ export function OperationsDashboard({
                   >
                     API {health.ok ? "Healthy" : "Unavailable"}
                   </span>
-                  <span className="rounded-full border border-[#223038] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                  <span className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                     {session.user.displayName}
                   </span>
                 </div>
@@ -2781,45 +2808,45 @@ export function OperationsDashboard({
                               ].map((item) => (
                                 <div
                                   key={item.label}
-                                  className="rounded-3xl border border-[#223038] bg-[#111b21] p-4"
+                                  className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4"
                                 >
-                                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                     {item.label}
                                   </p>
-                                  <p className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white">
+                                  <p className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
                                     {item.value}
                                   </p>
                                 </div>
                               ))}
                             </div>
-                            <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4">
-                              <p className="text-sm font-semibold text-white">
+                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+                              <p className="text-sm font-semibold text-[color:var(--foreground)]">
                                 Station {selectedTicket.ingestionReport.station} started{" "}
                                 {formatDateTime(selectedTicket.ingestionReport.startedAt)}
                               </p>
-                              <p className="mt-2 text-sm leading-6 text-[#8696a0]">
+                              <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
                                 {selectedTicket.ingestionReport.note}
                               </p>
                             </div>
                           </>
                         ) : (
-                          <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm text-[#8696a0]">
+                          <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 text-sm text-[color:var(--muted-foreground)]">
                             Ingestion has not started for this ticket yet.
                           </div>
                         )}
 
                         {canReconcileIngestion ? (
-                          <div className="grid gap-3 rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                          <div className="grid gap-3 rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                             <div className="flex items-center justify-between gap-3">
                               <div>
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                                   Reconciliation form
                                 </p>
-                                <h3 className="mt-1 text-base font-semibold text-white">
+                                <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
                                   Record ingestion counts
                                 </h3>
                               </div>
-                              <span className="text-xs uppercase tracking-[0.14em] text-[#8696a0]">
+                              <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                                 {viewerRoleLabel(viewer.role)}
                               </span>
                             </div>
@@ -2833,7 +2860,7 @@ export function OperationsDashboard({
                                   }))
                                 }
                                 placeholder="Station"
-                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                               />
                               <input
                                 type="number"
@@ -2845,7 +2872,7 @@ export function OperationsDashboard({
                                   }))
                                 }
                                 placeholder="Expected"
-                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                               />
                               <input
                                 type="number"
@@ -2861,7 +2888,7 @@ export function OperationsDashboard({
                                   }))
                                 }
                                 placeholder="Received"
-                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                               />
                               <input
                                 type="number"
@@ -2873,7 +2900,7 @@ export function OperationsDashboard({
                                   }))
                                 }
                                 placeholder="Processed"
-                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                               />
                               <input
                                 type="number"
@@ -2885,7 +2912,7 @@ export function OperationsDashboard({
                                   }))
                                 }
                                 placeholder="Missing"
-                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                               />
                               <input
                                 type="number"
@@ -2897,7 +2924,7 @@ export function OperationsDashboard({
                                   }))
                                 }
                                 placeholder="Faulty"
-                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                               />
                             </div>
                             <textarea
@@ -2910,9 +2937,9 @@ export function OperationsDashboard({
                               }
                               rows={4}
                               placeholder="Counts summary and red-mark note"
-                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
                             />
-                            <label className="flex items-center gap-3 text-sm text-white">
+                            <label className="flex items-center gap-3 text-sm text-[color:var(--foreground)]">
                               <input
                                 type="checkbox"
                                 checked={Boolean(reconciliationDraft.markCompleted)}
@@ -2926,7 +2953,7 @@ export function OperationsDashboard({
                               Mark ingestion completed after saving
                             </label>
                             <div className="flex items-center justify-between gap-3">
-                              <span className="text-xs uppercase tracking-[0.14em] text-[#8696a0]">
+                              <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                                 Missing should equal expected minus received.
                               </span>
                               <button
@@ -2943,7 +2970,7 @@ export function OperationsDashboard({
                               </button>
                             </div>
                             {reconciliationFeedback ? (
-                              <p className="text-sm text-[#8696a0]">{reconciliationFeedback}</p>
+                              <p className="text-sm text-[color:var(--muted-foreground)]">{reconciliationFeedback}</p>
                             ) : null}
                           </div>
                         ) : null}
@@ -2957,30 +2984,30 @@ export function OperationsDashboard({
                       {currentSnapshot.ingestionQueue.map((packet) => (
                         <article
                           key={packet.id}
-                          className="rounded-3xl border border-[#223038] bg-[#111b21] p-4"
+                          className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                 {packet.packageCode}
                               </p>
-                              <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
+                              <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
                                 {packet.teamName}
                               </h3>
-                              <p className="mt-1 text-sm text-[#8696a0]">{packet.factoryName}</p>
+                              <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">{packet.factoryName}</p>
                             </div>
                             <StatusBadge status={packet.status} />
                           </div>
                           <dl className="mt-5 grid gap-3 text-sm">
                             <div className="flex items-center justify-between gap-3">
-                              <dt className="text-[#8696a0]">Deployment date</dt>
-                              <dd className="font-medium text-white">
+                              <dt className="text-[color:var(--muted-foreground)]">Deployment date</dt>
+                              <dd className="font-medium text-[color:var(--foreground)]">
                                 {formatDate(packet.deploymentDate)}
                               </dd>
                             </div>
                             <div className="flex items-center justify-between gap-3">
-                              <dt className="text-[#8696a0]">Expected SD cards</dt>
-                              <dd className="font-medium text-white">{packet.expectedSdCards}</dd>
+                              <dt className="text-[color:var(--muted-foreground)]">Expected SD cards</dt>
+                              <dd className="font-medium text-[color:var(--foreground)]">{packet.expectedSdCards}</dd>
                             </div>
                           </dl>
                         </article>
