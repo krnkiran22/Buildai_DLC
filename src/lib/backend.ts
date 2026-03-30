@@ -331,19 +331,21 @@ export async function updateTicketPackageStatus(
 
 export async function getQrPackageDetail(
   qrToken: string,
+  session?: AuthSession | null,
 ): Promise<QrPackageDetail | null> {
   if (!API_BASE_URL) {
     return null;
   }
 
   return requestJson<QrPackageDetail>(`/api/v1/qr/${qrToken}`, {
-    headers: publicRequestHeaders(),
+    headers: session ? requestHeaders(session) : publicRequestHeaders(),
   });
 }
 
 export async function updateQrPackageDetail(
   qrToken: string,
   payload: PublicQrPackagePatch,
+  session?: AuthSession | null,
 ): Promise<QrPackageDetail | null> {
   if (!API_BASE_URL) {
     return null;
@@ -353,7 +355,7 @@ export async function updateQrPackageDetail(
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      ...publicRequestHeaders(),
+      ...(session ? requestHeaders(session) : publicRequestHeaders()),
     },
     body: JSON.stringify(payload),
   });

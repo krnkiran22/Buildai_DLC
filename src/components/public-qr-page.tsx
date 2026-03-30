@@ -42,7 +42,14 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
           teamName: payload.teamName,
           factoryName: payload.factoryName,
           deploymentDate: payload.deploymentDate,
-          sdCardsCount: payload.package.sdCardsCount,
+          receivedSdCardsCount:
+            payload.package.receivedSdCardsCount ?? payload.package.shippedSdCardsCount,
+          receivedDevicesCount:
+            payload.package.receivedDevicesCount ?? payload.package.shippedDevicesCount,
+          receivedUsbHubsCount:
+            payload.package.receivedUsbHubsCount ?? payload.package.shippedUsbHubsCount,
+          receivedCablesCount:
+            payload.package.receivedCablesCount ?? payload.package.shippedCablesCount,
           note: payload.package.note,
         });
       })
@@ -80,7 +87,14 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
         teamName: updated.teamName,
         factoryName: updated.factoryName,
         deploymentDate: updated.deploymentDate,
-        sdCardsCount: updated.package.sdCardsCount,
+        receivedSdCardsCount:
+          updated.package.receivedSdCardsCount ?? updated.package.shippedSdCardsCount,
+        receivedDevicesCount:
+          updated.package.receivedDevicesCount ?? updated.package.shippedDevicesCount,
+        receivedUsbHubsCount:
+          updated.package.receivedUsbHubsCount ?? updated.package.shippedUsbHubsCount,
+        receivedCablesCount:
+          updated.package.receivedCablesCount ?? updated.package.shippedCablesCount,
         note: updated.package.note,
       });
       setEditing(false);
@@ -107,7 +121,8 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-[color:var(--muted-foreground)]">
                   Factory and ingestion teams can scan this label without login. Team,
-                  factory, deployment date, and SD card count stay attached to the packet.
+                  factory, deployment date, shipped counts, and received counts stay attached
+                  to the packet.
                 </p>
               </div>
               {detail ? (
@@ -211,13 +226,67 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
                         {detail.deploymentDate || "Not set"}
                       </p>
                     </div>
-                    <div className="border border-[color:var(--border)] bg-white/78 p-4">
+                    <div className="border border-[color:var(--border)] bg-white/78 p-4 sm:col-span-2">
                       <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                        SD card count
+                        Logistics packed
                       </p>
-                      <p className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
-                        {detail.package.sdCardsCount}
+                      <dl className="mt-2 grid gap-2 text-sm text-[color:var(--muted-foreground)] sm:grid-cols-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>SD cards</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.shippedSdCardsCount}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>Devices</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.shippedDevicesCount}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>USB hubs</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.shippedUsbHubsCount}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>Cables</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.shippedCablesCount}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                    <div className="border border-[color:var(--border)] bg-white/78 p-4 sm:col-span-2">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                        Factory confirmed received
                       </p>
+                      <dl className="mt-2 grid gap-2 text-sm text-[color:var(--muted-foreground)] sm:grid-cols-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>SD cards</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.receivedSdCardsCount ?? "Not set"}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>Devices</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.receivedDevicesCount ?? "Not set"}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>USB hubs</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.receivedUsbHubsCount ?? "Not set"}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <dt>Cables</dt>
+                          <dd className="font-semibold text-[color:var(--foreground)]">
+                            {detail.package.receivedCablesCount ?? "Not set"}
+                          </dd>
+                        </div>
+                      </dl>
                     </div>
                   </div>
 
@@ -254,11 +323,47 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
                         <input
                           type="number"
                           min={0}
-                          value={draft.sdCardsCount ?? 0}
+                          value={draft.receivedSdCardsCount ?? 0}
                           onChange={(event) =>
                             setDraft((current) => ({
                               ...current,
-                              sdCardsCount: Number(event.target.value),
+                              receivedSdCardsCount: Number(event.target.value),
+                            }))
+                          }
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          value={draft.receivedDevicesCount ?? 0}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              receivedDevicesCount: Number(event.target.value),
+                            }))
+                          }
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          value={draft.receivedUsbHubsCount ?? 0}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              receivedUsbHubsCount: Number(event.target.value),
+                            }))
+                          }
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          value={draft.receivedCablesCount ?? 0}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              receivedCablesCount: Number(event.target.value),
                             }))
                           }
                           className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"

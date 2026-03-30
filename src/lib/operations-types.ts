@@ -68,7 +68,14 @@ export type PackageRecord = {
   direction: "outbound" | "return";
   status: TicketStatus;
   itemCount: number;
-  sdCardsCount: number;
+  shippedSdCardsCount: number;
+  shippedDevicesCount: number;
+  shippedUsbHubsCount: number;
+  shippedCablesCount: number;
+  receivedSdCardsCount?: number | null;
+  receivedDevicesCount?: number | null;
+  receivedUsbHubsCount?: number | null;
+  receivedCablesCount?: number | null;
   note: string;
   teamName?: string | null;
   factoryName?: string | null;
@@ -260,17 +267,22 @@ export type TicketStatusUpdateInput = {
 export type PackageCreateInput = {
   direction: "outbound" | "return";
   itemCount: number;
-  sdCardsCount: number;
+  shippedSdCardsCount: number;
+  shippedDevicesCount: number;
+  shippedUsbHubsCount: number;
+  shippedCablesCount: number;
   note: string;
 };
 
 export type PackageBatchItemInput = {
-  sdCardsCount: number;
+  shippedSdCardsCount: number;
+  shippedDevicesCount: number;
+  shippedUsbHubsCount: number;
+  shippedCablesCount: number;
   note: string;
 };
 
 export type PackageBatchCreateInput = {
-  direction: "outbound" | "return";
   labelCount: number;
   packages: PackageBatchItemInput[];
 };
@@ -279,7 +291,10 @@ export type PublicQrPackagePatch = {
   teamName?: string;
   factoryName?: string;
   deploymentDate?: string;
-  sdCardsCount?: number;
+  receivedSdCardsCount?: number;
+  receivedDevicesCount?: number;
+  receivedUsbHubsCount?: number;
+  receivedCablesCount?: number;
   note?: string;
 };
 

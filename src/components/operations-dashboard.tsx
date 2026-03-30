@@ -319,9 +319,11 @@ function PackageCard({
         </div>
         <div>
           <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-            SD Cards
+            Packed / Received
           </dt>
-          <dd className="mt-1 font-medium text-[color:var(--foreground)]">{pkg.sdCardsCount}</dd>
+          <dd className="mt-1 font-medium text-[color:var(--foreground)]">
+            SD {pkg.shippedSdCardsCount} / {pkg.receivedSdCardsCount ?? "-"}
+          </dd>
         </div>
       </dl>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -542,9 +544,16 @@ export function OperationsDashboard({
   const [packagePending, setPackagePending] = useState(false);
   const [packageFeedback, setPackageFeedback] = useState("");
   const [packageDraft, setPackageDraft] = useState<PackageBatchCreateInput>({
-    direction: "return",
     labelCount: 1,
-    packages: [{ sdCardsCount: 0, note: "" }],
+    packages: [
+      {
+        shippedSdCardsCount: 0,
+        shippedDevicesCount: 0,
+        shippedUsbHubsCount: 0,
+        shippedCablesCount: 0,
+        note: "",
+      },
+    ],
   });
   const [packageCreatePending, setPackageCreatePending] = useState(false);
   const [packageCreateFeedback, setPackageCreateFeedback] = useState("");
@@ -624,7 +633,8 @@ export function OperationsDashboard({
       qrDetail.deploymentDate === (nextPackage.deploymentDate ?? "") &&
       qrDetail.package.status === nextPackage.status &&
       qrDetail.package.note === nextPackage.note &&
-      qrDetail.package.sdCardsCount === nextPackage.sdCardsCount &&
+      qrDetail.package.receivedSdCardsCount === nextPackage.receivedSdCardsCount &&
+      qrDetail.package.receivedDevicesCount === nextPackage.receivedDevicesCount &&
       qrDetail.package.direction === nextPackage.direction;
     if (unchanged) {
       return;
@@ -1005,12 +1015,19 @@ export function OperationsDashboard({
         upsertTicket(updated);
       } else {
         const nextPackages: PackageRecord[] = packageDraft.packages.map((entry, index) => ({
-          packageCode: `PKG-${packageDraft.direction === "outbound" ? "OUT" : "RET"}-${selectedTicket.id.slice(-4).toUpperCase()}${String.fromCharCode(65 + selectedTicket.packages.length + index)}`,
+          packageCode: `PKG-RET-${selectedTicket.id.slice(-4).toUpperCase()}${String.fromCharCode(65 + selectedTicket.packages.length + index)}`,
           qrToken: `qr_local_${Date.now()}_${index}`,
-          direction: packageDraft.direction,
+          direction: "return",
           status: selectedTicket.status,
           itemCount: 1,
-          sdCardsCount: entry.sdCardsCount,
+          shippedSdCardsCount: entry.shippedSdCardsCount,
+          shippedDevicesCount: entry.shippedDevicesCount,
+          shippedUsbHubsCount: entry.shippedUsbHubsCount,
+          shippedCablesCount: entry.shippedCablesCount,
+          receivedSdCardsCount: null,
+          receivedDevicesCount: null,
+          receivedUsbHubsCount: null,
+          receivedCablesCount: null,
           note: entry.note,
           teamName: selectedTicket.teamName,
           factoryName: selectedTicket.factoryName,
@@ -1027,9 +1044,16 @@ export function OperationsDashboard({
       }
       setPackageCreateFeedback("QR labels generated.");
       setPackageDraft({
-        direction: "return",
         labelCount: 1,
-        packages: [{ sdCardsCount: 0, note: "" }],
+        packages: [
+          {
+            shippedSdCardsCount: 0,
+            shippedDevicesCount: 0,
+            shippedUsbHubsCount: 0,
+            shippedCablesCount: 0,
+            note: "",
+          },
+        ],
       });
     } catch (error) {
       if (error instanceof Error && /401|403/i.test(error.message)) {
@@ -1052,7 +1076,7 @@ export function OperationsDashboard({
       setQrPending(true);
     setQrFeedback("");
     try {
-      const detail = await getQrPackageDetail(resolvedToken);
+      const detail = await getQrPackageDetail(resolvedToken, session);
       if (detail) {
         if (detail.ticketId !== selectedTicket?.id) {
           setSelectedTicketId(detail.ticketId);
@@ -1062,7 +1086,14 @@ export function OperationsDashboard({
           teamName: detail.teamName,
           factoryName: detail.factoryName,
           deploymentDate: detail.deploymentDate,
-          sdCardsCount: detail.package.sdCardsCount,
+          receivedSdCardsCount:
+            detail.package.receivedSdCardsCount ?? detail.package.shippedSdCardsCount,
+          receivedDevicesCount:
+            detail.package.receivedDevicesCount ?? detail.package.shippedDevicesCount,
+          receivedUsbHubsCount:
+            detail.package.receivedUsbHubsCount ?? detail.package.shippedUsbHubsCount,
+          receivedCablesCount:
+            detail.package.receivedCablesCount ?? detail.package.shippedCablesCount,
           note: detail.package.note,
         });
       } else if (selectedTicket) {
@@ -1074,7 +1105,14 @@ export function OperationsDashboard({
             teamName: detail.teamName,
             factoryName: detail.factoryName,
             deploymentDate: detail.deploymentDate,
-            sdCardsCount: detail.package.sdCardsCount,
+            receivedSdCardsCount:
+              detail.package.receivedSdCardsCount ?? detail.package.shippedSdCardsCount,
+            receivedDevicesCount:
+              detail.package.receivedDevicesCount ?? detail.package.shippedDevicesCount,
+            receivedUsbHubsCount:
+              detail.package.receivedUsbHubsCount ?? detail.package.shippedUsbHubsCount,
+            receivedCablesCount:
+              detail.package.receivedCablesCount ?? detail.package.shippedCablesCount,
             note: detail.package.note,
           });
         }
@@ -1097,7 +1135,7 @@ export function OperationsDashboard({
     setQrPending(true);
     setQrFeedback("");
     try {
-      const updated = await updateQrPackageDetail(qrDetail.package.qrToken, qrDraft);
+      const updated = await updateQrPackageDetail(qrDetail.package.qrToken, qrDraft, session);
       if (updated) {
         setQrDetail(updated);
         setQrFeedback("QR detail updated.");
@@ -1805,19 +1843,6 @@ export function OperationsDashboard({
                             </span>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            <select
-                              value={packageDraft.direction}
-                              onChange={(event) =>
-                                setPackageDraft((current) => ({
-                                  ...current,
-                                  direction: event.target.value as PackageBatchCreateInput["direction"],
-                                }))
-                              }
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            >
-                              <option value="outbound">Outbound</option>
-                              <option value="return">Return</option>
-                            </select>
                             <input
                               type="number"
                               min={1}
@@ -1830,7 +1855,10 @@ export function OperationsDashboard({
                                     { length: Math.max(Number(event.target.value) || 1, 1) },
                                     (_, index) =>
                                       current.packages[index] ?? {
-                                        sdCardsCount: 0,
+                                        shippedSdCardsCount: 0,
+                                        shippedDevicesCount: 0,
+                                        shippedUsbHubsCount: 0,
+                                        shippedCablesCount: 0,
                                         note: "",
                                       },
                                   ),
@@ -1840,32 +1868,97 @@ export function OperationsDashboard({
                               className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                             />
                             <div className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              Logistics sets team and factory from the ticket.
+                              Logistics sets team and factory from the ticket. Each label keeps its own shipped counts.
                             </div>
                           </div>
                           <div className="grid gap-3">
                             {packageDraft.packages.map((entry, index) => (
                               <div
                                 key={`label-${index}`}
-                                className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3 sm:grid-cols-[0.32fr_1fr]"
+                                className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3"
                               >
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={entry.sdCardsCount || ""}
-                                  onChange={(event) =>
-                                    setPackageDraft((current) => ({
-                                      ...current,
-                                      packages: current.packages.map((pkg, packageIndex) =>
-                                        packageIndex === index
-                                          ? { ...pkg, sdCardsCount: Number(event.target.value) }
-                                          : pkg,
-                                      ),
-                                    }))
-                                  }
-                                  placeholder="SD card count"
-                                  className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                                />
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={entry.shippedSdCardsCount || ""}
+                                    onChange={(event) =>
+                                      setPackageDraft((current) => ({
+                                        ...current,
+                                        packages: current.packages.map((pkg, packageIndex) =>
+                                          packageIndex === index
+                                            ? {
+                                                ...pkg,
+                                                shippedSdCardsCount: Number(event.target.value),
+                                              }
+                                            : pkg,
+                                        ),
+                                      }))
+                                    }
+                                    placeholder="Shipped SD cards"
+                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                                  />
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={entry.shippedDevicesCount || ""}
+                                    onChange={(event) =>
+                                      setPackageDraft((current) => ({
+                                        ...current,
+                                        packages: current.packages.map((pkg, packageIndex) =>
+                                          packageIndex === index
+                                            ? {
+                                                ...pkg,
+                                                shippedDevicesCount: Number(event.target.value),
+                                              }
+                                            : pkg,
+                                        ),
+                                      }))
+                                    }
+                                    placeholder="Shipped devices"
+                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                                  />
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={entry.shippedUsbHubsCount || ""}
+                                    onChange={(event) =>
+                                      setPackageDraft((current) => ({
+                                        ...current,
+                                        packages: current.packages.map((pkg, packageIndex) =>
+                                          packageIndex === index
+                                            ? {
+                                                ...pkg,
+                                                shippedUsbHubsCount: Number(event.target.value),
+                                              }
+                                            : pkg,
+                                        ),
+                                      }))
+                                    }
+                                    placeholder="Shipped USB hubs"
+                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                                  />
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={entry.shippedCablesCount || ""}
+                                    onChange={(event) =>
+                                      setPackageDraft((current) => ({
+                                        ...current,
+                                        packages: current.packages.map((pkg, packageIndex) =>
+                                          packageIndex === index
+                                            ? {
+                                                ...pkg,
+                                                shippedCablesCount: Number(event.target.value),
+                                              }
+                                            : pkg,
+                                        ),
+                                      }))
+                                    }
+                                    placeholder="Shipped cables"
+                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                                  />
+                                </div>
                                 <input
                                   value={entry.note}
                                   onChange={(event) =>
@@ -1895,7 +1988,12 @@ export function OperationsDashboard({
                                 packageCreatePending ||
                                 packageDraft.labelCount <= 0 ||
                                 packageDraft.packages.some(
-                                  (entry) => entry.sdCardsCount < 0 || !entry.note.trim(),
+                                  (entry) =>
+                                    entry.shippedSdCardsCount < 0 ||
+                                    entry.shippedDevicesCount < 0 ||
+                                    entry.shippedUsbHubsCount < 0 ||
+                                    entry.shippedCablesCount < 0 ||
+                                    !entry.note.trim(),
                                 )
                               }
                               className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
@@ -2009,6 +2107,70 @@ export function OperationsDashboard({
 
                           <div className="grid gap-3">
                             <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4 text-sm">
+                                <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                                  Logistics packed
+                                </p>
+                                <dl className="mt-3 grid gap-2 text-[color:var(--muted-foreground)]">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>SD cards</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.shippedSdCardsCount}
+                                    </dd>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>Devices</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.shippedDevicesCount}
+                                    </dd>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>USB hubs</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.shippedUsbHubsCount}
+                                    </dd>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>Cables</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.shippedCablesCount}
+                                    </dd>
+                                  </div>
+                                </dl>
+                              </div>
+                              <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4 text-sm">
+                                <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                                  Factory confirmed received
+                                </p>
+                                <dl className="mt-3 grid gap-2 text-[color:var(--muted-foreground)]">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>SD cards</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.receivedSdCardsCount ?? "-"}
+                                    </dd>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>Devices</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.receivedDevicesCount ?? "-"}
+                                    </dd>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>USB hubs</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.receivedUsbHubsCount ?? "-"}
+                                    </dd>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <dt>Cables</dt>
+                                    <dd className="font-medium text-[color:var(--foreground)]">
+                                      {qrDetail.package.receivedCablesCount ?? "-"}
+                                    </dd>
+                                  </div>
+                                </dl>
+                              </div>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
                               <input
                                 value={qrDraft.teamName ?? qrDetail.teamName}
                                 onChange={(event) =>
@@ -2047,15 +2209,70 @@ export function OperationsDashboard({
                               />
                               <input
                                 type="number"
-                                value={qrDraft.sdCardsCount ?? qrDetail.package.sdCardsCount}
+                                value={
+                                  qrDraft.receivedSdCardsCount ??
+                                  qrDetail.package.receivedSdCardsCount ??
+                                  qrDetail.package.shippedSdCardsCount
+                                }
                                 onChange={(event) =>
                                   setQrDraft((current) => ({
                                     ...current,
-                                    sdCardsCount: Number(event.target.value),
+                                    receivedSdCardsCount: Number(event.target.value),
                                   }))
                                 }
                                 disabled={!qrDetail.editable || qrPending}
-                                placeholder="SD card count"
+                                placeholder="Received SD card count"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              />
+                              <input
+                                type="number"
+                                value={
+                                  qrDraft.receivedDevicesCount ??
+                                  qrDetail.package.receivedDevicesCount ??
+                                  qrDetail.package.shippedDevicesCount
+                                }
+                                onChange={(event) =>
+                                  setQrDraft((current) => ({
+                                    ...current,
+                                    receivedDevicesCount: Number(event.target.value),
+                                  }))
+                                }
+                                disabled={!qrDetail.editable || qrPending}
+                                placeholder="Received devices"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              />
+                              <input
+                                type="number"
+                                value={
+                                  qrDraft.receivedUsbHubsCount ??
+                                  qrDetail.package.receivedUsbHubsCount ??
+                                  qrDetail.package.shippedUsbHubsCount
+                                }
+                                onChange={(event) =>
+                                  setQrDraft((current) => ({
+                                    ...current,
+                                    receivedUsbHubsCount: Number(event.target.value),
+                                  }))
+                                }
+                                disabled={!qrDetail.editable || qrPending}
+                                placeholder="Received USB hubs"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              />
+                              <input
+                                type="number"
+                                value={
+                                  qrDraft.receivedCablesCount ??
+                                  qrDetail.package.receivedCablesCount ??
+                                  qrDetail.package.shippedCablesCount
+                                }
+                                onChange={(event) =>
+                                  setQrDraft((current) => ({
+                                    ...current,
+                                    receivedCablesCount: Number(event.target.value),
+                                  }))
+                                }
+                                disabled={!qrDetail.editable || qrPending}
+                                placeholder="Received cables"
                                 className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
                               />
                             </div>
@@ -2075,7 +2292,9 @@ export function OperationsDashboard({
                               <div className="space-y-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                                 <p>
                                   {qrDetail.editable
-                                    ? "Public edit window is open for this QR label."
+                                    ? viewer.role === "admin" && qrDetail.lockedReason
+                                      ? "Public edit window closed. Admin override is active."
+                                      : "Public edit window is open for this QR label."
                                     : qrDetail.lockedReason ?? "Public edit window is closed."}
                                 </p>
                                 {qrDetail.editWindowExpiresAt ? (
