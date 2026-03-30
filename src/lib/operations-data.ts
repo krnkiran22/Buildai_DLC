@@ -1,7 +1,7 @@
 import type { DashboardSnapshot } from "@/lib/operations-types";
 
 export const mockOperationsSnapshot: DashboardSnapshot = {
-  productName: "Moto Ops Control",
+  productName: "Build AI",
   generatedAt: "2026-03-29T16:20:00Z",
   highlightedTicketId: "tkt_0041",
   viewer: {

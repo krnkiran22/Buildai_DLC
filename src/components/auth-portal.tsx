@@ -94,7 +94,7 @@ export function AuthPortal({
         <section className="panel-shell grid w-full overflow-hidden lg:grid-cols-[1.08fr_0.92fr]">
           <div className="border-b border-[color:var(--border)] bg-[color:var(--accent-soft)] px-6 py-8 lg:border-b-0 lg:border-r lg:px-8">
             <span className="border border-[color:var(--border)] bg-white px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
-              Moto Ops Control
+              Build AI
             </span>
             <h1 className="mt-5 max-w-2xl font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-5xl">
               Registration and login for factory and ingestion teams.

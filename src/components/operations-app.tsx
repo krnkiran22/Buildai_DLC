@@ -110,7 +110,7 @@ export function OperationsApp() {
       <main className="grid-overlay min-h-screen">
         <div className="mx-auto flex min-h-screen w-full max-w-[960px] items-center justify-center px-4">
           <div className="panel-shell border border-[color:var(--border)] px-6 py-5 text-sm text-[color:var(--muted-foreground)]">
-            Loading Moto Ops Control...
+            Loading Build AI...
           </div>
         </div>
       </main>
