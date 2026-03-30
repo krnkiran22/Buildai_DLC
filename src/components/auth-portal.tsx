@@ -29,15 +29,53 @@ export function AuthPortal({
   const [feedback, setFeedback] = useState("");
   const [pending, setPending] = useState(false);
 
+  function validateRegistrationForm() {
+    if (!registerDisplayName.trim()) {
+      return "Display name is required.";
+    }
+    if (registerDisplayName.trim().length < 2) {
+      return "Display name must be at least 2 characters.";
+    }
+    if (!registerEmail.trim()) {
+      return "Email is required.";
+    }
+    if (!registerPassword) {
+      return "Password is required.";
+    }
+    if (registerPassword.length < 8) {
+      return "Password must be at least 8 characters.";
+    }
+    return "";
+  }
+
+  function validateLoginForm() {
+    if (!loginEmail.trim()) {
+      return "Email is required.";
+    }
+    if (!loginPassword) {
+      return "Password is required.";
+    }
+    if (loginPassword.length < 8) {
+      return "Password must be at least 8 characters.";
+    }
+    return "";
+  }
+
   async function handleRequestOtp() {
+    const validationMessage = validateRegistrationForm();
+    if (validationMessage) {
+      setFeedback(validationMessage);
+      return;
+    }
+
     setPending(true);
     setFeedback("");
 
     try {
       const challenge = await requestRegistrationOtp({
-        email: registerEmail,
+        email: registerEmail.trim(),
         password: registerPassword,
-        displayName: registerDisplayName,
+        displayName: registerDisplayName.trim(),
         role: registerRole,
       });
       setOtpEmail(challenge.email);
@@ -55,13 +93,22 @@ export function AuthPortal({
   }
 
   async function handleVerifyOtp() {
+    if (!otpEmail.trim()) {
+      setFeedback("Registration email is missing. Request a new OTP.");
+      return;
+    }
+    if (!otpCode.trim()) {
+      setFeedback("Enter the OTP code from your email.");
+      return;
+    }
+
     setPending(true);
     setFeedback("");
 
     try {
       const session = await verifyRegistrationOtp({
-        email: otpEmail,
-        otp: otpCode,
+        email: otpEmail.trim(),
+        otp: otpCode.trim(),
       });
       startTransition(() => onAuthenticated(session));
     } catch (error) {
@@ -72,12 +119,18 @@ export function AuthPortal({
   }
 
   async function handleLogin() {
+    const validationMessage = validateLoginForm();
+    if (validationMessage) {
+      setFeedback(validationMessage);
+      return;
+    }
+
     setPending(true);
     setFeedback("");
 
     try {
       const session = await loginUser({
-        email: loginEmail,
+        email: loginEmail.trim(),
         password: loginPassword,
       });
       startTransition(() => onAuthenticated(session));
@@ -146,6 +199,7 @@ export function AuthPortal({
                 <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
                   Email
                   <input
+                    type="email"
                     value={loginEmail}
                     onChange={(event) => setLoginEmail(event.target.value)}
                     className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
@@ -155,6 +209,7 @@ export function AuthPortal({
                   Password
                   <input
                     type="password"
+                    minLength={8}
                     value={loginPassword}
                     onChange={(event) => setLoginPassword(event.target.value)}
                     className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
@@ -182,6 +237,7 @@ export function AuthPortal({
                 <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
                   Email
                   <input
+                    type="email"
                     value={registerEmail}
                     onChange={(event) => setRegisterEmail(event.target.value)}
                     className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
@@ -191,6 +247,7 @@ export function AuthPortal({
                   Password
                   <input
                     type="password"
+                    minLength={8}
                     value={registerPassword}
                     onChange={(event) => setRegisterPassword(event.target.value)}
                     className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"

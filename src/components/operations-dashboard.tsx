@@ -32,6 +32,7 @@ import type {
   RoleCapability,
   RequestItem,
   TicketCreateInput,
+  TicketRecord,
   TicketStatus,
   TicketType,
   TimelineEvent,
@@ -225,6 +226,59 @@ function viewerRoleLabel(role: UserRole) {
     case "ingestion":
       return "Ingestion";
   }
+}
+
+function validatePackageBatchDraft(
+  draft: PackageBatchCreateInput,
+  ticket: TicketRecord | undefined,
+) {
+  if (!ticket) {
+    return "Select a ticket before generating QR labels.";
+  }
+  if (draft.labelCount <= 0) {
+    return "Enter at least one QR label.";
+  }
+  if (draft.labelCount !== draft.packages.length) {
+    return "QR label count must match the number of label rows.";
+  }
+
+  let totalSdCards = 0;
+  let totalDevices = 0;
+
+  for (const [index, entry] of draft.packages.entries()) {
+    if (
+      entry.shippedSdCardsCount < 0 ||
+      entry.shippedDevicesCount < 0 ||
+      entry.shippedUsbHubsCount < 0 ||
+      entry.shippedCablesCount < 0
+    ) {
+      return `QR label ${index + 1} has an invalid shipped quantity.`;
+    }
+    if (!entry.note.trim()) {
+      return `QR label ${index + 1} note is required.`;
+    }
+
+    const totalForLabel =
+      entry.shippedSdCardsCount +
+      entry.shippedDevicesCount +
+      entry.shippedUsbHubsCount +
+      entry.shippedCablesCount;
+    if (totalForLabel <= 0) {
+      return `QR label ${index + 1} must include at least one shipped item count.`;
+    }
+
+    totalSdCards += entry.shippedSdCardsCount;
+    totalDevices += entry.shippedDevicesCount;
+  }
+
+  if (ticket.sdCardsRequested > 0 && totalSdCards <= 0) {
+    return "Enter the shipped SD card count for at least one QR label.";
+  }
+  if (ticket.devicesRequested > 0 && totalDevices <= 0) {
+    return "Enter the shipped device count for at least one QR label.";
+  }
+
+  return "";
 }
 
 function PanelHeader({
@@ -1124,6 +1178,12 @@ export function OperationsDashboard({
 
   async function handleCreatePackage() {
     if (!selectedTicket || !canEditPackages) {
+      return;
+    }
+
+    const validationMessage = validatePackageBatchDraft(packageDraft, selectedTicket);
+    if (validationMessage) {
+      setPackageCreateFeedback(validationMessage);
       return;
     }
 
@@ -2177,18 +2237,7 @@ export function OperationsDashboard({
                             <button
                               type="button"
                               onClick={() => void handleCreatePackage()}
-                              disabled={
-                                packageCreatePending ||
-                                packageDraft.labelCount <= 0 ||
-                                packageDraft.packages.some(
-                                  (entry) =>
-                                    entry.shippedSdCardsCount < 0 ||
-                                    entry.shippedDevicesCount < 0 ||
-                                    entry.shippedUsbHubsCount < 0 ||
-                                    entry.shippedCablesCount < 0 ||
-                                    !entry.note.trim(),
-                                )
-                              }
+                              disabled={packageCreatePending || !selectedTicket}
                               className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                             >
                               {packageCreatePending ? "Generating..." : "Generate QR Labels"}

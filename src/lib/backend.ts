@@ -24,6 +24,13 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
+type ApiValidationIssue = {
+  loc?: Array<string | number>;
+  msg?: string;
+  type?: string;
+  ctx?: Record<string, unknown>;
+};
+
 const PROD_API_BASE_URL =
   process.env.NEXT_PUBLIC_OPERATIONS_PROD_API_BASE_URL?.replace(/\/+$/, "") ??
   "https://marvelous-consideration-production.up.railway.app";
@@ -37,6 +44,133 @@ const ACTOR_NAME = process.env.NEXT_PUBLIC_ACTOR_NAME ?? "Admin Console";
 
 function apiBaseUrl() {
   return API_BASE_URL;
+}
+
+const API_ERROR_FIELD_LABELS: Record<string, string> = {
+  email: "Email",
+  password: "Password",
+  display_name: "Display name",
+  display_name_input: "Display name",
+  otp: "OTP code",
+  role: "Role",
+  label_count: "QR label count",
+  packages: "QR label",
+  note: "Note",
+  team_name: "Team name",
+  factory_name: "Factory name",
+  deployment_date: "Deployment date",
+  worker_count: "Worker count",
+  devices_requested: "Requested device count",
+  sd_cards_requested: "Requested SD card count",
+  shipped_sd_cards_count: "Shipped SD card count",
+  shipped_devices_count: "Shipped device count",
+  shipped_usb_hubs_count: "Shipped USB hub count",
+  shipped_cables_count: "Shipped cable count",
+  received_sd_cards_count: "Received SD card count",
+  received_devices_count: "Received device count",
+  received_usb_hubs_count: "Received USB hub count",
+  received_cables_count: "Received cable count",
+};
+
+function normalizeFieldKey(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[-\s]+/g, "_")
+    .toLowerCase();
+}
+
+function humanizeFieldName(value: string) {
+  const normalized = normalizeFieldKey(value);
+  return API_ERROR_FIELD_LABELS[normalized] ?? normalized.replace(/_/g, " ").replace(/^\w/, (char) => char.toUpperCase());
+}
+
+function formatValidationLocation(loc?: Array<string | number>) {
+  if (!Array.isArray(loc)) {
+    return "";
+  }
+
+  const parts: string[] = [];
+  for (const part of loc) {
+    if (typeof part === "string" && ["body", "query", "path", "header", "cookie"].includes(part)) {
+      continue;
+    }
+    if (typeof part === "number") {
+      if (parts.length > 0) {
+        parts[parts.length - 1] = `${parts[parts.length - 1]} ${part + 1}`;
+      } else {
+        parts.push(`Item ${part + 1}`);
+      }
+      continue;
+    }
+    parts.push(humanizeFieldName(part));
+  }
+
+  return parts.join(" ").trim();
+}
+
+function formatValidationIssue(issue: ApiValidationIssue) {
+  const fieldName = formatValidationLocation(issue.loc);
+  const errorType = issue.type ?? "";
+  const context = issue.ctx ?? {};
+
+  if (errorType === "missing") {
+    return `${fieldName || "Field"} is required.`;
+  }
+  if (errorType === "string_too_short" && typeof context.min_length === "number" && fieldName) {
+    return `${fieldName} must be at least ${context.min_length} characters.`;
+  }
+  if (errorType === "string_too_long" && typeof context.max_length === "number" && fieldName) {
+    return `${fieldName} must be ${context.max_length} characters or less.`;
+  }
+  if (errorType === "greater_than_equal" && typeof context.ge === "number" && fieldName) {
+    return `${fieldName} must be ${context.ge} or more.`;
+  }
+  if (errorType === "less_than_equal" && typeof context.le === "number" && fieldName) {
+    return `${fieldName} must be ${context.le} or less.`;
+  }
+
+  if (fieldName && issue.msg) {
+    return `${fieldName}: ${issue.msg}`;
+  }
+  return issue.msg ?? "Request failed.";
+}
+
+function extractApiErrorMessage(payload: unknown, status: number) {
+  if (!payload || typeof payload !== "object") {
+    return `Request failed with ${status}`;
+  }
+
+  const detail = (payload as { detail?: unknown }).detail;
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((issue) => formatValidationIssue(issue as ApiValidationIssue))
+      .filter(Boolean);
+    if (messages.length > 0) {
+      return messages.join(" ");
+    }
+  }
+
+  const errors = (payload as { errors?: unknown }).errors;
+  if (Array.isArray(errors)) {
+    const messages = errors
+      .map((issue) =>
+        typeof issue === "string" ? issue : formatValidationIssue(issue as ApiValidationIssue),
+      )
+      .filter(Boolean);
+    if (messages.length > 0) {
+      return messages.join(" ");
+    }
+  }
+
+  const message = (payload as { message?: unknown }).message;
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+
+  return `Request failed with ${status}`;
 }
 
 function websocketBaseUrl() {
@@ -104,9 +238,7 @@ async function requestJson<T>(
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    const detail =
-      payload?.detail || payload?.message || `Request failed with ${response.status}`;
-    throw new Error(detail);
+    throw new Error(extractApiErrorMessage(payload, response.status));
   }
 
   const payload = (await response.json()) as ApiEnvelope<T>;
