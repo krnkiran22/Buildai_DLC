@@ -12,6 +12,7 @@ export type TicketStatus =
   | "ingestion_processing"
   | "ingestion_completed"
   | "closed";
+export type TicketType = "deployment" | "transfer";
 
 export type Priority = "high" | "medium" | "low";
 export type InventoryStatus = "healthy" | "low_stock" | "critical";
@@ -100,8 +101,12 @@ export type IngestionReport = {
 export type TicketRecord = {
   id: string;
   title: string;
+  ticketType: TicketType;
   teamName: string;
   factoryName: string;
+  sourceTeamName?: string | null;
+  sourceFactoryName?: string | null;
+  linkedTicketId?: string | null;
   deploymentDate: string;
   workerCount: number;
   status: TicketStatus;
@@ -158,6 +163,25 @@ export type MeritScore = {
   updatedAt: string;
 };
 
+export type MovementRecord = {
+  id: string;
+  ticketId: string;
+  ticketType: TicketType;
+  status: TicketStatus;
+  sourceLabel: string;
+  destinationLabel: string;
+  routePath: string[];
+  routeSummary: string;
+  relatedTicketId?: string | null;
+  devicesCount: number;
+  sdCardsCount: number;
+  usbHubsCount: number;
+  cablesCount: number;
+  packageCount: number;
+  lastEventAt: string;
+  note: string;
+};
+
 export type AdminInventoryPatch = {
   totalUnits?: number;
   availableUnits?: number;
@@ -208,6 +232,7 @@ export type DashboardSnapshot = {
   ingestionQueue: IngestionQueueItem[];
   inventoryItems: AdminInventoryItem[];
   meritScores: MeritScore[];
+  movementHistory: MovementRecord[];
 };
 
 export type AuthUser = {
@@ -250,8 +275,12 @@ export type QrPackageDetail = {
 };
 
 export type TicketCreateInput = {
+  ticketType: TicketType;
   teamName: string;
   factoryName: string;
+  sourceTeamName?: string;
+  sourceFactoryName?: string;
+  linkedTicketId?: string;
   deploymentDate: string;
   workerCount: number;
   devicesRequested: number;

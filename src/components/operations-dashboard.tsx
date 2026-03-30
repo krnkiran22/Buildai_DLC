@@ -24,6 +24,7 @@ import type {
   IngestionReconciliationInput,
   LiveTicketEvent,
   MeritScore,
+  MovementRecord,
   PackageBatchCreateInput,
   PackageRecord,
   PublicQrPackagePatch,
@@ -32,6 +33,7 @@ import type {
   RequestItem,
   TicketCreateInput,
   TicketStatus,
+  TicketType,
   TimelineEvent,
   Tone,
   UserRole,
@@ -126,6 +128,10 @@ function statusLabel(status: TicketStatus) {
   }
 }
 
+function ticketTypeLabel(ticketType: TicketType) {
+  return ticketType === "transfer" ? "Transfer" : "Deployment";
+}
+
 function toneForStatus(status: TicketStatus): Tone {
   switch (status) {
     case "accepted":
@@ -193,6 +199,21 @@ function RoleBadge({ role }: { role: ChatMessage["role"] }) {
   );
 }
 
+function TicketTypeBadge({ ticketType }: { ticketType: TicketType }) {
+  const classes =
+    ticketType === "transfer"
+      ? "status-warning"
+      : "status-neutral";
+
+  return (
+    <span
+      className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${classes}`}
+    >
+      {ticketTypeLabel(ticketType)}
+    </span>
+  );
+}
+
 function viewerRoleLabel(role: UserRole) {
   switch (role) {
     case "admin":
@@ -234,8 +255,8 @@ function PanelHeader({
 
 function ItemTable({ items }: { items: RequestItem[] }) {
   return (
-    <div className="overflow-hidden border border-[color:var(--border)]">
-      <table className="w-full border-collapse text-left text-sm">
+    <div className="overflow-x-auto border border-[color:var(--border)]">
+      <table className="min-w-[640px] w-full border-collapse text-left text-sm">
         <thead className="bg-[color:var(--muted)] text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
           <tr>
             <th className="px-4 py-3 font-medium">Item</th>
@@ -315,7 +336,7 @@ function PackageCard({
           <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
             QR Token
           </dt>
-          <dd className="mt-1 font-mono text-[color:var(--foreground)]">{pkg.qrToken}</dd>
+          <dd className="mt-1 break-all font-mono text-[color:var(--foreground)]">{pkg.qrToken}</dd>
         </div>
         <div>
           <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
@@ -486,11 +507,11 @@ function RoleMatrixPanel({
                 <h3 className="text-sm font-semibold text-[color:var(--foreground)]">
                   {viewerRoleLabel(entry.role)}
                 </h3>
-                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                <p className="mt-1 break-words text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                   {entry.permissions.join(" / ")}
                 </p>
               </div>
-              <div className="flex flex-col gap-2 text-right">
+              <div className="flex flex-col gap-2 text-left sm:text-right">
                 <span
                   className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
                     entry.canChat ? "status-success" : "status-neutral"
@@ -511,6 +532,88 @@ function RoleMatrixPanel({
         ))}
       </div>
     </div>
+  );
+}
+
+function MovementLedgerPanel({
+  movements,
+}: {
+  movements: MovementRecord[];
+}) {
+  return (
+    <section className="panel-shell overflow-hidden">
+      <PanelHeader
+        eyebrow="Movement Ledger"
+        title="Full Device Movement History"
+        helper="Admin and logistics can trace hardware across HQ dispatch, factory return, and factory-to-factory transfer chains."
+      />
+      <div className="grid gap-4 p-5 md:grid-cols-2 2xl:grid-cols-3">
+        {movements.map((movement) => (
+          <article
+            key={movement.id}
+            className="border border-[color:var(--border)] bg-white/78 p-4"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <TicketTypeBadge ticketType={movement.ticketType} />
+                  <StatusBadge status={movement.status} />
+                </div>
+                <h3 className="break-words text-base font-semibold text-[color:var(--foreground)]">
+                  {movement.routeSummary}
+                </h3>
+              </div>
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                {formatDateTime(movement.lastEventAt)}
+              </span>
+            </div>
+            <dl className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
+              <div className="flex items-start justify-between gap-3">
+                <dt>Source</dt>
+                <dd className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
+                  {movement.sourceLabel}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <dt>Destination</dt>
+                <dd className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
+                  {movement.destinationLabel}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Devices / SD</dt>
+                <dd className="font-medium text-[color:var(--foreground)]">
+                  {movement.devicesCount} / {movement.sdCardsCount}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Hubs / Cables</dt>
+                <dd className="font-medium text-[color:var(--foreground)]">
+                  {movement.usbHubsCount} / {movement.cablesCount}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt>Packets</dt>
+                <dd className="font-medium text-[color:var(--foreground)]">
+                  {movement.packageCount}
+                </dd>
+              </div>
+              {movement.relatedTicketId ? (
+                <div className="flex items-center justify-between gap-3">
+                  <dt>Linked ticket</dt>
+                  <dd className="font-mono text-[color:var(--foreground)]">
+                    {movement.relatedTicketId}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+            <p className="mt-4 text-sm leading-6 text-[color:var(--muted-foreground)]">
+              {movement.note}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -579,8 +682,12 @@ export function OperationsDashboard({
   const [createPending, setCreatePending] = useState(false);
   const [createFeedback, setCreateFeedback] = useState("");
   const [ticketDraft, setTicketDraft] = useState<TicketCreateInput>({
+    ticketType: "deployment",
     teamName: "",
     factoryName: "",
+    sourceTeamName: "",
+    sourceFactoryName: "",
+    linkedTicketId: "",
     deploymentDate: "",
     workerCount: 0,
     devicesRequested: 0,
@@ -594,7 +701,9 @@ export function OperationsDashboard({
       deferredQuery.trim() === "" ||
       ticket.title.toLowerCase().includes(deferredQuery.toLowerCase()) ||
       ticket.teamName.toLowerCase().includes(deferredQuery.toLowerCase()) ||
-      ticket.factoryName.toLowerCase().includes(deferredQuery.toLowerCase());
+      ticket.factoryName.toLowerCase().includes(deferredQuery.toLowerCase()) ||
+      (ticket.sourceTeamName ?? "").toLowerCase().includes(deferredQuery.toLowerCase()) ||
+      (ticket.sourceFactoryName ?? "").toLowerCase().includes(deferredQuery.toLowerCase());
     const statusMatch = statusFilter === "all" || ticket.status === statusFilter;
 
     return queryMatch && statusMatch;
@@ -972,7 +1081,13 @@ export function OperationsDashboard({
     setCreateFeedback("");
 
     try {
-      const updated = await createTicket(ticketDraft, session);
+      const ticketPayload: TicketCreateInput = {
+        ...ticketDraft,
+        sourceTeamName: ticketDraft.sourceTeamName?.trim() || undefined,
+        sourceFactoryName: ticketDraft.sourceFactoryName?.trim() || undefined,
+        linkedTicketId: ticketDraft.linkedTicketId?.trim() || undefined,
+      };
+      const updated = await createTicket(ticketPayload, session);
       if (!updated) {
         throw new Error("Backend API is not configured.");
       }
@@ -984,8 +1099,12 @@ export function OperationsDashboard({
       setSelectedTicketId(updated.id);
       setCreateFeedback("Ticket created.");
       setTicketDraft({
+        ticketType: "deployment",
         teamName: "",
         factoryName: "",
+        sourceTeamName: "",
+        sourceFactoryName: "",
+        linkedTicketId: "",
         deploymentDate: "",
         workerCount: 0,
         devicesRequested: 0,
@@ -1276,7 +1395,7 @@ export function OperationsDashboard({
 
             <div className="grid gap-4 xl:grid-cols-2">
               <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
                       Flow locked
@@ -1317,7 +1436,7 @@ export function OperationsDashboard({
                   ].map((step, index) => (
                     <li
                       key={step}
-                      className="flex items-center justify-between border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-2"
+                      className="flex flex-wrap items-center justify-between gap-2 border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-2"
                     >
                       <span>{step}</span>
                       <span className="font-mono text-[11px] uppercase tracking-[0.14em]">
@@ -1346,7 +1465,7 @@ export function OperationsDashboard({
                   <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
                     {session.user.email}
                   </p>
-                  <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
                       {viewerRoleLabel(session.user.role)}
                     </span>
@@ -1406,7 +1525,7 @@ export function OperationsDashboard({
                         Raise ticket
                       </p>
                       <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
-                        Factory-side request form
+                        Factory-side request and transfer form
                       </h3>
                     </div>
                     <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
@@ -1414,12 +1533,29 @@ export function OperationsDashboard({
                     </span>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
+                    <select
+                      value={ticketDraft.ticketType}
+                      onChange={(event) =>
+                        setTicketDraft((current) => ({
+                          ...current,
+                          ticketType: event.target.value as TicketType,
+                        }))
+                      }
+                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                    >
+                      <option value="deployment">Deployment request</option>
+                      <option value="transfer">Factory transfer</option>
+                    </select>
                     <input
                       value={ticketDraft.teamName}
                       onChange={(event) =>
                         setTicketDraft((current) => ({ ...current, teamName: event.target.value }))
                       }
-                      placeholder="Team name"
+                      placeholder={
+                        ticketDraft.ticketType === "transfer"
+                          ? "Destination team name"
+                          : "Team name"
+                      }
                       className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                     />
                     <input
@@ -1430,9 +1566,39 @@ export function OperationsDashboard({
                           factoryName: event.target.value,
                         }))
                       }
-                      placeholder="Factory name"
+                      placeholder={
+                        ticketDraft.ticketType === "transfer"
+                          ? "Destination factory name"
+                          : "Factory name"
+                      }
                       className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                     />
+                    {ticketDraft.ticketType === "transfer" ? (
+                      <>
+                        <input
+                          value={ticketDraft.sourceTeamName ?? ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              sourceTeamName: event.target.value,
+                            }))
+                          }
+                          placeholder="Source team name"
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                        />
+                        <input
+                          value={ticketDraft.sourceFactoryName ?? ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              sourceFactoryName: event.target.value,
+                            }))
+                          }
+                          placeholder="Source factory name"
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                        />
+                      </>
+                    ) : null}
                     <input
                       type="date"
                       value={ticketDraft.deploymentDate}
@@ -1444,6 +1610,19 @@ export function OperationsDashboard({
                       }
                       className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                     />
+                    {ticketDraft.ticketType === "transfer" ? (
+                      <input
+                        value={ticketDraft.linkedTicketId ?? ""}
+                        onChange={(event) =>
+                          setTicketDraft((current) => ({
+                            ...current,
+                            linkedTicketId: event.target.value,
+                          }))
+                        }
+                        placeholder="Linked source ticket ID"
+                        className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                      />
+                    ) : null}
                     <input
                       type="number"
                       value={ticketDraft.workerCount || ""}
@@ -1481,7 +1660,7 @@ export function OperationsDashboard({
                       className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                     />
                   </div>
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <select
                       value={ticketDraft.priority}
                       onChange={(event) =>
@@ -1504,11 +1683,17 @@ export function OperationsDashboard({
                         !ticketDraft.teamName ||
                         !ticketDraft.factoryName ||
                         !ticketDraft.deploymentDate ||
-                        ticketDraft.workerCount <= 0
+                        ticketDraft.workerCount <= 0 ||
+                        (ticketDraft.ticketType === "transfer" &&
+                          (!ticketDraft.sourceTeamName || !ticketDraft.sourceFactoryName))
                       }
                       className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                     >
-                      {createPending ? "Creating..." : "Create Ticket"}
+                      {createPending
+                        ? "Creating..."
+                        : ticketDraft.ticketType === "transfer"
+                          ? "Create Transfer"
+                          : "Create Ticket"}
                     </button>
                   </div>
                   {createFeedback ? (
@@ -1565,8 +1750,9 @@ export function OperationsDashboard({
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
+                          <TicketTypeBadge ticketType={ticket.ticketType} />
                           <StatusBadge status={ticket.status} />
-                        <span className="border border-[color:var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                          <span className="border border-[color:var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                             {ticket.priority}
                           </span>
                         </div>
@@ -1583,6 +1769,11 @@ export function OperationsDashboard({
                       <p>Devices: {ticket.devicesRequested}</p>
                       <p>SD cards: {ticket.sdCardsRequested}</p>
                     </div>
+                    {ticket.ticketType === "transfer" ? (
+                      <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
+                        Source: {ticket.sourceTeamName} / {ticket.sourceFactoryName}
+                      </p>
+                    ) : null}
                     <p className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]">
                       {ticket.summary}
                     </p>
@@ -1609,6 +1800,14 @@ export function OperationsDashboard({
                 <div className="grid gap-6 p-5 lg:grid-cols-[1.15fr_0.85fr]">
                   <div className="space-y-5">
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="border border-[color:var(--border)] bg-white/78 p-4">
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                          Ticket type
+                        </p>
+                        <div className="mt-2">
+                          <TicketTypeBadge ticketType={selectedTicket.ticketType} />
+                        </div>
+                      </div>
                       <div className="border border-[color:var(--border)] bg-white/78 p-4">
                         <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                           Factory
@@ -1642,11 +1841,29 @@ export function OperationsDashboard({
                         </div>
                       </div>
                     </div>
+                    {selectedTicket.ticketType === "transfer" ? (
+                      <div className="border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-4">
+                        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--info-foreground)]">
+                          Transfer chain
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-[color:var(--foreground)]">
+                          Source {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
+                          {" "}to destination {selectedTicket.teamName} / {selectedTicket.factoryName}.
+                        </p>
+                        {selectedTicket.linkedTicketId ? (
+                          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                            Linked ticket {selectedTicket.linkedTicketId}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-4">
                         <h3 className="text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-                          Requested inventory
+                          {selectedTicket.ticketType === "transfer"
+                            ? "Transfer inventory"
+                            : "Requested inventory"}
                         </h3>
                         <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                           Deploys {formatDate(selectedTicket.deploymentDate)}
@@ -1701,7 +1918,7 @@ export function OperationsDashboard({
                             placeholder="Send a logistics or admin update into the ticket thread"
                           />
                         </label>
-                        <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                           <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                             Posting as {viewerRoleLabel(viewer.role)}
                           </span>
@@ -1776,7 +1993,7 @@ export function OperationsDashboard({
                           className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
                         />
                       </label>
-                      <div className="mt-4 flex items-center justify-between gap-3">
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                         <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                           {canCloseTicket
                             ? `Closing allowed for ${viewerRoleLabel(viewer.role)}`
@@ -2537,6 +2754,10 @@ export function OperationsDashboard({
             </section>
           )}
         </section>
+
+        {viewer.role === "admin" || viewer.role === "logistics" ? (
+          <MovementLedgerPanel movements={currentSnapshot.movementHistory} />
+        ) : null}
 
         <section className="panel-shell overflow-hidden">
           <PanelHeader

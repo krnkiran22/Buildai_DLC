@@ -82,6 +82,7 @@ function normalizeSnapshot(
     ingestionQueue: snapshot.ingestionQueue ?? fallback.ingestionQueue,
     inventoryItems: snapshot.inventoryItems ?? fallback.inventoryItems,
     meritScores: snapshot.meritScores ?? fallback.meritScores,
+    movementHistory: snapshot.movementHistory ?? fallback.movementHistory,
   };
 }
 

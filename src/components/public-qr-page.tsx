@@ -142,7 +142,7 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
                     <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
                       {detail.package.packageCode}
                     </p>
-                    <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                    <p className="mt-2 break-all font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                       {detail.package.qrToken}
                     </p>
                   </div>
@@ -402,7 +402,7 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                       <p className="text-sm leading-6 text-[color:var(--foreground)]">
                         Review the details first, then edit only if team, factory, date, or SD card
                         count must be corrected for this packet.
