@@ -117,13 +117,8 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
               </span>
               <div className="space-y-3">
                 <h1 className="font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)]">
-                  QR-linked packet details
+                  Packet detail
                 </h1>
-                <p className="max-w-2xl text-base leading-7 text-[color:var(--muted-foreground)]">
-                  Factory and ingestion teams can scan this label without login. Team,
-                  factory, deployment date, shipped counts, and received counts stay attached
-                  to the packet.
-                </p>
               </div>
               {detail ? (
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -172,13 +167,11 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
                 </p>
                 {detail?.editWindowExpiresAt ? (
                   <p className="mt-2 text-sm leading-6 text-[color:var(--foreground)]">
-                    Editable until {formatDateTime(detail.editWindowExpiresAt)}. After that,
-                    this QR becomes read-only for the public flow.
+                    Editable until {formatDateTime(detail.editWindowExpiresAt)}.
                   </p>
                 ) : (
                   <p className="mt-2 text-sm leading-6 text-[color:var(--foreground)]">
-                    The edit window starts after the first successful save and then remains open
-                    until end of day.
+                    The edit window starts after the first save.
                   </p>
                 )}
                 {!detail?.editable && detail?.lockedReason ? (
@@ -403,10 +396,7 @@ export function PublicQrPage({ qrToken }: { qrToken: string }) {
                     </div>
                   ) : (
                     <div className="flex flex-wrap items-center justify-between gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                      <p className="text-sm leading-6 text-[color:var(--foreground)]">
-                        Review the details first, then edit only if team, factory, date, or SD card
-                        count must be corrected for this packet.
-                      </p>
+                      <p className="text-sm leading-6 text-[color:var(--foreground)]">Packet metadata</p>
                       <button
                         type="button"
                         onClick={() => setEditing(true)}

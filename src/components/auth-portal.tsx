@@ -97,26 +97,19 @@ export function AuthPortal({
               Build AI
             </span>
             <h1 className="mt-5 max-w-2xl font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-5xl">
-              Registration and login for factory and ingestion teams.
+              Access portal
             </h1>
             <p className="mt-5 max-w-xl text-base leading-7 text-[color:var(--muted-foreground)]">
-              Factory operators can raise deployment requests. Ingestion users can
-              monitor returned SD card packets and processing progress. Admin and
-              logistics accounts are created privately through backend endpoints.
+              Secure sign-in for registered teams.
             </p>
-            <div className="mt-8 grid gap-3">
-              {[
-                "Factory operator can self-register with OTP",
-                "Ingestion user can self-register with OTP",
-                "Admin and logistics accounts stay private",
-                "Role-based dashboard actions come from backend permissions",
-              ].map((item) => (
-                <div
+            <div className="mt-8 flex flex-wrap gap-2">
+              {["Factory", "Ingestion", "OTP", "Secure"].map((item) => (
+                <span
                   key={item}
-                  className="border border-[color:var(--border)] bg-white/75 px-4 py-3 text-sm text-[color:var(--foreground)]"
+                  className="border border-[color:var(--border)] bg-white/75 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)]"
                 >
                   {item}
-                </div>
+                </span>
               ))}
             </div>
           </div>

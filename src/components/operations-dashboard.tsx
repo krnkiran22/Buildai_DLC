@@ -234,7 +234,7 @@ function PanelHeader({
 }: {
   eyebrow: string;
   title: string;
-  helper: string;
+  helper?: string;
 }) {
   return (
     <div className="flex flex-col gap-2 border-b border-[color:var(--border)] px-5 py-4">
@@ -245,9 +245,11 @@ function PanelHeader({
         <h2 className="font-display text-xl font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
           {title}
         </h2>
-        <p className="max-w-2xl text-sm leading-6 text-[color:var(--muted-foreground)]">
-          {helper}
-        </p>
+        {helper ? (
+          <p className="max-w-2xl text-sm leading-6 text-[color:var(--muted-foreground)]">
+            {helper}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -545,7 +547,6 @@ function MovementLedgerPanel({
       <PanelHeader
         eyebrow="Movement Ledger"
         title="Full Device Movement History"
-        helper="Admin and logistics can trace hardware across HQ dispatch, factory return, and factory-to-factory transfer chains."
       />
       <div className="grid gap-4 p-5 md:grid-cols-2 2xl:grid-cols-3">
         {movements.map((movement) => (
@@ -1377,19 +1378,11 @@ export function OperationsDashboard({
                 <span className="border border-[color:var(--border)] bg-white px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
                   Build AI // Logistics OS
                 </span>
-                <span className="border border-[color:var(--border)] bg-[color:var(--accent-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--info-foreground)]">
-                  First module live in UI
-                </span>
               </div>
               <div className="space-y-3">
                 <h1 className="max-w-4xl font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-5xl">
                   {currentSnapshot.productName}
                 </h1>
-                <p className="max-w-3xl text-base leading-7 text-[color:var(--muted-foreground)] sm:text-lg">
-                  One surface for factory operators, logistics, and ingestion staff to
-                  track requests, packets, returns, and SD card reconciliation without
-                  relying on marker-written pouches or manual follow-ups.
-                </p>
               </div>
             </div>
 
@@ -1398,10 +1391,10 @@ export function OperationsDashboard({
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
-                      Flow locked
+                      System
                     </p>
                     <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-                      Ticket to ingestion
+                      Operations status
                     </h2>
                   </div>
                   <div className="text-right">
@@ -1422,29 +1415,24 @@ export function OperationsDashboard({
                     </div>
                   </div>
                 </div>
-                <ol className="mt-5 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
-                  {[
-                    "Open ticket",
-                    "Accept or reject",
-                    "Outbound shipped",
-                    "Factory received",
-                    "Return shipped",
-                    "HQ received",
-                    "Transfer to ingestion",
-                    "Ingestion processing",
-                    "Close with counts",
-                  ].map((step, index) => (
-                    <li
-                      key={step}
-                      className="flex flex-wrap items-center justify-between gap-2 border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-2"
-                    >
-                      <span>{step}</span>
-                      <span className="font-mono text-[11px] uppercase tracking-[0.14em]">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                      Active role
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
+                      {viewerRoleLabel(session.user.role)}
+                    </p>
+                  </div>
+                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                      Connected backend
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
+                      {health.baseUrl.replace(/^https?:\/\//, "")}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid gap-4">
@@ -1513,7 +1501,6 @@ export function OperationsDashboard({
             <PanelHeader
               eyebrow="Ticket Queue"
               title="Requests visible to logistics"
-              helper="Search the board, filter by lifecycle state, and open the ticket that needs action now."
             />
 
             <div className="grid gap-3 border-b border-[color:var(--border)] p-5">
@@ -1794,7 +1781,6 @@ export function OperationsDashboard({
                 <PanelHeader
                   eyebrow="Request Focus"
                   title={selectedTicket.teamName}
-                  helper={selectedTicket.nextAction}
                 />
 
                 <div className="grid gap-6 p-5 lg:grid-cols-[1.15fr_0.85fr]">
@@ -1943,12 +1929,7 @@ export function OperationsDashboard({
                       <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--info-foreground)]">
                         Control actions
                       </p>
-                      <p className="mt-3 text-sm leading-6 text-[color:var(--foreground)]">
-                        Status actions are role-driven. Logistics controls outbound flow,
-                        factory operator handles return shipment steps, ingestion controls
-                        receipt and processing, and admin can override when required.
-                      </p>
-                      <label className="mt-4 grid gap-2 text-sm text-[color:var(--foreground)]">
+                      <label className="mt-3 grid gap-2 text-sm text-[color:var(--foreground)]">
                         Status note
                         <textarea
                           value={statusNote}
@@ -2029,7 +2010,6 @@ export function OperationsDashboard({
                   <PanelHeader
                     eyebrow="Tracking"
                     title="Operator-visible lifecycle"
-                    helper="The selected ticket exposes the same timeline to the factory team, HQ logistics, and admin."
                   />
                   <div className="p-5">
                     <TimelineList events={selectedTicket.timeline} />
@@ -2041,7 +2021,6 @@ export function OperationsDashboard({
                     <PanelHeader
                       eyebrow="Packet Identity"
                       title="QR-linked packets"
-                      helper="Each shipment packet keeps a digital identity so ingestion never depends on handwritten pouch labels."
                     />
                     <div className="grid gap-5 p-5">
                       {canEditPackages && (viewer.role === "admin" || viewer.role === "logistics") ? (
@@ -2085,7 +2064,7 @@ export function OperationsDashboard({
                               className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                             />
                             <div className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              Logistics sets team and factory from the ticket. Each label keeps its own shipped counts.
+                              Per-label shipped counts
                             </div>
                           </div>
                           <div className="grid gap-3">
@@ -2194,10 +2173,7 @@ export function OperationsDashboard({
                               </div>
                             ))}
                           </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              QR labels open the public packet page. Factory and ingestion can scan without login.
-                            </span>
+                          <div className="flex items-center justify-end gap-3">
                             <button
                               type="button"
                               onClick={() => void handleCreatePackage()}
@@ -2544,7 +2520,6 @@ export function OperationsDashboard({
                     <PanelHeader
                       eyebrow="Ingestion"
                       title="Reconciliation"
-                      helper="Count what arrived, what processed successfully, and what is missing or red-marked."
                     />
                     <div className="grid gap-4 p-5">
                       {selectedTicket.ingestionReport ? (
@@ -2763,7 +2738,6 @@ export function OperationsDashboard({
           <PanelHeader
             eyebrow="Ingestion Room"
             title="Packets visible to ingestion"
-            helper="This queue is what the ingestion team sees after logistics hands off the return packet from HQ."
           />
           <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
             {currentSnapshot.ingestionQueue.map((packet) => (
