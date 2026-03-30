@@ -306,17 +306,13 @@ export type PackageCreateInput = {
   note: string;
 };
 
-export type PackageBatchItemInput = {
+export type PackageBatchCreateInput = {
+  labelCount: number;
   shippedSdCardsCount: number;
   shippedDevicesCount: number;
   shippedUsbHubsCount: number;
   shippedCablesCount: number;
   note: string;
-};
-
-export type PackageBatchCreateInput = {
-  labelCount: number;
-  packages: PackageBatchItemInput[];
 };
 
 export type PublicQrPackagePatch = {

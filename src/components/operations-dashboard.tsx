@@ -249,43 +249,31 @@ function validatePackageBatchDraft(
   if (draft.labelCount <= 0) {
     return "Enter at least one QR label.";
   }
-  if (draft.labelCount !== draft.packages.length) {
-    return "QR label count must match the number of label rows.";
+  if (
+    draft.shippedSdCardsCount < 0 ||
+    draft.shippedDevicesCount < 0 ||
+    draft.shippedUsbHubsCount < 0 ||
+    draft.shippedCablesCount < 0
+  ) {
+    return "Enter valid shipped quantities for the QR batch.";
+  }
+  if (!draft.note.trim()) {
+    return "Add the shared QR label note.";
   }
 
-  let totalSdCards = 0;
-  let totalDevices = 0;
-
-  for (const [index, entry] of draft.packages.entries()) {
-    if (
-      entry.shippedSdCardsCount < 0 ||
-      entry.shippedDevicesCount < 0 ||
-      entry.shippedUsbHubsCount < 0 ||
-      entry.shippedCablesCount < 0
-    ) {
-      return `QR label ${index + 1} has an invalid shipped quantity.`;
-    }
-    if (!entry.note.trim()) {
-      return `QR label ${index + 1} note is required.`;
-    }
-
-    const totalForLabel =
-      entry.shippedSdCardsCount +
-      entry.shippedDevicesCount +
-      entry.shippedUsbHubsCount +
-      entry.shippedCablesCount;
-    if (totalForLabel <= 0) {
-      return `QR label ${index + 1} must include at least one shipped item count.`;
-    }
-
-    totalSdCards += entry.shippedSdCardsCount;
-    totalDevices += entry.shippedDevicesCount;
+  const totalForLabel =
+    draft.shippedSdCardsCount +
+    draft.shippedDevicesCount +
+    draft.shippedUsbHubsCount +
+    draft.shippedCablesCount;
+  if (totalForLabel <= 0) {
+    return "Enter at least one shipped item count for the QR batch.";
   }
 
-  if (ticket.sdCardsRequested > 0 && totalSdCards <= 0) {
+  if (ticket.sdCardsRequested > 0 && draft.shippedSdCardsCount <= 0) {
     return "Enter the shipped SD card count for at least one QR label.";
   }
-  if (ticket.devicesRequested > 0 && totalDevices <= 0) {
+  if (ticket.devicesRequested > 0 && draft.shippedDevicesCount <= 0) {
     return "Enter the shipped device count for at least one QR label.";
   }
 
@@ -732,15 +720,11 @@ export function OperationsDashboard({
   const [packageFeedback, setPackageFeedback] = useState("");
   const [packageDraft, setPackageDraft] = useState<PackageBatchCreateInput>({
     labelCount: 1,
-    packages: [
-      {
-        shippedSdCardsCount: 0,
-        shippedDevicesCount: 0,
-        shippedUsbHubsCount: 0,
-        shippedCablesCount: 0,
-        note: "",
-      },
-    ],
+    shippedSdCardsCount: 0,
+    shippedDevicesCount: 0,
+    shippedUsbHubsCount: 0,
+    shippedCablesCount: 0,
+    note: "",
   });
   const [packageCreatePending, setPackageCreatePending] = useState(false);
   const [packageCreateFeedback, setPackageCreateFeedback] = useState("");
@@ -1318,29 +1302,32 @@ export function OperationsDashboard({
       if (updated) {
         upsertTicket(updated);
       } else {
-        const nextPackages: PackageRecord[] = packageDraft.packages.map((entry, index) => ({
-          packageCode: `PKG-RET-${selectedTicket.id.slice(-4).toUpperCase()}${String.fromCharCode(65 + selectedTicket.packages.length + index)}`,
-          qrToken: `qr_local_${Date.now()}_${index}`,
-          direction: "return",
-          status: selectedTicket.status,
-          itemCount: 1,
-          shippedSdCardsCount: entry.shippedSdCardsCount,
-          shippedDevicesCount: entry.shippedDevicesCount,
-          shippedUsbHubsCount: entry.shippedUsbHubsCount,
-          shippedCablesCount: entry.shippedCablesCount,
-          receivedSdCardsCount: null,
-          receivedDevicesCount: null,
-          receivedUsbHubsCount: null,
-          receivedCablesCount: null,
-          note: entry.note,
-          teamName: selectedTicket.teamName,
-          factoryName: selectedTicket.factoryName,
-          deploymentDate: null,
-          updatedAt: new Date().toISOString(),
-          updatedBy: viewer.name,
-          firstEditAt: null,
-          editWindowExpiresAt: null,
-        }));
+        const nextPackages: PackageRecord[] = Array.from(
+          { length: packageDraft.labelCount },
+          (_, index) => ({
+            packageCode: `PKG-RET-${selectedTicket.id.slice(-4).toUpperCase()}${String.fromCharCode(65 + selectedTicket.packages.length + index)}`,
+            qrToken: `qr_local_${Date.now()}_${index}`,
+            direction: "return",
+            status: selectedTicket.status,
+            itemCount: 1,
+            shippedSdCardsCount: packageDraft.shippedSdCardsCount,
+            shippedDevicesCount: packageDraft.shippedDevicesCount,
+            shippedUsbHubsCount: packageDraft.shippedUsbHubsCount,
+            shippedCablesCount: packageDraft.shippedCablesCount,
+            receivedSdCardsCount: null,
+            receivedDevicesCount: null,
+            receivedUsbHubsCount: null,
+            receivedCablesCount: null,
+            note: packageDraft.note,
+            teamName: selectedTicket.teamName,
+            factoryName: selectedTicket.factoryName,
+            deploymentDate: null,
+            updatedAt: new Date().toISOString(),
+            updatedBy: viewer.name,
+            firstEditAt: null,
+            editWindowExpiresAt: null,
+          }),
+        );
         upsertTicket({
           ...selectedTicket,
           packages: [...selectedTicket.packages, ...nextPackages],
@@ -1349,15 +1336,11 @@ export function OperationsDashboard({
       setPackageCreateFeedback("QR labels generated.");
       setPackageDraft({
         labelCount: 1,
-        packages: [
-          {
-            shippedSdCardsCount: 0,
-            shippedDevicesCount: 0,
-            shippedUsbHubsCount: 0,
-            shippedCablesCount: 0,
-            note: "",
-          },
-        ],
+        shippedSdCardsCount: 0,
+        shippedDevicesCount: 0,
+        shippedUsbHubsCount: 0,
+        shippedCablesCount: 0,
+        note: "",
       });
     } catch (error) {
       if (error instanceof Error && /401|403/i.test(error.message)) {
@@ -2335,131 +2318,84 @@ export function OperationsDashboard({
                                 setPackageDraft((current) => ({
                                   ...current,
                                   labelCount: Number(event.target.value),
-                                  packages: Array.from(
-                                    { length: Math.max(Number(event.target.value) || 1, 1) },
-                                    (_, index) =>
-                                      current.packages[index] ?? {
-                                        shippedSdCardsCount: 0,
-                                        shippedDevicesCount: 0,
-                                        shippedUsbHubsCount: 0,
-                                        shippedCablesCount: 0,
-                                        note: "",
-                                      },
-                                  ),
                                 }))
                               }
                               placeholder="Number of QR labels"
                               className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
                             />
                             <div className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              Per-label shipped counts
+                              One shared payload, unique QR IDs
                             </div>
                           </div>
-                            <div className="grid gap-3">
-                              {packageDraft.packages.map((entry, index) => (
-                                <div
-                                  key={`label-${index}`}
-                                  className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3"
-                                >
-                                <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={entry.shippedSdCardsCount || ""}
-                                    onChange={(event) =>
-                                      setPackageDraft((current) => ({
-                                        ...current,
-                                        packages: current.packages.map((pkg, packageIndex) =>
-                                          packageIndex === index
-                                            ? {
-                                                ...pkg,
-                                                shippedSdCardsCount: Number(event.target.value),
-                                              }
-                                            : pkg,
-                                        ),
-                                      }))
-                                    }
-                                    placeholder="Shipped SD cards"
-                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                                  />
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={entry.shippedDevicesCount || ""}
-                                    onChange={(event) =>
-                                      setPackageDraft((current) => ({
-                                        ...current,
-                                        packages: current.packages.map((pkg, packageIndex) =>
-                                          packageIndex === index
-                                            ? {
-                                                ...pkg,
-                                                shippedDevicesCount: Number(event.target.value),
-                                              }
-                                            : pkg,
-                                        ),
-                                      }))
-                                    }
-                                    placeholder="Shipped devices"
-                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                                  />
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={entry.shippedUsbHubsCount || ""}
-                                    onChange={(event) =>
-                                      setPackageDraft((current) => ({
-                                        ...current,
-                                        packages: current.packages.map((pkg, packageIndex) =>
-                                          packageIndex === index
-                                            ? {
-                                                ...pkg,
-                                                shippedUsbHubsCount: Number(event.target.value),
-                                              }
-                                            : pkg,
-                                        ),
-                                      }))
-                                    }
-                                    placeholder="Shipped USB hubs"
-                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                                  />
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={entry.shippedCablesCount || ""}
-                                    onChange={(event) =>
-                                      setPackageDraft((current) => ({
-                                        ...current,
-                                        packages: current.packages.map((pkg, packageIndex) =>
-                                          packageIndex === index
-                                            ? {
-                                                ...pkg,
-                                                shippedCablesCount: Number(event.target.value),
-                                              }
-                                            : pkg,
-                                        ),
-                                      }))
-                                    }
-                                    placeholder="Shipped cables"
-                                    className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                                  />
-                                </div>
-                                <input
-                                  value={entry.note}
-                                  onChange={(event) =>
-                                    setPackageDraft((current) => ({
-                                      ...current,
-                                      packages: current.packages.map((pkg, packageIndex) =>
-                                        packageIndex === index
-                                          ? { ...pkg, note: event.target.value }
-                                          : pkg,
-                                      ),
-                                    }))
-                                  }
-                                  placeholder={`Label ${index + 1} note`}
-                                  className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                                />
-                              </div>
-                            ))}
+                          <div className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3">
+                            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+                              <input
+                                type="number"
+                                min={0}
+                                value={packageDraft.shippedSdCardsCount || ""}
+                                onChange={(event) =>
+                                  setPackageDraft((current) => ({
+                                    ...current,
+                                    shippedSdCardsCount: Number(event.target.value),
+                                  }))
+                                }
+                                placeholder="Shipped SD cards"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                              />
+                              <input
+                                type="number"
+                                min={0}
+                                value={packageDraft.shippedDevicesCount || ""}
+                                onChange={(event) =>
+                                  setPackageDraft((current) => ({
+                                    ...current,
+                                    shippedDevicesCount: Number(event.target.value),
+                                  }))
+                                }
+                                placeholder="Shipped devices"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                              />
+                              <input
+                                type="number"
+                                min={0}
+                                value={packageDraft.shippedUsbHubsCount || ""}
+                                onChange={(event) =>
+                                  setPackageDraft((current) => ({
+                                    ...current,
+                                    shippedUsbHubsCount: Number(event.target.value),
+                                  }))
+                                }
+                                placeholder="Shipped USB hubs"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                              />
+                              <input
+                                type="number"
+                                min={0}
+                                value={packageDraft.shippedCablesCount || ""}
+                                onChange={(event) =>
+                                  setPackageDraft((current) => ({
+                                    ...current,
+                                    shippedCablesCount: Number(event.target.value),
+                                  }))
+                                }
+                                placeholder="Shipped cables"
+                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                              />
+                            </div>
+                            <input
+                              value={packageDraft.note}
+                              onChange={(event) =>
+                                setPackageDraft((current) => ({
+                                  ...current,
+                                  note: event.target.value,
+                                }))
+                              }
+                              placeholder="Shared QR label note"
+                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
+                            />
+                            <p className="text-xs leading-5 text-[color:var(--muted-foreground)]">
+                              Fill this once. The system generates {packageDraft.labelCount || 0} QR labels with different unique IDs for the same team and factory batch.
+                            </p>
                           </div>
                           <div className="flex items-center justify-end gap-3">
                             <button
