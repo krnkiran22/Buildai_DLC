@@ -750,6 +750,14 @@ export function OperationsDashboard({
     priority: "medium",
   });
   const deferredQuery = useDeferredValue(query);
+  const openTicketCount = currentSnapshot.tickets.filter(
+    (ticket) => ticket.status !== "closed" && ticket.status !== "rejected",
+  ).length;
+  const packetCount = currentSnapshot.tickets.reduce(
+    (total, ticket) => total + ticket.packages.length,
+    0,
+  );
+  const activeMeritAlertCount = currentSnapshot.meritScores.filter((score) => score.score < 95).length;
 
   const filteredTickets = currentSnapshot.tickets.filter((ticket) => {
     const queryMatch =
@@ -1430,10 +1438,10 @@ export function OperationsDashboard({
 
   return (
     <main className="grid-overlay min-h-screen">
-      <div className="mx-auto flex w-full max-w-[1880px] flex-col gap-6 px-4 py-5 sm:px-6 lg:px-10 lg:py-8 2xl:px-14">
+      <div className="mx-auto flex w-full max-w-[1920px] flex-col gap-5 px-3 py-4 sm:px-5 lg:px-8 lg:py-6 2xl:px-10">
         <section className="panel-shell overflow-hidden">
-          <div className="grid gap-6 border-b border-[color:var(--border)] px-5 py-5 lg:grid-cols-[1.35fr_1.05fr] lg:px-7 lg:py-7">
-            <div className="space-y-5">
+          <div className="grid gap-5 border-b border-[color:var(--border)] px-4 py-4 lg:px-6 lg:py-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.95fr)]">
+            <div className="min-w-0 space-y-5">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="border border-[color:var(--border)] bg-white px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
                   Build AI // Logistics OS
@@ -1443,10 +1451,47 @@ export function OperationsDashboard({
                 <h1 className="max-w-4xl font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-5xl">
                   {currentSnapshot.productName}
                 </h1>
+                <p className="max-w-3xl text-sm leading-6 text-[color:var(--muted-foreground)]">
+                  Ticketing, packet tracking, QR-linked returns, and ingestion control in one workspace.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                    Active role
+                  </p>
+                  <p className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
+                    {viewerRoleLabel(session.user.role)}
+                  </p>
+                </div>
+                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                    Tickets in system
+                  </p>
+                  <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
+                    {currentSnapshot.tickets.length}
+                  </p>
+                </div>
+                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                    Active packets
+                  </p>
+                  <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
+                    {packetCount}
+                  </p>
+                </div>
+                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                    Merit watchlist
+                  </p>
+                  <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
+                    {activeMeritAlertCount}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
               <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -1478,10 +1523,10 @@ export function OperationsDashboard({
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                      Active role
+                      Open flow
                     </p>
                     <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
-                      {viewerRoleLabel(session.user.role)}
+                      {openTicketCount} active tickets
                     </p>
                   </div>
                   <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
@@ -1530,7 +1575,7 @@ export function OperationsDashboard({
             </div>
           </div>
 
-          <div className="grid gap-4 px-5 py-5 md:grid-cols-2 xl:grid-cols-5 lg:px-7">
+          <div className="grid gap-4 px-4 py-4 md:grid-cols-2 xl:grid-cols-5 lg:px-6 lg:py-5">
             {currentSnapshot.metrics.map((metric) => (
               <article
                 key={metric.label}
@@ -1556,8 +1601,8 @@ export function OperationsDashboard({
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[0.82fr_1.48fr]">
-          <section className="panel-shell overflow-hidden">
+        <section className="grid items-start gap-5 xl:grid-cols-[minmax(340px,0.9fr)_minmax(0,1.6fr)] 2xl:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.65fr)]">
+          <section className="panel-shell overflow-hidden xl:sticky xl:top-4">
             <PanelHeader
               eyebrow="Ticket Queue"
               title="Requests visible to logistics"
@@ -1779,7 +1824,7 @@ export function OperationsDashboard({
               </div>
             </div>
 
-            <div className="flex max-h-[980px] flex-col overflow-auto">
+            <div className="flex flex-col xl:max-h-[980px] xl:overflow-auto">
               {filteredTickets.map((ticket) => {
                 const selected = ticket.id === selectedTicket?.id;
 
@@ -1836,16 +1881,15 @@ export function OperationsDashboard({
           </section>
 
           {selectedTicket ? (
-            <section className="grid gap-6">
+            <section className="grid min-w-0 gap-5">
               <section className="panel-shell overflow-hidden">
                 <PanelHeader
                   eyebrow="Request Focus"
                   title={selectedTicket.teamName}
                 />
 
-                <div className="grid gap-6 p-5 lg:grid-cols-[1.15fr_0.85fr]">
-                  <div className="space-y-5">
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-5 p-4 lg:p-5 xl:grid-cols-[minmax(0,1.28fr)_minmax(340px,0.92fr)]">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2 xl:grid-cols-5">
                       <div className="border border-[color:var(--border)] bg-white/78 p-4">
                         <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                           Ticket type
@@ -1886,7 +1930,8 @@ export function OperationsDashboard({
                           <StatusBadge status={selectedTicket.status} />
                         </div>
                       </div>
-                    </div>
+                  </div>
+                  <div className="min-w-0 space-y-5">
                     {selectedTicket.ticketType === "transfer" ? (
                       <div className="border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-4">
                         <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--info-foreground)]">
@@ -1919,7 +1964,7 @@ export function OperationsDashboard({
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 xl:self-start">
                     <div className="border border-[color:var(--border)] bg-white/78 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
@@ -1929,7 +1974,7 @@ export function OperationsDashboard({
                           {streamStatus}
                         </span>
                       </div>
-                      <div className="mt-4 space-y-3">
+                      <div className="mt-4 space-y-3 xl:max-h-[360px] xl:overflow-auto xl:pr-1">
                         {selectedTicket.messages.map((message) => (
                           <article
                             key={message.id}
@@ -2065,7 +2110,7 @@ export function OperationsDashboard({
                 </div>
               </section>
 
-              <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+              <section className="grid gap-5 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
                 <section className="panel-shell overflow-hidden">
                   <PanelHeader
                     eyebrow="Tracking"
@@ -2098,7 +2143,7 @@ export function OperationsDashboard({
                               {viewerRoleLabel(viewer.role)}
                             </span>
                           </div>
-                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                             <input
                               type="number"
                               min={1}
@@ -2127,13 +2172,13 @@ export function OperationsDashboard({
                               Per-label shipped counts
                             </div>
                           </div>
-                          <div className="grid gap-3">
-                            {packageDraft.packages.map((entry, index) => (
-                              <div
-                                key={`label-${index}`}
-                                className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3"
-                              >
-                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid gap-3">
+                              {packageDraft.packages.map((entry, index) => (
+                                <div
+                                  key={`label-${index}`}
+                                  className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3"
+                                >
+                                <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                                   <input
                                     type="number"
                                     min={0}
@@ -2253,7 +2298,7 @@ export function OperationsDashboard({
 
                       <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
                         QR lookup
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row">
                           <input
                             value={qrLookup}
                             onChange={(event) => setQrLookup(event.target.value)}
@@ -2264,7 +2309,7 @@ export function OperationsDashboard({
                             type="button"
                             onClick={() => void handleLoadQrDetail()}
                             disabled={!canViewPackages || qrPending || !qrLookup.trim()}
-                            className="border border-[color:var(--foreground)] bg-white px-4 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:opacity-60"
+                            className="border border-[color:var(--foreground)] bg-white px-4 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:opacity-60 sm:self-start"
                           >
                             {qrPending ? "Loading..." : "Open"}
                           </button>
@@ -2788,7 +2833,7 @@ export function OperationsDashboard({
             eyebrow="Ingestion Room"
             title="Packets visible to ingestion"
           />
-          <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 p-5 md:grid-cols-2 2xl:grid-cols-3">
             {currentSnapshot.ingestionQueue.map((packet) => (
               <article
                 key={packet.id}
