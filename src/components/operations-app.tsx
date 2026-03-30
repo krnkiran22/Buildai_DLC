@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AuthPortal } from "@/components/auth-portal";
 import { OperationsDashboard } from "@/components/operations-dashboard";
 import {
@@ -45,20 +45,20 @@ export function OperationsApp() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [health, setHealth] = useState<BackendHealth>(healthPlaceholder);
   const [loading, setLoading] = useState(true);
-  const [shouldVerifySession, setShouldVerifySession] = useState(false);
+  const shouldVerifySessionRef = useRef(false);
   const sessionToken = session?.token ?? null;
 
   useEffect(() => {
     Promise.resolve().then(() => {
-      const rawSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
-      if (rawSession) {
-        try {
-          setSession(JSON.parse(rawSession) as AuthSession);
-          setShouldVerifySession(true);
-          return;
-        } catch {
-          window.localStorage.removeItem(SESSION_STORAGE_KEY);
-        }
+        const rawSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
+        if (rawSession) {
+          try {
+            setSession(JSON.parse(rawSession) as AuthSession);
+            shouldVerifySessionRef.current = true;
+            return;
+          } catch {
+            window.localStorage.removeItem(SESSION_STORAGE_KEY);
+          }
       }
       setLoading(false);
     });
@@ -98,7 +98,7 @@ export function OperationsApp() {
 
     Promise.resolve()
       .then(async () => {
-        const nextSession = shouldVerifySession
+        const nextSession = shouldVerifySessionRef.current
           ? await getCurrentSession(session).catch(() => session)
           : session;
         const nextSnapshot = await getOperationsSnapshot(nextSession);
@@ -110,7 +110,7 @@ export function OperationsApp() {
           setSession(nextSession);
         }
         setSnapshot(nextSnapshot);
-        setShouldVerifySession(false);
+        shouldVerifySessionRef.current = false;
         setLoading(false);
       })
       .catch(() => {
@@ -119,7 +119,7 @@ export function OperationsApp() {
         }
         window.localStorage.removeItem(SESSION_STORAGE_KEY);
         setSnapshot(null);
-        setShouldVerifySession(false);
+        shouldVerifySessionRef.current = false;
         setSession(null);
       })
       .finally(() => {
@@ -136,7 +136,7 @@ export function OperationsApp() {
   function handleAuthenticated(nextSession: AuthSession) {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
     setSnapshot(null);
-    setShouldVerifySession(false);
+    shouldVerifySessionRef.current = false;
     setLoading(true);
     setSession(nextSession);
   }
@@ -147,7 +147,7 @@ export function OperationsApp() {
     }
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     setSnapshot(null);
-    setShouldVerifySession(false);
+    shouldVerifySessionRef.current = false;
     setLoading(false);
     setSession(null);
   }
