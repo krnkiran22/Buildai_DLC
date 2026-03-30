@@ -44,17 +44,40 @@ export function OperationsApp() {
     Promise.resolve()
       .then(async () => {
         const verifiedSession = await getCurrentSession(session).catch(() => session);
-        const [nextSnapshot, nextHealth] = await Promise.all([
-          getOperationsSnapshot(verifiedSession),
-          getBackendHealth(),
-        ]);
+        const nextSnapshot = await getOperationsSnapshot(verifiedSession);
         if (!active) {
           return;
         }
         window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(verifiedSession));
         setSession(verifiedSession);
         setSnapshot(nextSnapshot);
-        setHealth(nextHealth);
+
+        setHealth((current) => ({
+          ok: current?.ok ?? false,
+          service: current?.service ?? "DLC Service API",
+          environment: current?.environment ?? "loading",
+          baseUrl: current?.baseUrl ?? "loading",
+        }));
+        setLoading(false);
+
+        void getBackendHealth()
+          .then((nextHealth) => {
+            if (!active) {
+              return;
+            }
+            setHealth(nextHealth);
+          })
+          .catch(() => {
+            if (!active) {
+              return;
+            }
+            setHealth((current) => ({
+              ok: current?.ok ?? false,
+              service: current?.service ?? "DLC Service API",
+              environment: current?.environment ?? "unknown",
+              baseUrl: current?.baseUrl ?? "unknown",
+            }));
+          });
       })
       .catch(() => {
         if (!active) {
