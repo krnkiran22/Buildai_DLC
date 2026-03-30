@@ -90,7 +90,7 @@ export function AuthPortal({
 
   return (
     <main className="grid-overlay min-h-screen">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1240px] items-center px-4 py-8 sm:px-6 lg:px-10">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1240px] items-start px-4 py-6 sm:px-6 sm:py-8 lg:items-center lg:px-10">
         <section className="panel-shell grid w-full overflow-hidden lg:grid-cols-[1.08fr_0.92fr]">
           <div className="border-b border-[color:var(--border)] bg-[color:var(--accent-soft)] px-6 py-8 lg:border-b-0 lg:border-r lg:px-8">
             <span className="border border-[color:var(--border)] bg-white px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
@@ -121,8 +121,8 @@ export function AuthPortal({
             </div>
           </div>
 
-          <div className="px-6 py-8 lg:px-8">
-            <div className="flex gap-2">
+          <div className="min-w-0 px-6 py-8 lg:px-8">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { id: "login", label: "Login" },
                 { id: "register", label: "Register" },
@@ -171,7 +171,7 @@ export function AuthPortal({
                   type="button"
                   onClick={() => void handleLogin()}
                   disabled={pending || !loginEmail || !loginPassword || !isApiConfigured()}
-                  className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                  className="w-full border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {pending ? "Signing in..." : "Login"}
                 </button>
@@ -224,18 +224,18 @@ export function AuthPortal({
                     !registerDisplayName ||
                     !isApiConfigured()
                   }
-                  className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                  className="w-full border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {pending ? "Generating..." : "Request OTP"}
                 </button>
 
                 {otpEmail ? (
                   <div className="grid gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                    <p className="text-sm text-[color:var(--foreground)]">
+                    <p className="break-all text-sm text-[color:var(--foreground)]">
                       Verify registration for <span className="font-semibold">{otpEmail}</span>
                     </p>
                     {otpDebugCode ? (
-                      <p className="font-mono text-sm text-[color:var(--info-foreground)]">
+                      <p className="break-all font-mono text-sm text-[color:var(--info-foreground)]">
                         Debug OTP: {otpDebugCode}
                       </p>
                     ) : null}
@@ -251,7 +251,7 @@ export function AuthPortal({
                       type="button"
                       onClick={() => void handleVerifyOtp()}
                       disabled={pending || !otpCode}
-                      className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                      className="w-full border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                     >
                       {pending ? "Verifying..." : "Verify OTP and Login"}
                     </button>
@@ -269,4 +269,3 @@ export function AuthPortal({
     </main>
   );
 }
-
