@@ -969,6 +969,7 @@ export function OperationsDashboard({
   const canViewInventory = viewer.permissions.includes("inventory.view");
   const canViewMovement = viewer.role === "admin" || viewer.role === "logistics";
   const canViewMerit = viewer.role !== "factory_operator";
+  const showTicketAuxPanels = false;
   const availableStatusActions =
     selectedTicket && canUpdateStatus
       ? transitionMap[selectedTicket.status].filter((status) =>
@@ -1656,7 +1657,7 @@ export function OperationsDashboard({
 
           {workspace === "tickets" ? (
             <>
-              <div className="grid h-full min-h-0 lg:grid-cols-[420px_minmax(0,1fr)]">
+              <div className="grid h-full min-h-0 lg:grid-cols-[440px_minmax(0,1fr)]">
                 <aside className="flex min-h-0 flex-col border-b border-[color:var(--border)] bg-[color:var(--card)] lg:border-b-0 lg:border-r">
                 <div className="border-b border-[color:var(--border)] px-5 py-5">
                   <div className="flex items-start justify-between gap-3">
@@ -1780,7 +1781,13 @@ export function OperationsDashboard({
 
               <section className="min-w-0 bg-[color:var(--background)]">
                 {selectedTicket ? (
-                  <div className="grid min-h-full lg:h-full lg:grid-cols-[minmax(0,1.55fr)_400px]">
+                  <div
+                    className={`grid min-h-full lg:h-full ${
+                      showTicketAuxPanels
+                        ? "lg:grid-cols-[minmax(0,1.55fr)_400px]"
+                        : "lg:grid-cols-[minmax(0,1fr)]"
+                    }`}
+                  >
                     <div className="flex min-h-0 flex-col lg:border-r lg:border-[color:var(--border)]">
                       <div className="border-b border-[color:var(--border)] bg-[color:var(--card)] px-4 py-4 lg:px-5">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -1849,7 +1856,7 @@ export function OperationsDashboard({
                                   </span>
                                   <RoleBadge role={message.role} />
                                 </div>
-                                <div className={`group relative max-w-[94%] sm:max-w-[88%] lg:max-w-[78%]`}>
+                                <div className={`group relative max-w-[96%] sm:max-w-[90%] lg:max-w-[86%]`}>
                                   <article
                                     className={`relative overflow-hidden rounded-2xl px-4 py-3 shadow-md ring-1 ring-inset transition-all duration-200 ${
                                       isOwnMessage
@@ -1974,6 +1981,7 @@ export function OperationsDashboard({
                       </div>
                     </div>
 
+                    {showTicketAuxPanels ? (
                     <aside className="flex min-h-0 flex-col border-t border-[color:var(--border)] bg-[color:var(--card)] lg:border-t-0">
                       <div className="border-b border-[color:var(--border)] bg-[color:var(--card)]/50 px-3 py-3 backdrop-blur-sm">
                         <div className="flex gap-1 overflow-x-auto hover:scrollbar-thin">
@@ -2526,6 +2534,7 @@ export function OperationsDashboard({
                         ) : null}
                       </div>
                     </aside>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="flex min-h-[520px] flex-col items-center justify-center p-8 text-center">
