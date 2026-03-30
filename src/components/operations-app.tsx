@@ -131,7 +131,7 @@ export function OperationsApp() {
     return () => {
       active = false;
     };
-  }, [session, sessionToken, shouldVerifySession]);
+  }, [session, sessionToken]);
 
   function handleAuthenticated(nextSession: AuthSession) {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
