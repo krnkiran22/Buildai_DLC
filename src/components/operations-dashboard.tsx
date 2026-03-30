@@ -243,6 +243,52 @@ function viewerRoleLabel(role: UserRole) {
   }
 }
 
+function WorkspaceNavIcon({ workspace }: { workspace: WorkspaceId }) {
+  const className = "h-[18px] w-[18px]";
+
+  switch (workspace) {
+    case "home":
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M3 10.5 12 3l9 7.5" />
+          <path d="M5.25 9.75V21h13.5V9.75" />
+        </svg>
+      );
+    case "tickets":
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M4 6.75A1.75 1.75 0 0 1 5.75 5h12.5A1.75 1.75 0 0 1 20 6.75v10.5A1.75 1.75 0 0 1 18.25 19H5.75A1.75 1.75 0 0 1 4 17.25Z" />
+          <path d="M7.5 9h9M7.5 12h9M7.5 15h5.5" />
+        </svg>
+      );
+    case "ingestion":
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5" />
+        </svg>
+      );
+    case "movement":
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M4 7h10m0 0-3-3m3 3-3 3M20 17H10m0 0 3-3m-3 3 3 3" />
+        </svg>
+      );
+    case "merit":
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M12 4 14.47 9l5.53.8-4 3.9.94 5.5L12 16.6 7.06 19.2 8 13.7 4 9.8 9.53 9Z" />
+        </svg>
+      );
+    case "inventory":
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M4.5 7.5 12 3l7.5 4.5V18L12 21l-7.5-3Z" />
+          <path d="M4.5 7.5 12 12l7.5-4.5M12 12v9" />
+        </svg>
+      );
+  }
+}
+
 function replyExcerpt(message: string) {
   return message.replace(/\s+/g, " ").trim().slice(0, 160);
 }
@@ -981,12 +1027,6 @@ export function OperationsDashboard({
     },
   ].filter((workspace) => workspace.visible);
   const currentWorkspace = workspaceItems.find((item) => item.id === workspace) ?? workspaceItems[0];
-  const userInitials = session.user.displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("")
-    .slice(0, 2);
 
   function upsertTicket(updatedTicket: (typeof currentSnapshot.tickets)[number]) {
     setCurrentSnapshot((current) => ({
@@ -1554,98 +1594,71 @@ export function OperationsDashboard({
 
   return (
     <main className="min-h-screen bg-[color:var(--background)] text-[color:var(--foreground)] lg:h-screen">
-      <div className="flex min-h-screen lg:h-screen">
-        <aside className="hidden w-[76px] shrink-0 border-r border-[color:var(--border)] bg-[color:var(--card)] lg:flex lg:flex-col">
-          <div className="flex h-18 items-center justify-center border-b border-[color:var(--border)]">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--secondary)] text-sm font-semibold tracking-[0.24em] text-[color:var(--foreground)]">
-              BA
+      <div className="flex min-h-screen flex-col lg:h-screen">
+        <header className="border-b border-[color:var(--border)] bg-[color:var(--card)]">
+          <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
+                Build AI
+              </Link>
+              <span className="hidden text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)] lg:inline-flex">
+                {viewerRoleLabel(session.user.role)}
+              </span>
             </div>
-          </div>
-          <nav className="flex flex-1 flex-col items-center gap-3 px-3 py-4">
-            {workspaceItems.map((workspace) => {
-              const active = workspace.id === currentWorkspace?.id;
+            <nav className="flex gap-1 overflow-x-auto pb-1 lg:flex-1 lg:justify-center lg:pb-0">
+              {workspaceItems.map((item) => {
+                const active = item.id === currentWorkspace?.id;
 
-              return (
-                <Link
-                  key={workspace.id}
-                  href={workspace.href}
-                  className={`group relative flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
-                    active
-                      ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
-                      : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted-foreground)] hover:border-[#2f4049] hover:bg-[color:var(--muted)] hover:text-[#e9edef]"
-                  }`}
-                  title={workspace.label}
-                >
-                  {workspace.short}
-                  {workspace.count > 0 ? (
-                    <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#00a884] px-1 text-[10px] font-bold text-[#0b141a]">
-                      {workspace.count > 99 ? "99+" : workspace.count}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="border-t border-[color:var(--border)] px-3 py-4">
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--secondary)] text-sm font-semibold text-[color:var(--foreground)]">
-                {userInitials}
-              </div>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)] transition hover:border-[#2f4049] hover:bg-[color:var(--muted)] hover:text-[#e9edef]"
-                title="Sign out"
-              >
-                Out
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <div className="border-b border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 lg:hidden">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[color:var(--foreground)]">Build AI</p>
-                <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                  {viewerRoleLabel(session.user.role)}
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={`relative inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                      active
+                        ? "border-[color:var(--foreground)] bg-[color:var(--foreground)] text-white"
+                        : "border-[color:var(--border)] bg-[color:var(--background)] text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
+                    }`}
+                  >
+                    <WorkspaceNavIcon workspace={item.id} />
+                    <span>{item.label}</span>
+                    {item.count > 0 ? (
+                      <span className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] ${
+                        active ? "bg-white/15 text-white" : "bg-[color:var(--muted)] text-[color:var(--muted-foreground)]"
+                      }`}>
+                        {item.count > 99 ? "99+" : item.count}
+                      </span>
+                    ) : null}
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="flex items-center justify-between gap-3 lg:justify-end">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[color:var(--foreground)]">
+                  {session.user.displayName}
+                </p>
+                <p className="truncate text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                  {session.user.email}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={onLogout}
-                className="rounded-full border border-[color:var(--border)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]"
+                className="rounded-xl border border-[color:var(--border)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]"
               >
                 Sign Out
               </button>
             </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              {workspaceItems.map((workspace) => {
-                const active = workspace.id === currentWorkspace?.id;
-
-                return (
-                  <Link
-                    key={workspace.id}
-                    href={workspace.href}
-                    className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
-                      active
-                        ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
-                        : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted-foreground)]"
-                    }`}
-                  >
-                    {workspace.label} {workspace.count > 0 ? `(${workspace.count})` : ""}
-                  </Link>
-                );
-              })}
-            </div>
           </div>
+        </header>
+
+        <div className="min-h-0 flex-1">
 
           {workspace === "tickets" ? (
             <>
-              <div className="grid min-h-[calc(100vh-88px)] lg:h-screen lg:min-h-0 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="grid h-full min-h-0 lg:grid-cols-[420px_minmax(0,1fr)]">
                 <aside className="flex min-h-0 flex-col border-b border-[color:var(--border)] bg-[color:var(--card)] lg:border-b-0 lg:border-r">
-                <div className="border-b border-[color:var(--border)] px-4 py-4">
+                <div className="border-b border-[color:var(--border)] px-5 py-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h1 className="text-xl font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
@@ -1767,7 +1780,7 @@ export function OperationsDashboard({
 
               <section className="min-w-0 bg-[color:var(--background)]">
                 {selectedTicket ? (
-                  <div className="grid min-h-full lg:h-screen lg:grid-cols-[minmax(0,1fr)_360px]">
+                  <div className="grid min-h-full lg:h-full lg:grid-cols-[minmax(0,1.55fr)_400px]">
                     <div className="flex min-h-0 flex-col lg:border-r lg:border-[color:var(--border)]">
                       <div className="border-b border-[color:var(--border)] bg-[color:var(--card)] px-4 py-4 lg:px-5">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -1820,7 +1833,7 @@ export function OperationsDashboard({
                         ref={chatListRef}
                         className="min-h-0 flex-1 overflow-y-auto bg-[color:var(--background)] p-4 lg:p-6"
                       >
-                        <div className="mx-auto flex max-w-2xl flex-col gap-6">
+                        <div className="flex min-h-full flex-col gap-5">
                           {orderedMessages.map((message) => {
                             const isOwnMessage = message.author === viewer.name;
 
@@ -1836,7 +1849,7 @@ export function OperationsDashboard({
                                   </span>
                                   <RoleBadge role={message.role} />
                                 </div>
-                                <div className={`group relative max-w-[92%] sm:max-w-[82%] lg:max-w-[75%]`}>
+                                <div className={`group relative max-w-[94%] sm:max-w-[88%] lg:max-w-[78%]`}>
                                   <article
                                     className={`relative overflow-hidden rounded-2xl px-4 py-3 shadow-md ring-1 ring-inset transition-all duration-200 ${
                                       isOwnMessage
@@ -1908,7 +1921,7 @@ export function OperationsDashboard({
                       </div>
 
                       <div className="border-t border-[color:var(--border)] bg-[color:var(--card)] px-3 py-4 sm:px-4 lg:px-6">
-                        <div className="mx-auto max-w-4xl">
+                        <div className="w-full">
                           {replyTarget ? (
                             <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border)] bg-[#1b2a30] px-3 py-2">
                               <div className="min-w-0">
