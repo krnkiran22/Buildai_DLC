@@ -2,6 +2,6 @@ import { OperationsApp } from "@/components/operations-app";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
-  return <OperationsApp workspace="home" />;
+export default function MovementPage() {
+  return <OperationsApp workspace="movement" />;
 }

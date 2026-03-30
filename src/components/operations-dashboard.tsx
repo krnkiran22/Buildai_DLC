@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   startTransition,
   useDeferredValue,
@@ -10,6 +11,7 @@ import {
   useState,
 } from "react";
 import { AdminInventoryPanel } from "@/components/admin-inventory-panel";
+import type { AppWorkspace } from "@/components/operations-app";
 import {
   closeTicket,
   createTicket,
@@ -94,7 +96,7 @@ const transitionMap: Record<TicketStatus, TicketStatus[]> = {
 const PUBLIC_SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://buildai-dlc.vercel.app";
 
-type WorkspaceId = "tickets" | "ingestion" | "movement" | "merit" | "inventory";
+type WorkspaceId = AppWorkspace;
 type DetailPanelId = "tracking" | "actions" | "packets";
 
 function formatDate(value: string) {
@@ -625,12 +627,14 @@ function MovementLedgerPanel({
 }
 
 export function OperationsDashboard({
+  workspace,
   snapshot,
   health,
   session,
   onSessionChange,
   onLogout,
 }: {
+  workspace: WorkspaceId;
   snapshot: DashboardSnapshot;
   health: BackendHealth;
   session: AuthSession;
@@ -688,7 +692,6 @@ export function OperationsDashboard({
   const [reconciliationFeedback, setReconciliationFeedback] = useState("");
   const [createPending, setCreatePending] = useState(false);
   const [createFeedback, setCreateFeedback] = useState("");
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>("tickets");
   const [detailPanel, setDetailPanel] = useState<DetailPanelId>("tracking");
   const [showCreateTicketForm, setShowCreateTicketForm] = useState(false);
   const [ticketDraft, setTicketDraft] = useState<TicketCreateInput>({
@@ -709,7 +712,17 @@ export function OperationsDashboard({
   const messageComposerRef = useRef<HTMLTextAreaElement | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const swipeStartXRef = useRef(0);
+  const openTicketCount = currentSnapshot.tickets.filter(
+    (ticket) => ticket.status !== "closed" && ticket.status !== "rejected",
+  ).length;
+  const packetCount = currentSnapshot.tickets.reduce(
+    (total, ticket) => total + ticket.packages.length,
+    0,
+  );
   const activeMeritAlertCount = currentSnapshot.meritScores.filter((score) => score.score < 95).length;
+  const recentTickets = [...currentSnapshot.tickets]
+    .sort((left, right) => latestTicketTimestamp(right) - latestTicketTimestamp(left))
+    .slice(0, 6);
 
   const filteredTickets = currentSnapshot.tickets.filter((ticket) => {
     const queryMatch =
@@ -925,11 +938,20 @@ export function OperationsDashboard({
       ? availableStatusActions.filter((status) => status !== "accepted" && status !== "rejected")
       : availableStatusActions;
   const workspaceItems = [
-    { id: "tickets" as WorkspaceId, short: "TK", label: "Tickets", count: orderedTickets.length, visible: true },
+    { id: "home" as WorkspaceId, short: "HM", label: "Home", href: "/", count: 0, visible: true },
+    {
+      id: "tickets" as WorkspaceId,
+      short: "TK",
+      label: "Tickets",
+      href: "/tickets",
+      count: orderedTickets.length,
+      visible: true,
+    },
     {
       id: "ingestion" as WorkspaceId,
       short: "IG",
       label: "Ingestion",
+      href: "/ingestion",
       count: currentSnapshot.ingestionQueue.length,
       visible: viewer.role === "ingestion" || viewer.role === "admin" || viewer.role === "logistics",
     },
@@ -937,6 +959,7 @@ export function OperationsDashboard({
       id: "movement" as WorkspaceId,
       short: "MV",
       label: "Movement",
+      href: "/movement",
       count: currentSnapshot.movementHistory.length,
       visible: canViewMovement,
     },
@@ -944,6 +967,7 @@ export function OperationsDashboard({
       id: "merit" as WorkspaceId,
       short: "MR",
       label: "Merit",
+      href: "/merit",
       count: activeMeritAlertCount,
       visible: canViewMerit,
     },
@@ -951,17 +975,12 @@ export function OperationsDashboard({
       id: "inventory" as WorkspaceId,
       short: "IV",
       label: "Inventory",
+      href: "/inventory",
       count: currentSnapshot.inventoryItems.length,
       visible: canViewInventory,
     },
   ].filter((workspace) => workspace.visible);
-
-  useEffect(() => {
-    if (!workspaceItems.some((workspace) => workspace.id === activeWorkspace)) {
-      setActiveWorkspace("tickets");
-    }
-  }, [activeWorkspace, workspaceItems]);
-  const currentWorkspace = workspaceItems.find((workspace) => workspace.id === activeWorkspace);
+  const currentWorkspace = workspaceItems.find((item) => item.id === workspace) ?? workspaceItems[0];
   const userInitials = session.user.displayName
     .split(/\s+/)
     .filter(Boolean)
@@ -1258,6 +1277,7 @@ export function OperationsDashboard({
       }));
       setSelectedTicketId(updated.id);
       setCreateFeedback("Ticket created.");
+      setShowCreateTicketForm(false);
       setTicketDraft({
         ticketType: "deployment",
         teamName: "",
@@ -1543,13 +1563,12 @@ export function OperationsDashboard({
           </div>
           <nav className="flex flex-1 flex-col items-center gap-3 px-3 py-4">
             {workspaceItems.map((workspace) => {
-              const active = activeWorkspace === workspace.id;
+              const active = workspace.id === currentWorkspace?.id;
 
               return (
-                <button
+                <Link
                   key={workspace.id}
-                  type="button"
-                  onClick={() => setActiveWorkspace(workspace.id)}
+                  href={workspace.href}
                   className={`group relative flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
                     active
                       ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
@@ -1563,7 +1582,7 @@ export function OperationsDashboard({
                       {workspace.count > 99 ? "99+" : workspace.count}
                     </span>
                   ) : null}
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -1603,13 +1622,12 @@ export function OperationsDashboard({
             </div>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {workspaceItems.map((workspace) => {
-                const active = activeWorkspace === workspace.id;
+                const active = workspace.id === currentWorkspace?.id;
 
                 return (
-                  <button
+                  <Link
                     key={workspace.id}
-                    type="button"
-                    onClick={() => setActiveWorkspace(workspace.id)}
+                    href={workspace.href}
                     className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
                       active
                         ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
@@ -1617,15 +1635,16 @@ export function OperationsDashboard({
                     }`}
                   >
                     {workspace.label} {workspace.count > 0 ? `(${workspace.count})` : ""}
-                  </button>
+                  </Link>
                 );
               })}
             </div>
           </div>
 
-          {activeWorkspace === "tickets" ? (
-            <div className="grid min-h-[calc(100vh-88px)] lg:h-screen lg:min-h-0 lg:grid-cols-[360px_minmax(0,1fr)]">
-              <aside className="flex min-h-0 flex-col border-b border-[color:var(--border)] bg-[color:var(--card)] lg:border-b-0 lg:border-r">
+          {workspace === "tickets" ? (
+            <>
+              <div className="grid min-h-[calc(100vh-88px)] lg:h-screen lg:min-h-0 lg:grid-cols-[360px_minmax(0,1fr)]">
+                <aside className="flex min-h-0 flex-col border-b border-[color:var(--border)] bg-[color:var(--card)] lg:border-b-0 lg:border-r">
                 <div className="border-b border-[color:var(--border)] px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -1639,190 +1658,13 @@ export function OperationsDashboard({
                     {canCreateTicket ? (
                       <button
                         type="button"
-                        onClick={() => setShowCreateTicketForm((current) => !current)}
-                        className={`rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
-                          showCreateTicketForm
-                            ? "border-[color:var(--border)] bg-[color:var(--secondary)] text-[color:var(--foreground)]"
-                            : "border-[color:var(--accent)] bg-[color:var(--accent)] text-white"
-                        }`}
+                        onClick={() => setShowCreateTicketForm(true)}
+                        className="rounded-full border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition"
                       >
-                        {showCreateTicketForm ? "Cancel" : "New Request"}
+                        New Request
                       </button>
                     ) : null}
                   </div>
-
-                  {canCreateTicket && showCreateTicketForm ? (
-                    <div className="mt-4 grid gap-3 rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <select
-                          value={ticketDraft.ticketType}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              ticketType: event.target.value as TicketType,
-                            }))
-                          }
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        >
-                          <option value="deployment">Deployment request</option>
-                          <option value="transfer">Factory transfer</option>
-                        </select>
-                        <input
-                          value={ticketDraft.teamName}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({ ...current, teamName: event.target.value }))
-                          }
-                          placeholder={
-                            ticketDraft.ticketType === "transfer"
-                              ? "Destination team name"
-                              : "Team name"
-                          }
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        />
-                        <input
-                          value={ticketDraft.factoryName}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              factoryName: event.target.value,
-                            }))
-                          }
-                          placeholder={
-                            ticketDraft.ticketType === "transfer"
-                              ? "Destination factory name"
-                              : "Factory name"
-                          }
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        />
-                        <input
-                          type="date"
-                          value={ticketDraft.deploymentDate}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              deploymentDate: event.target.value,
-                            }))
-                          }
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        />
-                        {ticketDraft.ticketType === "transfer" ? (
-                          <>
-                            <input
-                              value={ticketDraft.sourceTeamName ?? ""}
-                              onChange={(event) =>
-                                setTicketDraft((current) => ({
-                                  ...current,
-                                  sourceTeamName: event.target.value,
-                                }))
-                              }
-                              placeholder="Source team name"
-                              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                            />
-                            <input
-                              value={ticketDraft.sourceFactoryName ?? ""}
-                              onChange={(event) =>
-                                setTicketDraft((current) => ({
-                                  ...current,
-                                  sourceFactoryName: event.target.value,
-                                }))
-                              }
-                              placeholder="Source factory name"
-                              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                            />
-                            <input
-                              value={ticketDraft.linkedTicketId ?? ""}
-                              onChange={(event) =>
-                                setTicketDraft((current) => ({
-                                  ...current,
-                                  linkedTicketId: event.target.value,
-                                }))
-                              }
-                              placeholder="Linked ticket ID"
-                              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none sm:col-span-2"
-                            />
-                          </>
-                        ) : null}
-                        <input
-                          type="number"
-                          value={ticketDraft.workerCount || ""}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              workerCount: Number(event.target.value),
-                            }))
-                          }
-                          placeholder="Workers"
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        />
-                        <input
-                          type="number"
-                          value={ticketDraft.devicesRequested || ""}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              devicesRequested: Number(event.target.value),
-                            }))
-                          }
-                          placeholder="Devices requested"
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        />
-                        <input
-                          type="number"
-                          value={ticketDraft.sdCardsRequested || ""}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              sdCardsRequested: Number(event.target.value),
-                            }))
-                          }
-                          placeholder="SD cards requested"
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        />
-                        <select
-                          value={ticketDraft.priority}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              priority: event.target.value as TicketCreateInput["priority"],
-                            }))
-                          }
-                          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--secondary)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
-                        >
-                          <option value="high">High priority</option>
-                          <option value="medium">Medium priority</option>
-                          <option value="low">Low priority</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                          Ticket title is generated from team, quantity, and deployment date.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => void handleCreateTicket()}
-                          disabled={
-                            createPending ||
-                            !ticketDraft.teamName ||
-                            !ticketDraft.factoryName ||
-                            !ticketDraft.deploymentDate ||
-                            ticketDraft.workerCount <= 0 ||
-                            (ticketDraft.ticketType === "transfer" &&
-                              (!ticketDraft.sourceTeamName || !ticketDraft.sourceFactoryName))
-                          }
-                          className="rounded-full bg-[#00a884] px-4 py-2 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
-                        >
-                          {createPending
-                            ? "Creating..."
-                            : ticketDraft.ticketType === "transfer"
-                              ? "Create Transfer"
-                              : "Create Ticket"}
-                        </button>
-                      </div>
-                      {createFeedback ? (
-                        <p className="text-sm text-[color:var(--muted-foreground)]">{createFeedback}</p>
-                      ) : null}
-                    </div>
-                  ) : null}
 
                   <div className="mt-4">
                     <input
@@ -2748,8 +2590,216 @@ export function OperationsDashboard({
                     </div>
                   </div>
                 )}
-              </section>
-            </div>
+                </section>
+              </div>
+
+              {canCreateTicket && showCreateTicketForm ? (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6"
+                  onClick={() => setShowCreateTicketForm(false)}
+                >
+                  <div
+                    className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-[color:var(--border)] bg-[color:var(--background)]"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex items-start justify-between gap-4 border-b border-[color:var(--border)] px-6 py-5">
+                      <div>
+                        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                          New ticket
+                        </p>
+                        <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
+                          Create deployment or transfer request
+                        </h2>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateTicketForm(false)}
+                        className="rounded-full border border-[color:var(--border)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="grid gap-4 px-6 py-5">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <select
+                          value={ticketDraft.ticketType}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              ticketType: event.target.value as TicketType,
+                            }))
+                          }
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        >
+                          <option value="deployment">Deployment request</option>
+                          <option value="transfer">Factory transfer</option>
+                        </select>
+                        <select
+                          value={ticketDraft.priority}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              priority: event.target.value as TicketCreateInput["priority"],
+                            }))
+                          }
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        >
+                          <option value="high">High priority</option>
+                          <option value="medium">Medium priority</option>
+                          <option value="low">Low priority</option>
+                        </select>
+                        <input
+                          value={ticketDraft.teamName}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({ ...current, teamName: event.target.value }))
+                          }
+                          placeholder={
+                            ticketDraft.ticketType === "transfer"
+                              ? "Destination team name"
+                              : "Team name"
+                          }
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        />
+                        <input
+                          value={ticketDraft.factoryName}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              factoryName: event.target.value,
+                            }))
+                          }
+                          placeholder={
+                            ticketDraft.ticketType === "transfer"
+                              ? "Destination factory name"
+                              : "Factory name"
+                          }
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        />
+                        <input
+                          type="date"
+                          value={ticketDraft.deploymentDate}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              deploymentDate: event.target.value,
+                            }))
+                          }
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={ticketDraft.workerCount || ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              workerCount: Number(event.target.value),
+                            }))
+                          }
+                          placeholder="Workers"
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={ticketDraft.devicesRequested || ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              devicesRequested: Number(event.target.value),
+                            }))
+                          }
+                          placeholder="Devices requested"
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={ticketDraft.sdCardsRequested || ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              sdCardsRequested: Number(event.target.value),
+                            }))
+                          }
+                          placeholder="SD cards requested"
+                          className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                        />
+                        {ticketDraft.ticketType === "transfer" ? (
+                          <>
+                            <input
+                              value={ticketDraft.sourceTeamName ?? ""}
+                              onChange={(event) =>
+                                setTicketDraft((current) => ({
+                                  ...current,
+                                  sourceTeamName: event.target.value,
+                                }))
+                              }
+                              placeholder="Source team name"
+                              className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                            />
+                            <input
+                              value={ticketDraft.sourceFactoryName ?? ""}
+                              onChange={(event) =>
+                                setTicketDraft((current) => ({
+                                  ...current,
+                                  sourceFactoryName: event.target.value,
+                                }))
+                              }
+                              placeholder="Source factory name"
+                              className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none"
+                            />
+                            <input
+                              value={ticketDraft.linkedTicketId ?? ""}
+                              onChange={(event) =>
+                                setTicketDraft((current) => ({
+                                  ...current,
+                                  linkedTicketId: event.target.value,
+                                }))
+                              }
+                              placeholder="Linked source ticket ID"
+                              className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-3 text-sm text-[color:var(--foreground)] outline-none sm:col-span-2"
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                      <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                        Ticket title is generated automatically from team, factory, deployment date, and requested quantities.
+                      </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowCreateTicketForm(false)}
+                          className="rounded-full border border-[color:var(--border)] px-4 py-2 text-sm font-semibold text-[color:var(--foreground)]"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleCreateTicket()}
+                          disabled={
+                            createPending ||
+                            !ticketDraft.teamName ||
+                            !ticketDraft.factoryName ||
+                            !ticketDraft.deploymentDate ||
+                            ticketDraft.workerCount <= 0 ||
+                            (ticketDraft.ticketType === "transfer" &&
+                              (!ticketDraft.sourceTeamName || !ticketDraft.sourceFactoryName))
+                          }
+                          className="rounded-full border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          {createPending
+                            ? "Creating..."
+                            : ticketDraft.ticketType === "transfer"
+                              ? "Create Transfer"
+                              : "Create Ticket"}
+                        </button>
+                      </div>
+                      {createFeedback ? (
+                        <p className="text-sm text-[color:var(--muted-foreground)]">{createFeedback}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </>
           ) : (
             <section className="min-h-[calc(100vh-88px)] bg-[color:var(--background)] p-4 lg:h-screen lg:min-h-0 lg:p-6">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -2775,7 +2825,103 @@ export function OperationsDashboard({
                 </div>
               </div>
 
-              {activeWorkspace === "ingestion" ? (
+              {workspace === "home" ? (
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_360px]">
+                  <section className="panel-shell overflow-hidden">
+                    <PanelHeader
+                      eyebrow="Overview"
+                      title="Operations home"
+                      helper="Use tickets for conversations. Use the other pages only for the operational context that belongs there."
+                    />
+                    <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+                      <article className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+                        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                          Open tickets
+                        </p>
+                        <p className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
+                          {openTicketCount}
+                        </p>
+                      </article>
+                      <article className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+                        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                          Active packets
+                        </p>
+                        <p className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
+                          {packetCount}
+                        </p>
+                      </article>
+                      <article className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+                        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                          Merit alerts
+                        </p>
+                        <p className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
+                          {activeMeritAlertCount}
+                        </p>
+                      </article>
+                    </div>
+                    <div className="grid gap-4 border-t border-[color:var(--border)] p-5 xl:grid-cols-[minmax(0,1fr)_280px]">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <h2 className="text-base font-semibold text-[color:var(--foreground)]">
+                            Recent ticket activity
+                          </h2>
+                          <Link
+                            href="/tickets"
+                            className="rounded-full border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white"
+                          >
+                            Open tickets
+                          </Link>
+                        </div>
+                        <div className="overflow-hidden rounded-3xl border border-[color:var(--border)]">
+                          {recentTickets.map((ticket) => (
+                            <Link
+                              key={ticket.id}
+                              href="/tickets"
+                              className="flex items-center justify-between gap-4 border-b border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 last:border-b-0 hover:bg-[color:var(--muted)]"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-[color:var(--foreground)]">
+                                  {ticket.teamName}
+                                </p>
+                                <p className="truncate text-xs text-[color:var(--muted-foreground)]">
+                                  {ticket.factoryName} • {ticket.id}
+                                </p>
+                              </div>
+                              <StatusBadge status={ticket.status} />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+                          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                            Logged in as
+                          </p>
+                          <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
+                            {session.user.displayName}
+                          </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                            {viewerRoleLabel(session.user.role)}
+                          </p>
+                        </div>
+                        <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+                          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                            Backend
+                          </p>
+                          <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
+                            {health.baseUrl.replace(/^https?:\/\//, "")}
+                          </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                            {health.ok ? "Healthy" : "Unavailable"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              ) : null}
+
+              {workspace === "ingestion" ? (
                 <div className="grid gap-4">
                   {selectedTicket ? (
                     <section className="panel-shell overflow-hidden">
@@ -3017,15 +3163,15 @@ export function OperationsDashboard({
                 </div>
               ) : null}
 
-              {activeWorkspace === "movement" && canViewMovement ? (
+              {workspace === "movement" && canViewMovement ? (
                 <MovementLedgerPanel movements={currentSnapshot.movementHistory} />
               ) : null}
 
-              {activeWorkspace === "merit" && canViewMerit ? (
+              {workspace === "merit" && canViewMerit ? (
                 <MeritPanel scores={currentSnapshot.meritScores} />
               ) : null}
 
-              {activeWorkspace === "inventory" && canViewInventory ? (
+              {workspace === "inventory" && canViewInventory ? (
                 <AdminInventoryPanel
                   initialItems={currentSnapshot.inventoryItems}
                   health={health}

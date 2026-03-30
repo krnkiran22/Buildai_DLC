@@ -12,6 +12,13 @@ import {
 import type { AuthSession, BackendHealth, DashboardSnapshot } from "@/lib/operations-types";
 
 const SESSION_STORAGE_KEY = "moto_ops_session";
+export type AppWorkspace =
+  | "home"
+  | "tickets"
+  | "ingestion"
+  | "movement"
+  | "merit"
+  | "inventory";
 
 function healthPlaceholder(): BackendHealth {
   return {
@@ -40,7 +47,7 @@ function sessionsEqual(left: AuthSession | null, right: AuthSession | null) {
   );
 }
 
-export function OperationsApp() {
+export function OperationsApp({ workspace = "home" }: { workspace?: AppWorkspace }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [health, setHealth] = useState<BackendHealth>(healthPlaceholder);
@@ -182,6 +189,7 @@ export function OperationsApp() {
 
   return (
     <OperationsDashboard
+      workspace={workspace}
       snapshot={snapshot}
       health={health}
       session={session}
