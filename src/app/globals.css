@@ -149,3 +149,47 @@ textarea {
   background: radial-gradient(circle, rgba(65, 105, 255, 0.12), transparent 60%);
   pointer-events: none;
 }
+
+.ops-dark {
+  --background: #0b141a;
+  --foreground: #e9edef;
+  --card: #111b21;
+  --card-foreground: #e9edef;
+  --primary: #00a884;
+  --primary-foreground: #0b141a;
+  --secondary: #202c33;
+  --secondary-foreground: #d1d7db;
+  --muted: #111b21;
+  --muted-foreground: #8696a0;
+  --accent: #53bdeb;
+  --accent-soft: rgba(83, 189, 235, 0.12);
+  --border: #223038;
+  --ring: #53bdeb;
+}
+
+.ops-dark .grid-overlay {
+  background-image: none;
+}
+
+.ops-dark .panel-shell {
+  border-color: #223038;
+  background: #111b21;
+  box-shadow: none;
+}
+
+.ops-dark input,
+.ops-dark select,
+.ops-dark textarea {
+  border-color: #223038;
+  background: #202c33;
+  color: #e9edef;
+}
+
+.ops-dark input::placeholder,
+.ops-dark textarea::placeholder {
+  color: #8696a0;
+}
+
+.ops-dark input[type="checkbox"] {
+  accent-color: #00a884;
+}

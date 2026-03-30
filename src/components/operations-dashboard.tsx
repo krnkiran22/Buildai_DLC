@@ -94,6 +94,9 @@ const transitionMap: Record<TicketStatus, TicketStatus[]> = {
 const PUBLIC_SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://buildai-dlc.vercel.app";
 
+type WorkspaceId = "tickets" | "ingestion" | "movement" | "merit" | "inventory";
+type DetailPanelId = "tracking" | "actions" | "packets";
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -335,9 +338,9 @@ function PanelHeader({
 
 function ItemTable({ items }: { items: RequestItem[] }) {
   return (
-    <div className="overflow-x-auto border border-[color:var(--border)]">
+    <div className="overflow-x-auto rounded-3xl border border-[#223038]">
       <table className="min-w-[640px] w-full border-collapse text-left text-sm">
-        <thead className="bg-[color:var(--muted)] text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+        <thead className="bg-[#172229] text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
           <tr>
             <th className="px-4 py-3 font-medium">Item</th>
             <th className="px-4 py-3 font-medium">Requested</th>
@@ -350,21 +353,21 @@ function ItemTable({ items }: { items: RequestItem[] }) {
           {items.map((item) => (
             <tr
               key={item.itemType}
-              className="border-t border-[color:var(--border)] bg-white/70"
+              className="border-t border-[#223038] bg-[#111b21]"
             >
-              <td className="px-4 py-3 font-medium text-[color:var(--foreground)]">
+              <td className="px-4 py-3 font-medium text-white">
                 {item.itemType}
               </td>
-              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
+              <td className="px-4 py-3 text-[#aebac1]">
                 {item.requestedQty}
               </td>
-              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
+              <td className="px-4 py-3 text-[#aebac1]">
                 {item.approvedQty}
               </td>
-              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
+              <td className="px-4 py-3 text-[#aebac1]">
                 {item.returnedQty}
               </td>
-              <td className="px-4 py-3 text-[color:var(--muted-foreground)]">
+              <td className="px-4 py-3 text-[#aebac1]">
                 {item.receivedAtHqQty}
               </td>
             </tr>
@@ -393,36 +396,36 @@ function PackageCard({
   pending: boolean;
 }) {
   return (
-    <article className="border border-[color:var(--border)] bg-white/78 p-4">
+    <article className="rounded-3xl border border-[#223038] bg-[#111b21] p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <div className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+          <div className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#8696a0]">
             {pkg.packageCode}
           </div>
-          <p className="text-sm text-[color:var(--foreground)]">{pkg.note}</p>
+          <p className="text-sm text-white">{pkg.note}</p>
         </div>
         <StatusBadge status={pkg.status} />
       </div>
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
         <div>
-          <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-            Direction
+          <dt className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+            Packet
           </dt>
-          <dd className="mt-1 font-medium text-[color:var(--foreground)]">
-            {pkg.direction}
+          <dd className="mt-1 font-medium text-white">
+            {pkg.packageCode}
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+          <dt className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
             QR Token
           </dt>
-          <dd className="mt-1 break-all font-mono text-[color:var(--foreground)]">{pkg.qrToken}</dd>
+          <dd className="mt-1 break-all font-mono text-white">{pkg.qrToken}</dd>
         </div>
         <div>
-          <dt className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+          <dt className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
             Packed / Received
           </dt>
-          <dd className="mt-1 font-medium text-[color:var(--foreground)]">
+          <dd className="mt-1 font-medium text-white">
             SD {pkg.shippedSdCardsCount} / {pkg.receivedSdCardsCount ?? "-"}
           </dd>
         </div>
@@ -431,7 +434,7 @@ function PackageCard({
         <button
           type="button"
           onClick={() => onSelectQr(pkg)}
-          className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)]"
+          className="rounded-full border border-[#31444e] bg-[#202c33] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#d1d7db]"
         >
           {canEditQr ? "Open QR Detail" : "View QR"}
         </button>
@@ -442,7 +445,7 @@ function PackageCard({
                 type="button"
                 onClick={() => onUpdateStatus(pkg, action)}
                 disabled={pending}
-                className="border border-[color:var(--foreground)] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)] disabled:opacity-60"
+                className="rounded-full border border-[#31444e] bg-[#202c33] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#d1d7db] disabled:opacity-60"
               >
                 {statusLabel(action)}
               </button>
@@ -455,27 +458,27 @@ function PackageCard({
 
 function MeritPanel({ scores }: { scores: MeritScore[] }) {
   return (
-    <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
+    <div className="rounded-[28px] border border-[#223038] bg-[#111b21] p-4 sm:p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8696a0]">
             Team merit
           </p>
-          <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
+          <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
             Return discipline scoreboard
           </h2>
         </div>
-        <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
+        <span className="rounded-full border border-[#223038] bg-[#202c33] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d1d7db]">
           SD 50 / Devices 25 / Accessories 25
         </span>
       </div>
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {scores.map((score) => (
-          <article key={score.teamName} className="border border-[color:var(--border)] bg-[color:var(--muted)] p-3">
+          <article key={score.teamName} className="rounded-3xl border border-[#223038] bg-[#0f171c] p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[color:var(--foreground)]">{score.teamName}</h3>
-                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                <h3 className="text-sm font-semibold text-white">{score.teamName}</h3>
+                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[#8696a0]">
                   SD {score.sdCardShortfall} • Devices {score.deviceShortfall} • Accessories {score.accessoryShortfall}
                 </p>
               </div>
@@ -487,22 +490,22 @@ function MeritPanel({ scores }: { scores: MeritScore[] }) {
                 Score {score.score.toFixed(2)}
               </span>
             </div>
-            <dl className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
+            <dl className="mt-4 grid gap-2 text-sm text-[#8696a0]">
               <div className="flex items-center justify-between gap-3">
                 <dt>SD card penalty</dt>
-                <dd className="font-medium text-[color:var(--foreground)]">
+                <dd className="font-medium text-white">
                   {score.sdCardPenalty.toFixed(2)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Device penalty</dt>
-                <dd className="font-medium text-[color:var(--foreground)]">
+                <dd className="font-medium text-white">
                   {score.devicePenalty.toFixed(2)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Accessory penalty</dt>
-                <dd className="font-medium text-[color:var(--foreground)]">
+                <dd className="font-medium text-white">
                   {score.accessoryPenalty.toFixed(2)}
                 </dd>
               </div>
@@ -565,7 +568,7 @@ function MovementLedgerPanel({
         {movements.map((movement) => (
           <article
             key={movement.id}
-            className="border border-[color:var(--border)] bg-white/78 p-4"
+            className="rounded-3xl border border-[#223038] bg-[#111b21] p-4"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 space-y-2">
@@ -573,55 +576,55 @@ function MovementLedgerPanel({
                   <TicketTypeBadge ticketType={movement.ticketType} />
                   <StatusBadge status={movement.status} />
                 </div>
-                <h3 className="break-words text-base font-semibold text-[color:var(--foreground)]">
+                <h3 className="break-words text-base font-semibold text-white">
                   {movement.routeSummary}
                 </h3>
               </div>
-              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#8696a0]">
                 {formatDateTime(movement.lastEventAt)}
               </span>
             </div>
-            <dl className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
+            <dl className="mt-4 grid gap-2 text-sm text-[#8696a0]">
               <div className="flex items-start justify-between gap-3">
                 <dt>Source</dt>
-                <dd className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
+                <dd className="max-w-[65%] text-right font-medium text-white">
                   {movement.sourceLabel}
                 </dd>
               </div>
               <div className="flex items-start justify-between gap-3">
                 <dt>Destination</dt>
-                <dd className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
+                <dd className="max-w-[65%] text-right font-medium text-white">
                   {movement.destinationLabel}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Devices / SD</dt>
-                <dd className="font-medium text-[color:var(--foreground)]">
+                <dd className="font-medium text-white">
                   {movement.devicesCount} / {movement.sdCardsCount}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Hubs / Cables</dt>
-                <dd className="font-medium text-[color:var(--foreground)]">
+                <dd className="font-medium text-white">
                   {movement.usbHubsCount} / {movement.cablesCount}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt>Packets</dt>
-                <dd className="font-medium text-[color:var(--foreground)]">
+                <dd className="font-medium text-white">
                   {movement.packageCount}
                 </dd>
               </div>
               {movement.relatedTicketId ? (
                 <div className="flex items-center justify-between gap-3">
                   <dt>Linked ticket</dt>
-                  <dd className="font-mono text-[color:var(--foreground)]">
+                  <dd className="font-mono text-white">
                     {movement.relatedTicketId}
                   </dd>
                 </div>
               ) : null}
             </dl>
-            <p className="mt-4 text-sm leading-6 text-[color:var(--muted-foreground)]">
+            <p className="mt-4 text-sm leading-6 text-[#aebac1]">
               {movement.note}
             </p>
           </article>
@@ -695,6 +698,9 @@ export function OperationsDashboard({
   const [reconciliationFeedback, setReconciliationFeedback] = useState("");
   const [createPending, setCreatePending] = useState(false);
   const [createFeedback, setCreateFeedback] = useState("");
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>("tickets");
+  const [detailPanel, setDetailPanel] = useState<DetailPanelId>("tracking");
+  const [showCreateTicketForm, setShowCreateTicketForm] = useState(false);
   const [ticketDraft, setTicketDraft] = useState<TicketCreateInput>({
     ticketType: "deployment",
     teamName: "",
@@ -713,13 +719,6 @@ export function OperationsDashboard({
   const messageComposerRef = useRef<HTMLTextAreaElement | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const swipeStartXRef = useRef(0);
-  const openTicketCount = currentSnapshot.tickets.filter(
-    (ticket) => ticket.status !== "closed" && ticket.status !== "rejected",
-  ).length;
-  const packetCount = currentSnapshot.tickets.reduce(
-    (total, ticket) => total + ticket.packages.length,
-    0,
-  );
   const activeMeritAlertCount = currentSnapshot.meritScores.filter((score) => score.score < 95).length;
 
   const filteredTickets = currentSnapshot.tickets.filter((ticket) => {
@@ -891,6 +890,7 @@ export function OperationsDashboard({
     setReplyTarget(null);
     setActiveSwipeMessageId(null);
     setActiveSwipeOffset(0);
+    setDetailPanel("tracking");
   }, [selectedTicket?.id]);
 
   useEffect(() => {
@@ -917,6 +917,9 @@ export function OperationsDashboard({
   const canUpdatePackageStatus = viewer.permissions.includes("package.status.update");
   const canViewPackages = viewer.permissions.includes("package.view");
   const canReconcileIngestion = viewer.permissions.includes("ingestion.reconcile");
+  const canViewInventory = viewer.permissions.includes("inventory.view");
+  const canViewMovement = viewer.role === "admin" || viewer.role === "logistics";
+  const canViewMerit = viewer.role !== "factory_operator";
   const availableStatusActions =
     selectedTicket && canUpdateStatus
       ? transitionMap[selectedTicket.status].filter((status) =>
@@ -931,6 +934,50 @@ export function OperationsDashboard({
     selectedTicket?.status === "open"
       ? availableStatusActions.filter((status) => status !== "accepted" && status !== "rejected")
       : availableStatusActions;
+  const workspaceItems = [
+    { id: "tickets" as WorkspaceId, short: "TK", label: "Tickets", count: orderedTickets.length, visible: true },
+    {
+      id: "ingestion" as WorkspaceId,
+      short: "IG",
+      label: "Ingestion",
+      count: currentSnapshot.ingestionQueue.length,
+      visible: viewer.role === "ingestion" || viewer.role === "admin" || viewer.role === "logistics",
+    },
+    {
+      id: "movement" as WorkspaceId,
+      short: "MV",
+      label: "Movement",
+      count: currentSnapshot.movementHistory.length,
+      visible: canViewMovement,
+    },
+    {
+      id: "merit" as WorkspaceId,
+      short: "MR",
+      label: "Merit",
+      count: activeMeritAlertCount,
+      visible: canViewMerit,
+    },
+    {
+      id: "inventory" as WorkspaceId,
+      short: "IV",
+      label: "Inventory",
+      count: currentSnapshot.inventoryItems.length,
+      visible: canViewInventory,
+    },
+  ].filter((workspace) => workspace.visible);
+
+  useEffect(() => {
+    if (!workspaceItems.some((workspace) => workspace.id === activeWorkspace)) {
+      setActiveWorkspace("tickets");
+    }
+  }, [activeWorkspace, workspaceItems]);
+  const currentWorkspace = workspaceItems.find((workspace) => workspace.id === activeWorkspace);
+  const userInitials = session.user.displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 2);
 
   function upsertTicket(updatedTicket: (typeof currentSnapshot.tickets)[number]) {
     setCurrentSnapshot((current) => ({
@@ -1496,1477 +1543,1471 @@ export function OperationsDashboard({
   }
 
   return (
-    <main className="grid-overlay min-h-screen">
-      <div className="mx-auto flex w-full max-w-[1920px] flex-col gap-4 px-3 py-4 sm:px-5 lg:px-7 lg:py-5 2xl:px-8">
-        <section className="panel-shell overflow-hidden">
-          <div className="grid gap-4 border-b border-[color:var(--border)] px-4 py-4 lg:px-6 lg:py-4 2xl:grid-cols-[minmax(0,1.65fr)_minmax(360px,0.75fr)]">
-            <div className="min-w-0 space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="border border-[color:var(--border)] bg-white px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
-                  Build AI // Logistics OS
-                </span>
-                <span
-                  className={`inline-flex items-center border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
-                    health.ok ? "status-success" : "status-error"
+    <main className="ops-dark min-h-screen bg-[#0b141a] text-[color:var(--foreground)] lg:h-screen">
+      <div className="flex min-h-screen lg:h-screen">
+        <aside className="hidden w-[76px] shrink-0 border-r border-[#223038] bg-[#111b21] lg:flex lg:flex-col">
+          <div className="flex h-18 items-center justify-center border-b border-[#223038]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#202c33] text-sm font-semibold tracking-[0.24em] text-white">
+              BA
+            </div>
+          </div>
+          <nav className="flex flex-1 flex-col items-center gap-3 px-3 py-4">
+            {workspaceItems.map((workspace) => {
+              const active = activeWorkspace === workspace.id;
+
+              return (
+                <button
+                  key={workspace.id}
+                  type="button"
+                  onClick={() => setActiveWorkspace(workspace.id)}
+                  className={`group relative flex h-12 w-12 items-center justify-center rounded-2xl border text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
+                    active
+                      ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
+                      : "border-[#223038] bg-[#111b21] text-[#8696a0] hover:border-[#2f4049] hover:bg-[#172229] hover:text-[#e9edef]"
                   }`}
+                  title={workspace.label}
                 >
-                  API {health.ok ? "Healthy" : "Unavailable"}
-                </span>
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                  {health.environment}
-                </span>
-              </div>
-              <div className="space-y-2">
-                <h1 className="max-w-4xl font-display text-3xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-4xl">
-                  {currentSnapshot.productName}
-                </h1>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Active role
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
-                    {viewerRoleLabel(session.user.role)}
-                  </p>
-                </div>
-                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Open tickets
-                  </p>
-                  <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
-                    {openTicketCount}
-                  </p>
-                </div>
-                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Active packets
-                  </p>
-                  <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
-                    {packetCount}
-                  </p>
-                </div>
-                <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Merit alerts
-                  </p>
-                  <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
-                    {activeMeritAlertCount}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4">
-              <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
-                      System
-                    </p>
-                    <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-                      Operations status
-                    </h2>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                      Updated {formatDateTime(currentSnapshot.generatedAt)}
+                  {workspace.short}
+                  {workspace.count > 0 ? (
+                    <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#00a884] px-1 text-[10px] font-bold text-[#0b141a]">
+                      {workspace.count > 99 ? "99+" : workspace.count}
                     </span>
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                      Open flow
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
-                      {openTicketCount} active tickets
-                    </p>
-                  </div>
-                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                      Connected backend
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
-                      {health.baseUrl.replace(/^https?:\/\//, "")}
-                    </p>
-                  </div>
-                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                      User
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
-                      {session.user.displayName}
-                    </p>
-                  </div>
-                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                      Email
-                    </p>
-                    <p className="mt-2 break-all text-sm font-semibold text-[color:var(--foreground)]">
-                      {session.user.email}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
-                    {viewerRoleLabel(session.user.role)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onLogout}
-                    className="border border-[color:var(--border)] bg-white px-3 py-2 text-sm font-semibold text-[color:var(--foreground)]"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-5 lg:px-6 lg:py-4">
-            {currentSnapshot.metrics.map((metric) => (
-              <article
-                key={metric.label}
-                className="panel-shell metric-glow min-h-[126px] p-3.5"
-              >
-                <div className="flex h-full flex-col justify-between gap-3">
-                  <div
-                    className={`inline-flex self-start border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${toneClass(metric.tone)}`}
-                  >
-                    {metric.label}
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-display text-3xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)]">
-                      {metric.value}
-                    </p>
-                    <p className="text-xs leading-5 text-[color:var(--muted-foreground)]">
-                      {metric.helper}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
-          <section className="panel-shell overflow-hidden xl:sticky xl:top-4">
-            <PanelHeader
-              eyebrow="Ticket Queue"
-              title="Requests visible to logistics"
-            />
-
-            <div className="grid gap-3 border-b border-[color:var(--border)] p-5">
-              {canCreateTicket ? (
-                <div className="grid gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                        Raise ticket
-                      </p>
-                      <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
-                        Factory-side request and transfer form
-                      </h3>
-                    </div>
-                    <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                      {viewerRoleLabel(viewer.role)}
-                    </span>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <select
-                      value={ticketDraft.ticketType}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({
-                          ...current,
-                          ticketType: event.target.value as TicketType,
-                        }))
-                      }
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    >
-                      <option value="deployment">Deployment request</option>
-                      <option value="transfer">Factory transfer</option>
-                    </select>
-                    <input
-                      value={ticketDraft.teamName}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({ ...current, teamName: event.target.value }))
-                      }
-                      placeholder={
-                        ticketDraft.ticketType === "transfer"
-                          ? "Destination team name"
-                          : "Team name"
-                      }
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    />
-                    <input
-                      value={ticketDraft.factoryName}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({
-                          ...current,
-                          factoryName: event.target.value,
-                        }))
-                      }
-                      placeholder={
-                        ticketDraft.ticketType === "transfer"
-                          ? "Destination factory name"
-                          : "Factory name"
-                      }
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    />
-                    {ticketDraft.ticketType === "transfer" ? (
-                      <>
-                        <input
-                          value={ticketDraft.sourceTeamName ?? ""}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              sourceTeamName: event.target.value,
-                            }))
-                          }
-                          placeholder="Source team name"
-                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                        />
-                        <input
-                          value={ticketDraft.sourceFactoryName ?? ""}
-                          onChange={(event) =>
-                            setTicketDraft((current) => ({
-                              ...current,
-                              sourceFactoryName: event.target.value,
-                            }))
-                          }
-                          placeholder="Source factory name"
-                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                        />
-                      </>
-                    ) : null}
-                    <input
-                      type="date"
-                      value={ticketDraft.deploymentDate}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({
-                          ...current,
-                          deploymentDate: event.target.value,
-                        }))
-                      }
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    />
-                    {ticketDraft.ticketType === "transfer" ? (
-                      <input
-                        value={ticketDraft.linkedTicketId ?? ""}
-                        onChange={(event) =>
-                          setTicketDraft((current) => ({
-                            ...current,
-                            linkedTicketId: event.target.value,
-                          }))
-                        }
-                        placeholder="Linked source ticket ID"
-                        className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                      />
-                    ) : null}
-                    <input
-                      type="number"
-                      value={ticketDraft.workerCount || ""}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({
-                          ...current,
-                          workerCount: Number(event.target.value),
-                        }))
-                      }
-                      placeholder="Workers"
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    />
-                    <input
-                      type="number"
-                      value={ticketDraft.devicesRequested || ""}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({
-                          ...current,
-                          devicesRequested: Number(event.target.value),
-                        }))
-                      }
-                      placeholder="Devices requested"
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    />
-                    <input
-                      type="number"
-                      value={ticketDraft.sdCardsRequested || ""}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({
-                          ...current,
-                          sdCardsRequested: Number(event.target.value),
-                        }))
-                      }
-                      placeholder="SD cards requested"
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <select
-                      value={ticketDraft.priority}
-                      onChange={(event) =>
-                        setTicketDraft((current) => ({
-                          ...current,
-                          priority: event.target.value as TicketCreateInput["priority"],
-                        }))
-                      }
-                      className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                    >
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => void handleCreateTicket()}
-                      disabled={
-                        createPending ||
-                        !ticketDraft.teamName ||
-                        !ticketDraft.factoryName ||
-                        !ticketDraft.deploymentDate ||
-                        ticketDraft.workerCount <= 0 ||
-                        (ticketDraft.ticketType === "transfer" &&
-                          (!ticketDraft.sourceTeamName || !ticketDraft.sourceFactoryName))
-                      }
-                      className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                    >
-                      {createPending
-                        ? "Creating..."
-                        : ticketDraft.ticketType === "transfer"
-                          ? "Create Transfer"
-                          : "Create Ticket"}
-                    </button>
-                  </div>
-                  {createFeedback ? (
-                    <p className="text-sm text-[color:var(--muted-foreground)]">{createFeedback}</p>
                   ) : null}
-                </div>
-              ) : null}
-              <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
-                Search tickets
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Team, factory, or ticket title"
-                  className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none transition focus:border-[color:var(--accent)]"
-                />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {statusOptions.map((option) => {
-                  const active = statusFilter === option.value;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setStatusFilter(option.value)}
-                      className={`border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
-                        active
-                          ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--info-foreground)]"
-                          : "border-[color:var(--border)] bg-white text-[color:var(--muted-foreground)]"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
+                </button>
+              );
+            })}
+          </nav>
+          <div className="border-t border-[#223038] px-3 py-4">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#202c33] text-sm font-semibold text-white">
+                {userInitials}
               </div>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#223038] bg-[#111b21] text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8696a0] transition hover:border-[#2f4049] hover:bg-[#172229] hover:text-[#e9edef]"
+                title="Sign out"
+              >
+                Out
+              </button>
             </div>
+          </div>
+        </aside>
 
-            <div className="flex flex-col xl:max-h-[980px] xl:overflow-auto">
-              {orderedTickets.map((ticket) => {
-                const selected = ticket.id === selectedTicket?.id;
-                const latestActivityAt = latestTicketTimestamp(ticket);
-                const latestPreview = latestTicketPreview(ticket);
+        <div className="min-w-0 flex-1">
+          <div className="border-b border-[#223038] bg-[#111b21] px-4 py-3 lg:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Build AI</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8696a0]">
+                  {viewerRoleLabel(session.user.role)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="rounded-full border border-[#223038] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+              >
+                Sign Out
+              </button>
+            </div>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {workspaceItems.map((workspace) => {
+                const active = activeWorkspace === workspace.id;
 
                 return (
                   <button
-                    key={ticket.id}
+                    key={workspace.id}
                     type="button"
-                    onClick={() => setSelectedTicketId(ticket.id)}
-                    className={`border-b border-[color:var(--border)] px-5 py-4 text-left transition ${
-                      selected
-                        ? "bg-[color:var(--accent-soft)]"
-                        : "bg-white/65 hover:bg-[color:var(--muted)]"
+                    onClick={() => setActiveWorkspace(workspace.id)}
+                    className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                      active
+                        ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
+                        : "border-[#223038] bg-[#111b21] text-[#8696a0]"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <TicketTypeBadge ticketType={ticket.ticketType} />
-                          <StatusBadge status={ticket.status} />
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <h3 className="truncate text-sm font-semibold leading-6 text-[color:var(--foreground)]">
-                            {ticket.teamName}
-                          </h3>
-                          <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                            {formatDateTime(new Date(latestActivityAt).toISOString())}
-                          </span>
-                        </div>
-                        <p className="truncate text-sm text-[color:var(--muted-foreground)]">
-                          {ticket.factoryName}
-                        </p>
-                        <p className="line-clamp-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                          {latestPreview}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                      <span>Deploy {formatDate(ticket.deploymentDate)}</span>
-                      <span>•</span>
-                      <span>SD {ticket.sdCardsRequested}</span>
-                      <span>•</span>
-                      <span>Devices {ticket.devicesRequested}</span>
-                    </div>
-                    {ticket.ticketType === "transfer" ? (
-                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                        Source: {ticket.sourceTeamName} / {ticket.sourceFactoryName}
-                      </p>
-                    ) : null}
+                    {workspace.label} {workspace.count > 0 ? `(${workspace.count})` : ""}
                   </button>
                 );
               })}
-              {orderedTickets.length === 0 ? (
-                <div className="px-5 py-10 text-sm text-[color:var(--muted-foreground)]">
-                  No tickets match the current filter.
-                </div>
-              ) : null}
             </div>
-          </section>
+          </div>
 
-          {selectedTicket ? (
-            <section className="grid min-w-0 gap-4">
-              <section className="panel-shell overflow-hidden">
-                <div className="border-b border-[color:var(--border)] px-4 py-4 lg:px-5">
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="min-w-0 space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <TicketTypeBadge ticketType={selectedTicket.ticketType} />
-                        <StatusBadge status={selectedTicket.status} />
-                        <span className="border border-[color:var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                          {selectedTicket.priority}
-                        </span>
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--foreground)]">
-                          {selectedTicket.teamName}
-                        </h2>
-                        <p className="mt-1 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                          {selectedTicket.factoryName} • Deploy {formatDate(selectedTicket.deploymentDate)} • Requested SD {selectedTicket.sdCardsRequested} • Devices {selectedTicket.devicesRequested}
-                        </p>
-                      </div>
-                      <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
-                        {selectedTicket.summary}
+          {activeWorkspace === "tickets" ? (
+            <div className="grid min-h-[calc(100vh-88px)] lg:h-screen lg:min-h-0 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <aside className="flex min-h-0 flex-col border-b border-[#223038] bg-[#111b21] lg:border-b-0 lg:border-r">
+                <div className="border-b border-[#223038] px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h1 className="text-xl font-semibold tracking-[-0.03em] text-white">
+                        Tickets
+                      </h1>
+                      <p className="mt-1 text-sm text-[#8696a0]">
+                        Latest requests, transfers, and operator conversations.
                       </p>
                     </div>
-                    <div className="space-y-3 xl:w-[360px]">
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                          {streamStatus}
-                        </span>
-                        {quickHeaderActions.length > 0
-                          ? quickHeaderActions.map((action) => (
+                    {canCreateTicket ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateTicketForm((current) => !current)}
+                        className="rounded-full border border-[#223038] bg-[#202c33] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+                      >
+                        {showCreateTicketForm ? "Hide" : "New"}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {canCreateTicket && showCreateTicketForm ? (
+                    <div className="mt-4 grid gap-3 rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <select
+                          value={ticketDraft.ticketType}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              ticketType: event.target.value as TicketType,
+                            }))
+                          }
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        >
+                          <option value="deployment">Deployment request</option>
+                          <option value="transfer">Factory transfer</option>
+                        </select>
+                        <input
+                          value={ticketDraft.teamName}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({ ...current, teamName: event.target.value }))
+                          }
+                          placeholder={
+                            ticketDraft.ticketType === "transfer"
+                              ? "Destination team name"
+                              : "Team name"
+                          }
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        />
+                        <input
+                          value={ticketDraft.factoryName}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              factoryName: event.target.value,
+                            }))
+                          }
+                          placeholder={
+                            ticketDraft.ticketType === "transfer"
+                              ? "Destination factory name"
+                              : "Factory name"
+                          }
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        />
+                        <input
+                          type="date"
+                          value={ticketDraft.deploymentDate}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              deploymentDate: event.target.value,
+                            }))
+                          }
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        />
+                        {ticketDraft.ticketType === "transfer" ? (
+                          <>
+                            <input
+                              value={ticketDraft.sourceTeamName ?? ""}
+                              onChange={(event) =>
+                                setTicketDraft((current) => ({
+                                  ...current,
+                                  sourceTeamName: event.target.value,
+                                }))
+                              }
+                              placeholder="Source team name"
+                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                            />
+                            <input
+                              value={ticketDraft.sourceFactoryName ?? ""}
+                              onChange={(event) =>
+                                setTicketDraft((current) => ({
+                                  ...current,
+                                  sourceFactoryName: event.target.value,
+                                }))
+                              }
+                              placeholder="Source factory name"
+                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                            />
+                            <input
+                              value={ticketDraft.linkedTicketId ?? ""}
+                              onChange={(event) =>
+                                setTicketDraft((current) => ({
+                                  ...current,
+                                  linkedTicketId: event.target.value,
+                                }))
+                              }
+                              placeholder="Linked ticket ID"
+                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none sm:col-span-2"
+                            />
+                          </>
+                        ) : null}
+                        <input
+                          type="number"
+                          value={ticketDraft.workerCount || ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              workerCount: Number(event.target.value),
+                            }))
+                          }
+                          placeholder="Workers"
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={ticketDraft.devicesRequested || ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              devicesRequested: Number(event.target.value),
+                            }))
+                          }
+                          placeholder="Devices requested"
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={ticketDraft.sdCardsRequested || ""}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              sdCardsRequested: Number(event.target.value),
+                            }))
+                          }
+                          placeholder="SD cards requested"
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        />
+                        <select
+                          value={ticketDraft.priority}
+                          onChange={(event) =>
+                            setTicketDraft((current) => ({
+                              ...current,
+                              priority: event.target.value as TicketCreateInput["priority"],
+                            }))
+                          }
+                          className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                        >
+                          <option value="high">High priority</option>
+                          <option value="medium">Medium priority</option>
+                          <option value="low">Low priority</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                          Ticket title is generated from team, quantity, and deployment date.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void handleCreateTicket()}
+                          disabled={
+                            createPending ||
+                            !ticketDraft.teamName ||
+                            !ticketDraft.factoryName ||
+                            !ticketDraft.deploymentDate ||
+                            ticketDraft.workerCount <= 0 ||
+                            (ticketDraft.ticketType === "transfer" &&
+                              (!ticketDraft.sourceTeamName || !ticketDraft.sourceFactoryName))
+                          }
+                          className="rounded-full bg-[#00a884] px-4 py-2 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
+                        >
+                          {createPending
+                            ? "Creating..."
+                            : ticketDraft.ticketType === "transfer"
+                              ? "Create Transfer"
+                              : "Create Ticket"}
+                        </button>
+                      </div>
+                      {createFeedback ? (
+                        <p className="text-sm text-[#8696a0]">{createFeedback}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4">
+                    <input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search team, factory, or title"
+                      className="w-full rounded-2xl border border-[#223038] bg-[#202c33] px-4 py-3 text-sm text-white outline-none"
+                    />
+                  </div>
+                  <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                    {statusOptions.map((option) => {
+                      const active = statusFilter === option.value;
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setStatusFilter(option.value)}
+                          className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                            active
+                              ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
+                              : "border-[#223038] bg-[#111b21] text-[#8696a0]"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  {orderedTickets.map((ticket) => {
+                    const selected = ticket.id === selectedTicket?.id;
+                    const latestActivityAt = latestTicketTimestamp(ticket);
+                    const latestPreview = latestTicketPreview(ticket);
+                    const initials = ticket.teamName
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .map((part) => part[0]?.toUpperCase() ?? "")
+                      .join("")
+                      .slice(0, 2);
+
+                    return (
+                      <button
+                        key={ticket.id}
+                        type="button"
+                        onClick={() => setSelectedTicketId(ticket.id)}
+                        className={`flex w-full items-start gap-3 border-b border-[#1f2b33] px-4 py-3 text-left transition ${
+                          selected ? "bg-[#202c33]" : "bg-[#111b21] hover:bg-[#172229]"
+                        }`}
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25323a] text-sm font-semibold text-white">
+                          {initials}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="truncate text-sm font-semibold text-white">
+                                  {ticket.teamName}
+                                </p>
+                                <TicketTypeBadge ticketType={ticket.ticketType} />
+                              </div>
+                              <p className="truncate text-xs text-[#8696a0]">{ticket.factoryName}</p>
+                            </div>
+                            <span className="shrink-0 text-xs font-medium text-[#8696a0]">
+                              {formatDateTime(new Date(latestActivityAt).toISOString())}
+                            </span>
+                          </div>
+                          <p className="mt-2 line-clamp-2 text-sm text-[#aebac1]">{latestPreview}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <StatusBadge status={ticket.status} />
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                              SD {ticket.sdCardsRequested}
+                            </span>
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                              Devices {ticket.devicesRequested}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {orderedTickets.length === 0 ? (
+                    <div className="px-4 py-10 text-sm text-[#8696a0]">
+                      No tickets match the current filter.
+                    </div>
+                  ) : null}
+                </div>
+              </aside>
+
+              <section className="min-w-0 bg-[#0b141a]">
+                {selectedTicket ? (
+                  <div className="grid min-h-full lg:h-screen lg:grid-cols-[minmax(0,1fr)_360px]">
+                    <div className="flex min-h-0 flex-col lg:border-r lg:border-[#223038]">
+                      <div className="border-b border-[#223038] bg-[#111b21] px-4 py-4 lg:px-5">
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#25323a] text-sm font-semibold text-white">
+                              {selectedTicket.teamName
+                                .split(/\s+/)
+                                .filter(Boolean)
+                                .map((part) => part[0]?.toUpperCase() ?? "")
+                                .join("")
+                                .slice(0, 2)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="truncate text-lg font-semibold text-white">
+                                  {selectedTicket.teamName}
+                                </h2>
+                                <TicketTypeBadge ticketType={selectedTicket.ticketType} />
+                                <StatusBadge status={selectedTicket.status} />
+                              </div>
+                              <p className="mt-1 truncate text-sm text-[#8696a0]">
+                                {selectedTicket.factoryName} • Deploy {formatDate(selectedTicket.deploymentDate)} • Owner {selectedTicket.requestOwner}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-[#223038] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                              {streamStatus}
+                            </span>
+                            {quickHeaderActions.map((action) => (
                               <button
                                 key={`quick-${action}`}
                                 type="button"
                                 onClick={() => void handleStatusUpdate(action)}
                                 disabled={statusPending}
-                                className={`border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
+                                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
                                   action === "accepted"
-                                    ? "status-success"
-                                    : action === "rejected"
-                                      ? "status-error"
-                                      : "border-[color:var(--foreground)] bg-white text-[color:var(--foreground)]"
+                                    ? "bg-[#00a884] text-[#0b141a]"
+                                    : "bg-[#f15c6d] text-white"
                                 } disabled:opacity-60`}
                               >
                                 {statusPending ? "Updating..." : statusLabel(action)}
                               </button>
-                            ))
-                          : null}
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap justify-end gap-2 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                        <span>{selectedTicket.requestOwner}</span>
-                        <span>•</span>
-                        <span>{selectedTicket.workerCount} workers</span>
-                        {selectedTicket.ticketType === "transfer" ? (
-                          <>
-                            <span>•</span>
-                            <span>
-                              {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
-                            </span>
-                          </>
-                        ) : null}
+
+                      <div
+                        ref={chatListRef}
+                        className="min-h-0 flex-1 overflow-y-auto bg-[#0f1a20] px-3 py-4 sm:px-4 lg:px-6"
+                      >
+                        <div className="mx-auto flex max-w-4xl flex-col gap-3">
+                          {orderedMessages.map((message) => {
+                            const isOwnMessage = message.author === viewer.name;
+
+                            return (
+                              <div
+                                key={message.id}
+                                id={`chat-message-${message.id}`}
+                                className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                              >
+                                <div className="relative max-w-[92%] sm:max-w-[82%]">
+                                  <article
+                                    className={`rounded-2xl border px-4 py-3 shadow-sm transition-transform duration-150 ${
+                                      isOwnMessage
+                                        ? "border-[#0b7f6a] bg-[#005c4b]"
+                                        : "border-[#223038] bg-[#202c33]"
+                                    }`}
+                                    style={{
+                                      transform:
+                                        activeSwipeMessageId === message.id
+                                          ? `translateX(${activeSwipeOffset}px)`
+                                          : "translateX(0px)",
+                                    }}
+                                    onTouchStart={(event) =>
+                                      beginSwipe(message.id, event.touches[0]?.clientX ?? 0)
+                                    }
+                                    onTouchMove={(event) =>
+                                      moveSwipe(message.id, event.touches[0]?.clientX ?? 0)
+                                    }
+                                    onTouchEnd={() => endSwipe(message)}
+                                    onTouchCancel={() => {
+                                      setActiveSwipeMessageId(null);
+                                      setActiveSwipeOffset(0);
+                                    }}
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-sm font-semibold text-white">
+                                          {message.author}
+                                        </p>
+                                        <RoleBadge role={message.role} />
+                                      </div>
+                                      <span className="text-[11px] uppercase tracking-[0.14em] text-[#b6c4ca]">
+                                        {formatDateTime(message.sentAt)}
+                                      </span>
+                                    </div>
+                                    {message.replyToMessageId ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const target = document.getElementById(
+                                            `chat-message-${message.replyToMessageId}`,
+                                          );
+                                          target?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                        }}
+                                        className="mt-3 block w-full rounded-xl border border-[#31444e] bg-black/10 px-3 py-2 text-left"
+                                      >
+                                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#b6c4ca]">
+                                          Replying to {message.replyToAuthor ?? "message"}
+                                        </p>
+                                        <p className="mt-1 text-sm leading-5 text-white">
+                                          {message.replyToExcerpt}
+                                        </p>
+                                      </button>
+                                    ) : null}
+                                    <p className="mt-3 text-sm leading-6 text-white">
+                                      {message.message}
+                                    </p>
+                                    <div className="mt-3 flex justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={() => beginReply(message)}
+                                        className="rounded-full border border-[#31444e] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+                                      >
+                                        Reply
+                                      </button>
+                                    </div>
+                                  </article>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-[#223038] bg-[#111b21] px-3 py-4 sm:px-4 lg:px-6">
+                        <div className="mx-auto max-w-4xl">
+                          {replyTarget ? (
+                            <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-[#223038] bg-[#1b2a30] px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-[#53bdeb]">
+                                  Replying to {replyTarget.author}
+                                </p>
+                                <p className="truncate text-sm text-white">
+                                  {replyExcerpt(replyTarget.message)}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={clearReplyTarget}
+                                className="rounded-full border border-[#31444e] px-2.5 py-1 text-xs font-semibold text-[#d1d7db]"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : null}
+                          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                            <div className="grid gap-2">
+                              <textarea
+                                ref={messageComposerRef}
+                                value={messageDraft}
+                                onChange={(event) => setMessageDraft(event.target.value)}
+                                rows={3}
+                                disabled={!canChat || messagePending}
+                                className="rounded-[22px] border border-[#223038] bg-[#202c33] px-4 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                placeholder="Type a message for this ticket"
+                              />
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                  Posting as {viewerRoleLabel(viewer.role)}
+                                </span>
+                                {messageFeedback ? (
+                                  <p className="text-sm text-[#8696a0]">{messageFeedback}</p>
+                                ) : null}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void handleSendMessage()}
+                              disabled={!canChat || messagePending || !messageDraft.trim()}
+                              className="h-12 rounded-full bg-[#00a884] px-6 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
+                            >
+                              {messagePending ? "Sending..." : "Send"}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="grid min-w-0 xl:grid-cols-[minmax(0,1fr)_360px]">
-                  <div className="min-w-0 border-b border-[color:var(--border)] bg-[color:var(--muted)]/35 xl:border-b-0 xl:border-r">
-                    <div
-                      ref={chatListRef}
-                      className="flex max-h-[720px] flex-col gap-3 overflow-auto px-4 py-5 lg:px-5"
-                    >
-                      {orderedMessages.map((message) => {
-                        const isOwnMessage = message.author === viewer.name;
+                    <aside className="flex min-h-0 flex-col border-t border-[#223038] bg-[#111b21] lg:border-t-0">
+                      <div className="border-b border-[#223038] p-3">
+                        <div className="flex gap-2 overflow-x-auto">
+                          {[
+                            { id: "tracking" as DetailPanelId, label: "Tracking" },
+                            { id: "actions" as DetailPanelId, label: "Actions" },
+                            { id: "packets" as DetailPanelId, label: "Packets" },
+                          ].map((tab) => {
+                            const active = detailPanel === tab.id;
 
-                        return (
-                          <div
-                            key={message.id}
-                            id={`chat-message-${message.id}`}
-                            className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
-                          >
-                            <div className="relative max-w-[86%] min-w-0 overflow-hidden">
-                              <article
-                                className={`border p-3 transition-transform duration-150 ${
-                                  isOwnMessage
-                                    ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
-                                    : "border-[color:var(--border)] bg-white"
+                            return (
+                              <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setDetailPanel(tab.id)}
+                                className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                                  active
+                                    ? "border-[#00a884] bg-[#1f3c34] text-[#d1f6ed]"
+                                    : "border-[#223038] bg-[#111b21] text-[#8696a0]"
                                 }`}
-                                style={{
-                                  transform:
-                                    activeSwipeMessageId === message.id
-                                      ? `translateX(${activeSwipeOffset}px)`
-                                      : "translateX(0px)",
-                                }}
-                                onTouchStart={(event) =>
-                                  beginSwipe(message.id, event.touches[0]?.clientX ?? 0)
-                                }
-                                onTouchMove={(event) =>
-                                  moveSwipe(message.id, event.touches[0]?.clientX ?? 0)
-                                }
-                                onTouchEnd={() => endSwipe(message)}
-                                onTouchCancel={() => {
-                                  setActiveSwipeMessageId(null);
-                                  setActiveSwipeOffset(0);
-                                }}
                               >
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-semibold text-[color:var(--foreground)]">
-                                      {message.author}
-                                    </p>
-                                    <RoleBadge role={message.role} />
+                                {tab.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                        {detailPanel === "tracking" ? (
+                          <div className="grid gap-4">
+                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                    Ticket overview
+                                  </p>
+                                  <h3 className="mt-2 text-base font-semibold text-white">
+                                    {selectedTicket.title}
+                                  </h3>
+                                </div>
+                                <span className="rounded-full border border-[#223038] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                  {selectedTicket.id}
+                                </span>
+                              </div>
+                              <p className="mt-3 text-sm leading-6 text-[#aebac1]">
+                                {selectedTicket.summary}
+                              </p>
+                              <div className="mt-4 grid gap-2 text-sm text-[#8696a0]">
+                                <div className="flex items-center justify-between gap-3">
+                                  <span>Priority</span>
+                                  <span className="font-medium text-white">{selectedTicket.priority}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span>Workers</span>
+                                  <span className="font-medium text-white">{selectedTicket.workerCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span>Request owner</span>
+                                  <span className="font-medium text-white">{selectedTicket.requestOwner}</span>
+                                </div>
+                                {selectedTicket.ticketType === "transfer" ? (
+                                  <div className="flex items-start justify-between gap-3">
+                                    <span>Source</span>
+                                    <span className="max-w-[65%] text-right font-medium text-white">
+                                      {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
+                                    </span>
                                   </div>
-                                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                    {formatDateTime(message.sentAt)}
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                Requested inventory
+                              </p>
+                              <div className="mt-3">
+                                <ItemTable items={selectedTicket.items} />
+                              </div>
+                            </div>
+                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                Tracking history
+                              </p>
+                              <div className="mt-4">
+                                <TimelineList events={selectedTicket.timeline} />
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {detailPanel === "actions" ? (
+                          <div className="grid gap-4">
+                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                Ticket actions
+                              </p>
+                              <label className="mt-3 grid gap-2 text-sm text-[#d1d7db]">
+                                Status note
+                                <textarea
+                                  value={statusNote}
+                                  onChange={(event) => setStatusNote(event.target.value)}
+                                  rows={3}
+                                  disabled={!canUpdateStatus || statusPending}
+                                  className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                  placeholder="Add the operational note for this transition"
+                                />
+                              </label>
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                {sidebarStatusActions.length > 0 ? (
+                                  sidebarStatusActions.map((action) => (
+                                    <button
+                                      key={action}
+                                      type="button"
+                                      onClick={() => void handleStatusUpdate(action)}
+                                      disabled={statusPending}
+                                      className="rounded-full border border-[#31444e] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#d1d7db] disabled:opacity-60"
+                                    >
+                                      {statusPending ? "Updating..." : statusLabel(action)}
+                                    </button>
+                                  ))
+                                ) : (
+                                  <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                    No more state changes are available here.
+                                  </span>
+                                )}
+                              </div>
+                              {statusFeedback ? (
+                                <p className="mt-3 text-sm text-[#8696a0]">{statusFeedback}</p>
+                              ) : null}
+                            </div>
+
+                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                Close ticket
+                              </p>
+                              <label className="mt-3 grid gap-2 text-sm text-[#d1d7db]">
+                                Closure note
+                                <textarea
+                                  value={closeNote}
+                                  onChange={(event) => setCloseNote(event.target.value)}
+                                  rows={3}
+                                  disabled={!canCloseTicket || closePending}
+                                  className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                />
+                              </label>
+                              <div className="mt-4 flex items-center justify-between gap-3">
+                                <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                  {canCloseTicket
+                                    ? `Close available for ${viewerRoleLabel(viewer.role)}`
+                                    : `${viewerRoleLabel(viewer.role)} cannot close tickets`}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleCloseTicket()}
+                                  disabled={
+                                    !canCloseTicket ||
+                                    closePending ||
+                                    !closeNote.trim() ||
+                                    selectedTicket.status === "open" ||
+                                    selectedTicket.status === "closed"
+                                  }
+                                  className="rounded-full bg-[#00a884] px-4 py-2 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
+                                >
+                                  {closePending ? "Closing..." : "Close Ticket"}
+                                </button>
+                              </div>
+                              {closeFeedback ? (
+                                <p className="mt-3 text-sm text-[#8696a0]">{closeFeedback}</p>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {detailPanel === "packets" ? (
+                          <div className="grid gap-4">
+                            {canEditPackages && (viewer.role === "admin" || viewer.role === "logistics") ? (
+                              <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                      Generate labels
+                                    </p>
+                                    <h3 className="mt-2 text-base font-semibold text-white">
+                                      Create QR batch
+                                    </h3>
+                                  </div>
+                                  <span className="text-xs uppercase tracking-[0.16em] text-[#8696a0]">
+                                    {viewerRoleLabel(viewer.role)}
                                   </span>
                                 </div>
-                                {message.replyToMessageId ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const target = document.getElementById(
-                                        `chat-message-${message.replyToMessageId}`,
-                                      );
-                                      target?.scrollIntoView({ behavior: "smooth", block: "center" });
-                                    }}
-                                    className="mt-3 block w-full border border-[color:var(--border)] bg-white/70 px-3 py-2 text-left"
-                                  >
-                                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                      Replying to {message.replyToAuthor ?? "message"}
+                                <div className="mt-4 grid gap-3">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={packageDraft.labelCount || ""}
+                                    onChange={(event) =>
+                                      setPackageDraft((current) => ({
+                                        ...current,
+                                        labelCount: Number(event.target.value),
+                                      }))
+                                    }
+                                    placeholder="Number of QR labels"
+                                    className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                  />
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={packageDraft.shippedSdCardsCount || ""}
+                                      onChange={(event) =>
+                                        setPackageDraft((current) => ({
+                                          ...current,
+                                          shippedSdCardsCount: Number(event.target.value),
+                                        }))
+                                      }
+                                      placeholder="Shipped SD cards"
+                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                    />
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={packageDraft.shippedDevicesCount || ""}
+                                      onChange={(event) =>
+                                        setPackageDraft((current) => ({
+                                          ...current,
+                                          shippedDevicesCount: Number(event.target.value),
+                                        }))
+                                      }
+                                      placeholder="Shipped devices"
+                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                    />
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={packageDraft.shippedUsbHubsCount || ""}
+                                      onChange={(event) =>
+                                        setPackageDraft((current) => ({
+                                          ...current,
+                                          shippedUsbHubsCount: Number(event.target.value),
+                                        }))
+                                      }
+                                      placeholder="Shipped USB hubs"
+                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                    />
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={packageDraft.shippedCablesCount || ""}
+                                      onChange={(event) =>
+                                        setPackageDraft((current) => ({
+                                          ...current,
+                                          shippedCablesCount: Number(event.target.value),
+                                        }))
+                                      }
+                                      placeholder="Shipped cables"
+                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                    />
+                                  </div>
+                                  <input
+                                    value={packageDraft.note}
+                                    onChange={(event) =>
+                                      setPackageDraft((current) => ({
+                                        ...current,
+                                        note: event.target.value,
+                                      }))
+                                    }
+                                    placeholder="Shared QR label note"
+                                    className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                  />
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs leading-5 text-[#8696a0]">
+                                      One shared payload. Build AI generates {packageDraft.labelCount || 0} unique QR IDs for this ticket.
                                     </p>
-                                    <p className="mt-1 text-sm leading-5 text-[color:var(--foreground)]">
-                                      {message.replyToExcerpt}
-                                    </p>
-                                  </button>
-                                ) : null}
-                                <p className="mt-3 text-sm leading-6 text-[color:var(--foreground)]">
-                                  {message.message}
-                                </p>
-                                <div className="mt-3 flex justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => beginReply(message)}
-                                    className="border border-[color:var(--border)] bg-white px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--foreground)]"
-                                  >
-                                    Reply
-                                  </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleCreatePackage()}
+                                      disabled={packageCreatePending || !selectedTicket}
+                                      className="rounded-full bg-[#00a884] px-4 py-2 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
+                                    >
+                                      {packageCreatePending ? "Generating..." : "Generate"}
+                                    </button>
+                                  </div>
+                                  {packageCreateFeedback ? (
+                                    <p className="text-sm text-[#8696a0]">{packageCreateFeedback}</p>
+                                  ) : null}
                                 </div>
-                              </article>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="border-t border-[color:var(--border)] bg-white px-4 py-4 lg:px-5">
-                      {replyTarget ? (
-                        <div className="mb-3 flex items-center justify-between gap-3 border border-[color:var(--border)] bg-[color:var(--accent-soft)] px-3 py-2">
-                          <div className="min-w-0">
-                            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--info-foreground)]">
-                              Replying to {replyTarget.author}
-                            </p>
-                            <p className="truncate text-sm text-[color:var(--foreground)]">
-                              {replyExcerpt(replyTarget.message)}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={clearReplyTarget}
-                            className="border border-[color:var(--border)] bg-white px-2 py-1 text-xs font-semibold text-[color:var(--foreground)]"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : null}
-                      <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
-                        Message
-                        <textarea
-                          ref={messageComposerRef}
-                          value={messageDraft}
-                          onChange={(event) => setMessageDraft(event.target.value)}
-                          rows={3}
-                          disabled={!canChat || messagePending}
-                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                          placeholder="Type a message for this ticket"
-                        />
-                      </label>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                        <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                          Posting as {viewerRoleLabel(viewer.role)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => void handleSendMessage()}
-                          disabled={!canChat || messagePending || !messageDraft.trim()}
-                          className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {messagePending ? "Sending..." : "Send Message"}
-                        </button>
-                      </div>
-                      {messageFeedback ? (
-                        <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">
-                          {messageFeedback}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <aside className="grid gap-4 p-4 lg:p-5">
-                    <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                        Ticket tracking
-                      </p>
-                      <div className="mt-4">
-                        <TimelineList events={selectedTicket.timeline} />
-                      </div>
-                    </div>
-
-                    <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <h3 className="text-base font-semibold text-[color:var(--foreground)]">
-                          {selectedTicket.ticketType === "transfer"
-                            ? "Transfer inventory"
-                            : "Requested inventory"}
-                        </h3>
-                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                          {selectedTicket.id}
-                        </span>
-                      </div>
-                      <div className="mt-4">
-                        <ItemTable items={selectedTicket.items} />
-                      </div>
-                    </div>
-
-                    <div className="border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-4">
-                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--info-foreground)]">
-                        Ticket actions
-                      </p>
-                      <label className="mt-3 grid gap-2 text-sm text-[color:var(--foreground)]">
-                        Status note
-                        <textarea
-                          value={statusNote}
-                          onChange={(event) => setStatusNote(event.target.value)}
-                          rows={3}
-                          disabled={!canUpdateStatus || statusPending}
-                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                          placeholder="Add the operational note for this transition"
-                        />
-                      </label>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {sidebarStatusActions.length > 0 ? (
-                          sidebarStatusActions.map((action) => (
-                            <button
-                              key={action}
-                              type="button"
-                              onClick={() => void handleStatusUpdate(action)}
-                              disabled={statusPending}
-                              className="border border-[color:var(--foreground)] bg-white px-3 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:opacity-60"
-                            >
-                              {statusPending ? "Updating..." : statusLabel(action)}
-                            </button>
-                          ))
-                        ) : (
-                          <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                            No more ticket state changes are available here.
-                          </span>
-                        )}
-                      </div>
-                      {statusFeedback ? (
-                        <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">
-                          {statusFeedback}
-                        </p>
-                      ) : null}
-
-                      <label className="mt-4 grid gap-2 text-sm text-[color:var(--foreground)]">
-                        Closure note
-                        <textarea
-                          value={closeNote}
-                          onChange={(event) => setCloseNote(event.target.value)}
-                          rows={3}
-                          disabled={!canCloseTicket || closePending}
-                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                        />
-                      </label>
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                        <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                          {canCloseTicket
-                            ? `Close available for ${viewerRoleLabel(viewer.role)}`
-                            : `${viewerRoleLabel(viewer.role)} cannot close tickets`}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => void handleCloseTicket()}
-                          disabled={
-                            !canCloseTicket ||
-                            closePending ||
-                            !closeNote.trim() ||
-                            selectedTicket.status === "open" ||
-                            selectedTicket.status === "closed"
-                          }
-                          className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {closePending ? "Closing..." : "Close Ticket"}
-                        </button>
-                      </div>
-                      {closeFeedback ? (
-                        <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">
-                          {closeFeedback}
-                        </p>
-                      ) : null}
-                    </div>
-                  </aside>
-                </div>
-              </section>
-
-              <section className="grid gap-4 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                <section className="grid gap-6">
-                  <section className="panel-shell overflow-hidden">
-                    <PanelHeader
-                      eyebrow="Packet Identity"
-                      title="QR-linked packets"
-                    />
-                    <div className="grid gap-5 p-5">
-                      {canEditPackages && (viewer.role === "admin" || viewer.role === "logistics") ? (
-                        <div className="grid gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                Generate labels
-                              </p>
-                              <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
-                                Create QR batch
-                              </h3>
-                            </div>
-                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              {viewerRoleLabel(viewer.role)}
-                            </span>
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-                            <input
-                              type="number"
-                              min={1}
-                              value={packageDraft.labelCount || ""}
-                              onChange={(event) =>
-                                setPackageDraft((current) => ({
-                                  ...current,
-                                  labelCount: Number(event.target.value),
-                                }))
-                              }
-                              placeholder="Number of QR labels"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                            <div className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              One shared payload, unique QR IDs
-                            </div>
-                          </div>
-                          <div className="grid gap-3 border border-[color:var(--border)] bg-white/78 p-3">
-                            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-                              <input
-                                type="number"
-                                min={0}
-                                value={packageDraft.shippedSdCardsCount || ""}
-                                onChange={(event) =>
-                                  setPackageDraft((current) => ({
-                                    ...current,
-                                    shippedSdCardsCount: Number(event.target.value),
-                                  }))
-                                }
-                                placeholder="Shipped SD cards"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                              />
-                              <input
-                                type="number"
-                                min={0}
-                                value={packageDraft.shippedDevicesCount || ""}
-                                onChange={(event) =>
-                                  setPackageDraft((current) => ({
-                                    ...current,
-                                    shippedDevicesCount: Number(event.target.value),
-                                  }))
-                                }
-                                placeholder="Shipped devices"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                              />
-                              <input
-                                type="number"
-                                min={0}
-                                value={packageDraft.shippedUsbHubsCount || ""}
-                                onChange={(event) =>
-                                  setPackageDraft((current) => ({
-                                    ...current,
-                                    shippedUsbHubsCount: Number(event.target.value),
-                                  }))
-                                }
-                                placeholder="Shipped USB hubs"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                              />
-                              <input
-                                type="number"
-                                min={0}
-                                value={packageDraft.shippedCablesCount || ""}
-                                onChange={(event) =>
-                                  setPackageDraft((current) => ({
-                                    ...current,
-                                    shippedCablesCount: Number(event.target.value),
-                                  }))
-                                }
-                                placeholder="Shipped cables"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                              />
-                            </div>
-                            <input
-                              value={packageDraft.note}
-                              onChange={(event) =>
-                                setPackageDraft((current) => ({
-                                  ...current,
-                                  note: event.target.value,
-                                }))
-                              }
-                              placeholder="Shared QR label note"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                            <p className="text-xs leading-5 text-[color:var(--muted-foreground)]">
-                              Fill this once. The system generates {packageDraft.labelCount || 0} QR labels with different unique IDs for the same team and factory batch.
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => void handleCreatePackage()}
-                              disabled={packageCreatePending || !selectedTicket}
-                              className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                            >
-                              {packageCreatePending ? "Generating..." : "Generate QR Labels"}
-                            </button>
-                          </div>
-                          {packageCreateFeedback ? (
-                            <p className="text-sm text-[color:var(--muted-foreground)]">
-                              {packageCreateFeedback}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
-                        QR lookup
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <input
-                            value={qrLookup}
-                            onChange={(event) => setQrLookup(event.target.value)}
-                            placeholder="Paste or scan QR token"
-                            className="flex-1 border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void handleLoadQrDetail()}
-                            disabled={!canViewPackages || qrPending || !qrLookup.trim()}
-                            className="border border-[color:var(--foreground)] bg-white px-4 py-2 text-sm font-semibold text-[color:var(--foreground)] disabled:opacity-60 sm:self-start"
-                          >
-                            {qrPending ? "Loading..." : "Open"}
-                          </button>
-                        </div>
-                      </label>
-
-                      {selectedTicket.packages.map((pkg) => (
-                        <PackageCard
-                          key={pkg.packageCode}
-                          pkg={pkg}
-                          canEditQr={canEditPackages}
-                          canUpdateStatus={canUpdatePackageStatus}
-                          availableActions={transitionMap[pkg.status].filter((status) =>
-                            roleStatusTargets[viewer.role].includes(status),
-                          )}
-                          onSelectQr={(entry) => {
-                            setQrLookup(entry.qrToken);
-                            void handleLoadQrDetail(entry.qrToken);
-                          }}
-                          onUpdateStatus={(entry, nextStatus) =>
-                            void handlePackageStatusAction(entry, nextStatus)
-                          }
-                          pending={packagePending}
-                        />
-                      ))}
-
-                      <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
-                        Packet lifecycle note
-                        <textarea
-                          value={packageActionNote}
-                          onChange={(event) => setPackageActionNote(event.target.value)}
-                          rows={3}
-                          disabled={!canUpdatePackageStatus || packagePending}
-                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                          placeholder="Add a note before moving a specific packet"
-                        />
-                      </label>
-                      {packageFeedback ? (
-                        <p className="text-sm text-[color:var(--muted-foreground)]">
-                          {packageFeedback}
-                        </p>
-                      ) : null}
-
-                      {qrDetail ? (
-                        <div className="grid gap-4 border border-[color:var(--border)] bg-white/78 p-4 lg:grid-cols-[0.9fr_1.1fr]">
-                          <div className="space-y-3">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                              QR detail
-                            </p>
-                            {qrDetail.qrSvgPath ? (
-                              <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                                <Image
-                                  src={qrSvgUrl(qrDetail.package.qrToken)}
-                                  alt={`${qrDetail.package.packageCode} QR`}
-                                  width={192}
-                                  height={192}
-                                  className="mx-auto h-48 w-48"
-                                  unoptimized
-                                />
                               </div>
                             ) : null}
-                            <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4 text-sm">
-                              <p className="font-semibold text-[color:var(--foreground)]">
-                                {qrDetail.package.packageCode}
-                              </p>
-                              <p className="mt-2 break-all font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                {qrDetail.package.qrToken}
-                              </p>
-                              <p className="mt-3 text-[color:var(--muted-foreground)]">
-                                Scan URL: {qrDetail.scanUrl}
-                              </p>
-                              <a
-                                href={qrDetail.scanUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 inline-flex border border-[color:var(--border)] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--foreground)]"
-                              >
-                                Open public page
-                              </a>
-                            </div>
-                          </div>
 
-                          <div className="grid gap-3">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4 text-sm">
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                  Logistics packed
-                                </p>
-                                <dl className="mt-3 grid gap-2 text-[color:var(--muted-foreground)]">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>SD cards</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.shippedSdCardsCount}
-                                    </dd>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>Devices</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.shippedDevicesCount}
-                                    </dd>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>USB hubs</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.shippedUsbHubsCount}
-                                    </dd>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>Cables</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.shippedCablesCount}
-                                    </dd>
-                                  </div>
-                                </dl>
-                              </div>
-                              <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4 text-sm">
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                  Factory confirmed received
-                                </p>
-                                <dl className="mt-3 grid gap-2 text-[color:var(--muted-foreground)]">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>SD cards</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.receivedSdCardsCount ?? "-"}
-                                    </dd>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>Devices</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.receivedDevicesCount ?? "-"}
-                                    </dd>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>USB hubs</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.receivedUsbHubsCount ?? "-"}
-                                    </dd>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <dt>Cables</dt>
-                                    <dd className="font-medium text-[color:var(--foreground)]">
-                                      {qrDetail.package.receivedCablesCount ?? "-"}
-                                    </dd>
-                                  </div>
-                                </dl>
-                              </div>
+                            <div className="rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                              <label className="grid gap-2 text-sm text-[#d1d7db]">
+                                QR lookup
+                                <div className="flex flex-col gap-2 sm:flex-row">
+                                  <input
+                                    value={qrLookup}
+                                    onChange={(event) => setQrLookup(event.target.value)}
+                                    placeholder="Paste or scan QR token"
+                                    className="flex-1 rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleLoadQrDetail()}
+                                    disabled={!canViewPackages || qrPending || !qrLookup.trim()}
+                                    className="rounded-full border border-[#31444e] px-4 py-3 text-sm font-semibold text-[#d1d7db] disabled:opacity-60"
+                                  >
+                                    {qrPending ? "Loading..." : "Open"}
+                                  </button>
+                                </div>
+                              </label>
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
+
+                            <div className="grid gap-3">
+                              {selectedTicket.packages.map((pkg) => (
+                                <PackageCard
+                                  key={pkg.packageCode}
+                                  pkg={pkg}
+                                  canEditQr={canEditPackages}
+                                  canUpdateStatus={canUpdatePackageStatus}
+                                  availableActions={transitionMap[pkg.status].filter((status) =>
+                                    roleStatusTargets[viewer.role].includes(status),
+                                  )}
+                                  onSelectQr={(entry) => {
+                                    setQrLookup(entry.qrToken);
+                                    void handleLoadQrDetail(entry.qrToken);
+                                  }}
+                                  onUpdateStatus={(entry, nextStatus) =>
+                                    void handlePackageStatusAction(entry, nextStatus)
+                                  }
+                                  pending={packagePending}
+                                />
+                              ))}
+                              <label className="grid gap-2 text-sm text-[#d1d7db]">
+                                Packet lifecycle note
+                                <textarea
+                                  value={packageActionNote}
+                                  onChange={(event) => setPackageActionNote(event.target.value)}
+                                  rows={3}
+                                  disabled={!canUpdatePackageStatus || packagePending}
+                                  className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                  placeholder="Add a note before moving a specific packet"
+                                />
+                              </label>
+                              {packageFeedback ? (
+                                <p className="text-sm text-[#8696a0]">{packageFeedback}</p>
+                              ) : null}
+                            </div>
+
+                            {qrDetail ? (
+                              <div className="grid gap-4 rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                                <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+                                  <div className="space-y-3">
+                                    {qrDetail.qrSvgPath ? (
+                                      <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4">
+                                        <Image
+                                          src={qrSvgUrl(qrDetail.package.qrToken)}
+                                          alt={`${qrDetail.package.packageCode} QR`}
+                                          width={192}
+                                          height={192}
+                                          className="mx-auto h-48 w-48"
+                                          unoptimized
+                                        />
+                                      </div>
+                                    ) : null}
+                                    <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm">
+                                      <p className="font-semibold text-white">
+                                        {qrDetail.package.packageCode}
+                                      </p>
+                                      <p className="mt-2 break-all text-[11px] uppercase tracking-[0.14em] text-[#8696a0]">
+                                        {qrDetail.package.qrToken}
+                                      </p>
+                                      <p className="mt-3 break-all text-[#8696a0]">{qrDetail.scanUrl}</p>
+                                      <a
+                                        href={qrDetail.scanUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mt-3 inline-flex rounded-full border border-[#31444e] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#d1d7db]"
+                                      >
+                                        Open public page
+                                      </a>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid gap-3">
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                      <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm">
+                                        <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                          Logistics packed
+                                        </p>
+                                        <dl className="mt-3 grid gap-2 text-[#aebac1]">
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>SD cards</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.shippedSdCardsCount}
+                                            </dd>
+                                          </div>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>Devices</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.shippedDevicesCount}
+                                            </dd>
+                                          </div>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>USB hubs</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.shippedUsbHubsCount}
+                                            </dd>
+                                          </div>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>Cables</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.shippedCablesCount}
+                                            </dd>
+                                          </div>
+                                        </dl>
+                                      </div>
+                                      <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm">
+                                        <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                          Factory confirmed received
+                                        </p>
+                                        <dl className="mt-3 grid gap-2 text-[#aebac1]">
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>SD cards</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.receivedSdCardsCount ?? "-"}
+                                            </dd>
+                                          </div>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>Devices</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.receivedDevicesCount ?? "-"}
+                                            </dd>
+                                          </div>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>USB hubs</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.receivedUsbHubsCount ?? "-"}
+                                            </dd>
+                                          </div>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <dt>Cables</dt>
+                                            <dd className="font-medium text-white">
+                                              {qrDetail.package.receivedCablesCount ?? "-"}
+                                            </dd>
+                                          </div>
+                                        </dl>
+                                      </div>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                      <input
+                                        value={qrDraft.teamName ?? qrDetail.teamName}
+                                        onChange={(event) =>
+                                          setQrDraft((current) => ({
+                                            ...current,
+                                            teamName: event.target.value,
+                                          }))
+                                        }
+                                        disabled={!qrDetail.editable || qrPending}
+                                        placeholder="Team name"
+                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      />
+                                      <input
+                                        value={qrDraft.factoryName ?? qrDetail.factoryName}
+                                        onChange={(event) =>
+                                          setQrDraft((current) => ({
+                                            ...current,
+                                            factoryName: event.target.value,
+                                          }))
+                                        }
+                                        disabled={!qrDetail.editable || qrPending}
+                                        placeholder="Factory name"
+                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      />
+                                      <input
+                                        type="date"
+                                        value={qrDraft.deploymentDate ?? qrDetail.deploymentDate}
+                                        onChange={(event) =>
+                                          setQrDraft((current) => ({
+                                            ...current,
+                                            deploymentDate: event.target.value,
+                                          }))
+                                        }
+                                        disabled={!qrDetail.editable || qrPending}
+                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={
+                                          qrDraft.receivedSdCardsCount ??
+                                          qrDetail.package.receivedSdCardsCount ??
+                                          qrDetail.package.shippedSdCardsCount
+                                        }
+                                        onChange={(event) =>
+                                          setQrDraft((current) => ({
+                                            ...current,
+                                            receivedSdCardsCount: Number(event.target.value),
+                                          }))
+                                        }
+                                        disabled={!qrDetail.editable || qrPending}
+                                        placeholder="Received SD card count"
+                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={
+                                          qrDraft.receivedDevicesCount ??
+                                          qrDetail.package.receivedDevicesCount ??
+                                          qrDetail.package.shippedDevicesCount
+                                        }
+                                        onChange={(event) =>
+                                          setQrDraft((current) => ({
+                                            ...current,
+                                            receivedDevicesCount: Number(event.target.value),
+                                          }))
+                                        }
+                                        disabled={!qrDetail.editable || qrPending}
+                                        placeholder="Received devices"
+                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={
+                                          qrDraft.receivedUsbHubsCount ??
+                                          qrDetail.package.receivedUsbHubsCount ??
+                                          qrDetail.package.shippedUsbHubsCount
+                                        }
+                                        onChange={(event) =>
+                                          setQrDraft((current) => ({
+                                            ...current,
+                                            receivedUsbHubsCount: Number(event.target.value),
+                                          }))
+                                        }
+                                        disabled={!qrDetail.editable || qrPending}
+                                        placeholder="Received USB hubs"
+                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={
+                                          qrDraft.receivedCablesCount ??
+                                          qrDetail.package.receivedCablesCount ??
+                                          qrDetail.package.shippedCablesCount
+                                        }
+                                        onChange={(event) =>
+                                          setQrDraft((current) => ({
+                                            ...current,
+                                            receivedCablesCount: Number(event.target.value),
+                                          }))
+                                        }
+                                        disabled={!qrDetail.editable || qrPending}
+                                        placeholder="Received cables"
+                                        className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                      />
+                                    </div>
+                                    <textarea
+                                      value={qrDraft.note ?? qrDetail.package.note}
+                                      onChange={(event) =>
+                                        setQrDraft((current) => ({
+                                          ...current,
+                                          note: event.target.value,
+                                        }))
+                                      }
+                                      rows={4}
+                                      disabled={!qrDetail.editable || qrPending}
+                                      className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+                                    />
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="space-y-1 text-xs uppercase tracking-[0.14em] text-[#8696a0]">
+                                        <p>
+                                          {qrDetail.editable
+                                            ? viewer.role === "admin" && qrDetail.lockedReason
+                                              ? "Public edit window closed. Admin override is active."
+                                              : "Public edit window is open for this QR label."
+                                            : qrDetail.lockedReason ?? "Public edit window is closed."}
+                                        </p>
+                                        {qrDetail.editWindowExpiresAt ? (
+                                          <p>Editable until {formatDateTime(qrDetail.editWindowExpiresAt)}</p>
+                                        ) : (
+                                          <p>Window starts on the first successful save.</p>
+                                        )}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => void handleSaveQrDetail()}
+                                        disabled={!qrDetail.editable || qrPending}
+                                        className="rounded-full bg-[#00a884] px-4 py-2 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
+                                      >
+                                        {qrPending ? "Saving..." : "Save QR Detail"}
+                                      </button>
+                                    </div>
+                                    {qrFeedback ? (
+                                      <p className="text-sm text-[#8696a0]">{qrFeedback}</p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </aside>
+                  </div>
+                ) : (
+                  <div className="flex min-h-[420px] items-center justify-center p-8 text-sm text-[#8696a0]">
+                    No ticket selected.
+                  </div>
+                )}
+              </section>
+            </div>
+          ) : (
+            <section className="min-h-[calc(100vh-88px)] bg-[#0b141a] p-4 lg:h-screen lg:min-h-0 lg:p-6">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                    {currentWorkspace?.label ?? "Workspace"}
+                  </p>
+                  <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">
+                    {currentWorkspace?.label ?? "Operations"}
+                  </h1>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                      health.ok ? "status-success" : "status-error"
+                    }`}
+                  >
+                    API {health.ok ? "Healthy" : "Unavailable"}
+                  </span>
+                  <span className="rounded-full border border-[#223038] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                    {session.user.displayName}
+                  </span>
+                </div>
+              </div>
+
+              {activeWorkspace === "ingestion" ? (
+                <div className="grid gap-4">
+                  {selectedTicket ? (
+                    <section className="panel-shell overflow-hidden">
+                      <PanelHeader eyebrow="Selected Ticket" title={selectedTicket.teamName} />
+                      <div className="grid gap-4 p-5">
+                        {selectedTicket.ingestionReport ? (
+                          <>
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                              {[
+                                {
+                                  label: "Expected",
+                                  value: selectedTicket.ingestionReport.expectedSdCards,
+                                },
+                                {
+                                  label: "Received",
+                                  value: selectedTicket.ingestionReport.actualSdCardsReceived,
+                                },
+                                {
+                                  label: "Processed",
+                                  value: selectedTicket.ingestionReport.processedSdCards,
+                                },
+                                {
+                                  label: "Missing",
+                                  value: selectedTicket.ingestionReport.missingSdCards,
+                                },
+                                {
+                                  label: "Faulty",
+                                  value: selectedTicket.ingestionReport.faultySdCards,
+                                },
+                              ].map((item) => (
+                                <div
+                                  key={item.label}
+                                  className="rounded-3xl border border-[#223038] bg-[#111b21] p-4"
+                                >
+                                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                    {item.label}
+                                  </p>
+                                  <p className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white">
+                                    {item.value}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4">
+                              <p className="text-sm font-semibold text-white">
+                                Station {selectedTicket.ingestionReport.station} started{" "}
+                                {formatDateTime(selectedTicket.ingestionReport.startedAt)}
+                              </p>
+                              <p className="mt-2 text-sm leading-6 text-[#8696a0]">
+                                {selectedTicket.ingestionReport.note}
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="rounded-3xl border border-[#223038] bg-[#111b21] p-4 text-sm text-[#8696a0]">
+                            Ingestion has not started for this ticket yet.
+                          </div>
+                        )}
+
+                        {canReconcileIngestion ? (
+                          <div className="grid gap-3 rounded-3xl border border-[#223038] bg-[#0f171c] p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] uppercase tracking-[0.16em] text-[#8696a0]">
+                                  Reconciliation form
+                                </p>
+                                <h3 className="mt-1 text-base font-semibold text-white">
+                                  Record ingestion counts
+                                </h3>
+                              </div>
+                              <span className="text-xs uppercase tracking-[0.14em] text-[#8696a0]">
+                                {viewerRoleLabel(viewer.role)}
+                              </span>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                               <input
-                                value={qrDraft.teamName ?? qrDetail.teamName}
+                                value={reconciliationDraft.station}
                                 onChange={(event) =>
-                                  setQrDraft((current) => ({
+                                  setReconciliationDraft((current) => ({
                                     ...current,
-                                    teamName: event.target.value,
+                                    station: event.target.value,
                                   }))
                                 }
-                                disabled={!qrDetail.editable || qrPending}
-                                placeholder="Team name"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                              />
-                              <input
-                                value={qrDraft.factoryName ?? qrDetail.factoryName}
-                                onChange={(event) =>
-                                  setQrDraft((current) => ({
-                                    ...current,
-                                    factoryName: event.target.value,
-                                  }))
-                                }
-                                disabled={!qrDetail.editable || qrPending}
-                                placeholder="Factory name"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                              />
-                              <input
-                                type="date"
-                                value={qrDraft.deploymentDate ?? qrDetail.deploymentDate}
-                                onChange={(event) =>
-                                  setQrDraft((current) => ({
-                                    ...current,
-                                    deploymentDate: event.target.value,
-                                  }))
-                                }
-                                disabled={!qrDetail.editable || qrPending}
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                                placeholder="Station"
+                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
                               />
                               <input
                                 type="number"
-                                value={
-                                  qrDraft.receivedSdCardsCount ??
-                                  qrDetail.package.receivedSdCardsCount ??
-                                  qrDetail.package.shippedSdCardsCount
-                                }
+                                value={reconciliationDraft.expectedSdCards || ""}
                                 onChange={(event) =>
-                                  setQrDraft((current) => ({
+                                  setReconciliationDraft((current) => ({
                                     ...current,
-                                    receivedSdCardsCount: Number(event.target.value),
+                                    expectedSdCards: Number(event.target.value),
                                   }))
                                 }
-                                disabled={!qrDetail.editable || qrPending}
-                                placeholder="Received SD card count"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                                placeholder="Expected"
+                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
                               />
                               <input
                                 type="number"
-                                value={
-                                  qrDraft.receivedDevicesCount ??
-                                  qrDetail.package.receivedDevicesCount ??
-                                  qrDetail.package.shippedDevicesCount
-                                }
+                                value={reconciliationDraft.actualSdCardsReceived || ""}
                                 onChange={(event) =>
-                                  setQrDraft((current) => ({
+                                  setReconciliationDraft((current) => ({
                                     ...current,
-                                    receivedDevicesCount: Number(event.target.value),
+                                    actualSdCardsReceived: Number(event.target.value),
+                                    missingSdCards: Math.max(
+                                      current.expectedSdCards - Number(event.target.value),
+                                      0,
+                                    ),
                                   }))
                                 }
-                                disabled={!qrDetail.editable || qrPending}
-                                placeholder="Received devices"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                                placeholder="Received"
+                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
                               />
                               <input
                                 type="number"
-                                value={
-                                  qrDraft.receivedUsbHubsCount ??
-                                  qrDetail.package.receivedUsbHubsCount ??
-                                  qrDetail.package.shippedUsbHubsCount
-                                }
+                                value={reconciliationDraft.processedSdCards || ""}
                                 onChange={(event) =>
-                                  setQrDraft((current) => ({
+                                  setReconciliationDraft((current) => ({
                                     ...current,
-                                    receivedUsbHubsCount: Number(event.target.value),
+                                    processedSdCards: Number(event.target.value),
                                   }))
                                 }
-                                disabled={!qrDetail.editable || qrPending}
-                                placeholder="Received USB hubs"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                                placeholder="Processed"
+                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
                               />
                               <input
                                 type="number"
-                                value={
-                                  qrDraft.receivedCablesCount ??
-                                  qrDetail.package.receivedCablesCount ??
-                                  qrDetail.package.shippedCablesCount
-                                }
+                                value={reconciliationDraft.missingSdCards || ""}
                                 onChange={(event) =>
-                                  setQrDraft((current) => ({
+                                  setReconciliationDraft((current) => ({
                                     ...current,
-                                    receivedCablesCount: Number(event.target.value),
+                                    missingSdCards: Number(event.target.value),
                                   }))
                                 }
-                                disabled={!qrDetail.editable || qrPending}
-                                placeholder="Received cables"
-                                className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                                placeholder="Missing"
+                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
+                              />
+                              <input
+                                type="number"
+                                value={reconciliationDraft.faultySdCards || ""}
+                                onChange={(event) =>
+                                  setReconciliationDraft((current) => ({
+                                    ...current,
+                                    faultySdCards: Number(event.target.value),
+                                  }))
+                                }
+                                placeholder="Faulty"
+                                className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
                               />
                             </div>
                             <textarea
-                              value={qrDraft.note ?? qrDetail.package.note}
+                              value={reconciliationDraft.note}
                               onChange={(event) =>
-                                setQrDraft((current) => ({
+                                setReconciliationDraft((current) => ({
                                   ...current,
                                   note: event.target.value,
                                 }))
                               }
                               rows={4}
-                              disabled={!qrDetail.editable || qrPending}
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                              placeholder="Counts summary and red-mark note"
+                              className="rounded-2xl border border-[#223038] bg-[#202c33] px-3 py-3 text-sm text-white outline-none"
                             />
+                            <label className="flex items-center gap-3 text-sm text-white">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(reconciliationDraft.markCompleted)}
+                                onChange={(event) =>
+                                  setReconciliationDraft((current) => ({
+                                    ...current,
+                                    markCompleted: event.target.checked,
+                                  }))
+                                }
+                              />
+                              Mark ingestion completed after saving
+                            </label>
                             <div className="flex items-center justify-between gap-3">
-                              <div className="space-y-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                <p>
-                                  {qrDetail.editable
-                                    ? viewer.role === "admin" && qrDetail.lockedReason
-                                      ? "Public edit window closed. Admin override is active."
-                                      : "Public edit window is open for this QR label."
-                                    : qrDetail.lockedReason ?? "Public edit window is closed."}
-                                </p>
-                                {qrDetail.editWindowExpiresAt ? (
-                                  <p>Editable until {formatDateTime(qrDetail.editWindowExpiresAt)}</p>
-                                ) : (
-                                  <p>Window starts on the first successful save.</p>
-                                )}
-                              </div>
+                              <span className="text-xs uppercase tracking-[0.14em] text-[#8696a0]">
+                                Missing should equal expected minus received.
+                              </span>
                               <button
                                 type="button"
-                                onClick={() => void handleSaveQrDetail()}
-                                disabled={!qrDetail.editable || qrPending}
-                                className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                                onClick={() => void handleSaveReconciliation()}
+                                disabled={
+                                  reconciliationPending ||
+                                  !reconciliationDraft.station.trim() ||
+                                  !reconciliationDraft.note.trim()
+                                }
+                                className="rounded-full bg-[#00a884] px-4 py-2 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
                               >
-                                {qrPending ? "Saving..." : "Save QR Detail"}
+                                {reconciliationPending ? "Saving..." : "Save Counts"}
                               </button>
                             </div>
-                            {qrFeedback ? (
-                              <p className="text-sm text-[color:var(--muted-foreground)]">
-                                {qrFeedback}
-                              </p>
+                            {reconciliationFeedback ? (
+                              <p className="text-sm text-[#8696a0]">{reconciliationFeedback}</p>
                             ) : null}
                           </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </section>
+                        ) : null}
+                      </div>
+                    </section>
+                  ) : null}
 
                   <section className="panel-shell overflow-hidden">
-                    <PanelHeader
-                      eyebrow="Ingestion"
-                      title="Reconciliation"
-                    />
-                    <div className="grid gap-4 p-5">
-                      {selectedTicket.ingestionReport ? (
-                        <>
-                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                            {[
-                              {
-                                label: "Expected",
-                                value: selectedTicket.ingestionReport.expectedSdCards,
-                              },
-                              {
-                                label: "Received",
-                                value:
-                                  selectedTicket.ingestionReport.actualSdCardsReceived,
-                              },
-                              {
-                                label: "Processed",
-                                value: selectedTicket.ingestionReport.processedSdCards,
-                              },
-                              {
-                                label: "Missing",
-                                value: selectedTicket.ingestionReport.missingSdCards,
-                              },
-                              {
-                                label: "Faulty",
-                                value: selectedTicket.ingestionReport.faultySdCards,
-                              },
-                            ].map((item) => (
-                              <div
-                                key={item.label}
-                                className="border border-[color:var(--border)] bg-white/78 p-4"
-                              >
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                  {item.label}
-                                </p>
-                                <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
-                                  {item.value}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                            <p className="text-sm font-semibold text-[color:var(--foreground)]">
-                              Station {selectedTicket.ingestionReport.station} started{" "}
-                              {formatDateTime(selectedTicket.ingestionReport.startedAt)}
-                            </p>
-                            <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                              {selectedTicket.ingestionReport.note}
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="border border-[color:var(--border)] bg-white/78 p-4 text-sm text-[color:var(--muted-foreground)]">
-                          Ingestion has not started for this ticket yet.
-                        </div>
-                      )}
-
-                      {canReconcileIngestion ? (
-                        <div className="grid gap-3 border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                          <div className="flex items-center justify-between gap-3">
+                    <PanelHeader eyebrow="Ingestion Room" title="Packets visible to ingestion" />
+                    <div className="grid gap-4 p-5 md:grid-cols-2 2xl:grid-cols-3">
+                      {currentSnapshot.ingestionQueue.map((packet) => (
+                        <article
+                          key={packet.id}
+                          className="rounded-3xl border border-[#223038] bg-[#111b21] p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                Reconciliation form
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8696a0]">
+                                {packet.packageCode}
                               </p>
-                              <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground)]">
-                                Record ingestion counts
+                              <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
+                                {packet.teamName}
                               </h3>
+                              <p className="mt-1 text-sm text-[#8696a0]">{packet.factoryName}</p>
                             </div>
-                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              {viewerRoleLabel(viewer.role)}
-                            </span>
+                            <StatusBadge status={packet.status} />
                           </div>
-                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                            <input
-                              value={reconciliationDraft.station}
-                              onChange={(event) =>
-                                setReconciliationDraft((current) => ({
-                                  ...current,
-                                  station: event.target.value,
-                                }))
-                              }
-                              placeholder="Station"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                            <input
-                              type="number"
-                              value={reconciliationDraft.expectedSdCards || ""}
-                              onChange={(event) =>
-                                setReconciliationDraft((current) => ({
-                                  ...current,
-                                  expectedSdCards: Number(event.target.value),
-                                }))
-                              }
-                              placeholder="Expected"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                            <input
-                              type="number"
-                              value={reconciliationDraft.actualSdCardsReceived || ""}
-                              onChange={(event) =>
-                                setReconciliationDraft((current) => ({
-                                  ...current,
-                                  actualSdCardsReceived: Number(event.target.value),
-                                  missingSdCards: Math.max(
-                                    current.expectedSdCards - Number(event.target.value),
-                                    0,
-                                  ),
-                                }))
-                              }
-                              placeholder="Received"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                            <input
-                              type="number"
-                              value={reconciliationDraft.processedSdCards || ""}
-                              onChange={(event) =>
-                                setReconciliationDraft((current) => ({
-                                  ...current,
-                                  processedSdCards: Number(event.target.value),
-                                }))
-                              }
-                              placeholder="Processed"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                            <input
-                              type="number"
-                              value={reconciliationDraft.missingSdCards || ""}
-                              onChange={(event) =>
-                                setReconciliationDraft((current) => ({
-                                  ...current,
-                                  missingSdCards: Number(event.target.value),
-                                }))
-                              }
-                              placeholder="Missing"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                            <input
-                              type="number"
-                              value={reconciliationDraft.faultySdCards || ""}
-                              onChange={(event) =>
-                                setReconciliationDraft((current) => ({
-                                  ...current,
-                                  faultySdCards: Number(event.target.value),
-                                }))
-                              }
-                              placeholder="Faulty"
-                              className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-sm text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                            />
-                          </div>
-                          <textarea
-                            value={reconciliationDraft.note}
-                            onChange={(event) =>
-                              setReconciliationDraft((current) => ({
-                                ...current,
-                                note: event.target.value,
-                              }))
-                            }
-                            rows={4}
-                            placeholder="Counts summary and red-mark note"
-                            className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)]"
-                          />
-                          <label className="flex items-center gap-3 text-sm text-[color:var(--foreground)]">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(reconciliationDraft.markCompleted)}
-                              onChange={(event) =>
-                                setReconciliationDraft((current) => ({
-                                  ...current,
-                                  markCompleted: event.target.checked,
-                                }))
-                              }
-                            />
-                            Mark ingestion completed after saving
-                          </label>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                              Missing should equal expected minus received.
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => void handleSaveReconciliation()}
-                              disabled={
-                                reconciliationPending ||
-                                !reconciliationDraft.station.trim() ||
-                                !reconciliationDraft.note.trim()
-                              }
-                              className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                            >
-                              {reconciliationPending ? "Saving..." : "Save Counts"}
-                            </button>
-                          </div>
-                          {reconciliationFeedback ? (
-                            <p className="text-sm text-[color:var(--muted-foreground)]">
-                              {reconciliationFeedback}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
+                          <dl className="mt-5 grid gap-3 text-sm">
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-[#8696a0]">Deployment date</dt>
+                              <dd className="font-medium text-white">
+                                {formatDate(packet.deploymentDate)}
+                              </dd>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-[#8696a0]">Expected SD cards</dt>
+                              <dd className="font-medium text-white">{packet.expectedSdCards}</dd>
+                            </div>
+                          </dl>
+                        </article>
+                      ))}
                     </div>
                   </section>
-                </section>
-              </section>
-            </section>
-          ) : (
-            <section className="panel-shell flex min-h-[480px] items-center justify-center p-8 text-sm text-[color:var(--muted-foreground)]">
-              No ticket selected.
+                </div>
+              ) : null}
+
+              {activeWorkspace === "movement" && canViewMovement ? (
+                <MovementLedgerPanel movements={currentSnapshot.movementHistory} />
+              ) : null}
+
+              {activeWorkspace === "merit" && canViewMerit ? (
+                <MeritPanel scores={currentSnapshot.meritScores} />
+              ) : null}
+
+              {activeWorkspace === "inventory" && canViewInventory ? (
+                <AdminInventoryPanel
+                  initialItems={currentSnapshot.inventoryItems}
+                  health={health}
+                  session={session}
+                />
+              ) : null}
             </section>
           )}
-        </section>
-
-        {viewer.role === "admin" || viewer.role === "logistics" ? (
-          <MovementLedgerPanel movements={currentSnapshot.movementHistory} />
-        ) : null}
-
-        {viewer.role !== "factory_operator" ? (
-          <MeritPanel scores={currentSnapshot.meritScores} />
-        ) : null}
-
-        <section className="panel-shell overflow-hidden">
-          <PanelHeader
-            eyebrow="Ingestion Room"
-            title="Packets visible to ingestion"
-          />
-          <div className="grid gap-4 p-5 md:grid-cols-2 2xl:grid-cols-3">
-            {currentSnapshot.ingestionQueue.map((packet) => (
-              <article
-                key={packet.id}
-                className="border border-[color:var(--border)] bg-white/78 p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                      {packet.packageCode}
-                    </p>
-                    <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-                      {packet.teamName}
-                    </h3>
-                    <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-                      {packet.factoryName}
-                    </p>
-                  </div>
-                  <StatusBadge status={packet.status} />
-                </div>
-                <dl className="mt-5 grid gap-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <dt className="text-[color:var(--muted-foreground)]">Deployment date</dt>
-                    <dd className="font-medium text-[color:var(--foreground)]">
-                      {formatDate(packet.deploymentDate)}
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <dt className="text-[color:var(--muted-foreground)]">Expected SD cards</dt>
-                    <dd className="font-medium text-[color:var(--foreground)]">
-                      {packet.expectedSdCards}
-                    </dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {viewer.permissions.includes("inventory.view") ? (
-          <AdminInventoryPanel
-            initialItems={currentSnapshot.inventoryItems}
-            health={health}
-            session={session}
-          />
-        ) : null}
+        </div>
       </div>
     </main>
   );
