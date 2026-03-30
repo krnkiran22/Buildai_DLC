@@ -36,7 +36,6 @@ import type {
   PackageRecord,
   PublicQrPackagePatch,
   QrPackageDetail,
-  RoleCapability,
   RequestItem,
   TicketCreateInput,
   TicketRecord,
@@ -240,6 +239,29 @@ function viewerRoleLabel(role: UserRole) {
 
 function replyExcerpt(message: string) {
   return message.replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
+function latestTicketTimestamp(ticket: TicketRecord) {
+  const timelineTimes = ticket.timeline.map((event) => Date.parse(event.occurredAt));
+  const messageTimes = ticket.messages.map((message) => Date.parse(message.sentAt));
+  const deploymentTime = Date.parse(ticket.deploymentDate);
+  return Math.max(
+    0,
+    Number.isNaN(deploymentTime) ? 0 : deploymentTime,
+    ...timelineTimes.filter((value) => !Number.isNaN(value)),
+    ...messageTimes.filter((value) => !Number.isNaN(value)),
+  );
+}
+
+function latestTicketPreview(ticket: TicketRecord) {
+  const latestMessage = [...ticket.messages]
+    .sort((left, right) => Date.parse(right.sentAt) - Date.parse(left.sentAt))[0];
+
+  if (latestMessage) {
+    return `${latestMessage.author}: ${replyExcerpt(latestMessage.message)}`;
+  }
+
+  return ticket.summary;
 }
 
 function validatePackageBatchDraft(
@@ -528,89 +550,6 @@ function TimelineList({ events }: { events: TimelineEvent[] }) {
   );
 }
 
-function RoleMatrixPanel({
-  viewerRole,
-  roleMatrix,
-}: {
-  viewerRole: UserRole;
-  roleMatrix: RoleCapability[];
-}) {
-  function capabilitySummary(entry: RoleCapability) {
-    const items: string[] = [];
-    if (entry.canCreateTickets) items.push("Create");
-    if (entry.canUpdateStatus) items.push("Status");
-    if (entry.closeTickets) items.push("Close");
-    if (entry.editInventory) items.push("Inventory");
-    if (entry.permissions.includes("ingestion.reconcile")) items.push("Reconcile");
-    if (entry.permissions.includes("package.edit")) items.push("QR");
-    return items;
-  }
-
-  return (
-    <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
-            Hierarchy
-          </p>
-          <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-            Who can do what
-          </h2>
-        </div>
-        <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
-          Viewing as {viewerRoleLabel(viewerRole)}
-        </span>
-      </div>
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
-        {roleMatrix.map((entry) => (
-          <article
-            key={entry.role}
-            className={`border p-3 ${
-              entry.role === viewerRole
-                ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
-                : "border-[color:var(--border)] bg-[color:var(--muted)]"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-[color:var(--foreground)]">
-                  {viewerRoleLabel(entry.role)}
-                </h3>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {capabilitySummary(entry).map((item) => (
-                    <span
-                      key={`${entry.role}-${item}`}
-                      className="border border-[color:var(--border)] bg-white/85 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 text-left sm:text-right">
-                <span
-                  className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                    entry.canChat ? "status-success" : "status-neutral"
-                  }`}
-                >
-                  {entry.canChat ? "Chat" : "Read Only"}
-                </span>
-                <span
-                  className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                    entry.closeTickets ? "status-info" : "status-neutral"
-                  }`}
-                >
-                  {entry.closeTickets ? "Can Close" : "No Close"}
-                </span>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function MovementLedgerPanel({
   movements,
 }: {
@@ -795,8 +734,16 @@ export function OperationsDashboard({
 
     return queryMatch && statusMatch;
   });
+  const orderedTickets = [...filteredTickets].sort(
+    (left, right) => latestTicketTimestamp(right) - latestTicketTimestamp(left),
+  );
   const selectedTicket =
-    filteredTickets.find((ticket) => ticket.id === selectedTicketId) ?? filteredTickets[0];
+    orderedTickets.find((ticket) => ticket.id === selectedTicketId) ?? orderedTickets[0];
+  const orderedMessages = selectedTicket
+    ? [...selectedTicket.messages].sort(
+        (left, right) => Date.parse(left.sentAt) - Date.parse(right.sentAt),
+      )
+    : [];
   const activeTicketId = selectedTicket?.id ?? null;
   const seedSelectedTicketPanels = useEffectEvent((ticket: typeof selectedTicket) => {
     if (!ticket) {
@@ -864,18 +811,18 @@ export function OperationsDashboard({
   }, [snapshot]);
 
   useEffect(() => {
-    if (filteredTickets.some((ticket) => ticket.id === selectedTicketId)) {
+    if (orderedTickets.some((ticket) => ticket.id === selectedTicketId)) {
       return;
     }
 
-    if (!filteredTickets[0]) {
+    if (!orderedTickets[0]) {
       return;
     }
 
     startTransition(() => {
-      setSelectedTicketId(filteredTickets[0].id);
+      setSelectedTicketId(orderedTickets[0].id);
     });
-  }, [filteredTickets, selectedTicketId]);
+  }, [orderedTickets, selectedTicketId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -976,6 +923,14 @@ export function OperationsDashboard({
           roleStatusTargets[viewer.role].includes(status),
         )
       : [];
+  const quickHeaderActions =
+    selectedTicket?.status === "open"
+      ? availableStatusActions.filter((status) => status === "accepted" || status === "rejected")
+      : [];
+  const sidebarStatusActions =
+    selectedTicket?.status === "open"
+      ? availableStatusActions.filter((status) => status !== "accepted" && status !== "rejected")
+      : availableStatusActions;
 
   function upsertTicket(updatedTicket: (typeof currentSnapshot.tickets)[number]) {
     setCurrentSnapshot((current) => ({
@@ -1919,8 +1874,10 @@ export function OperationsDashboard({
             </div>
 
             <div className="flex flex-col xl:max-h-[980px] xl:overflow-auto">
-              {filteredTickets.map((ticket) => {
+              {orderedTickets.map((ticket) => {
                 const selected = ticket.id === selectedTicket?.id;
+                const latestActivityAt = latestTicketTimestamp(ticket);
+                const latestPreview = latestTicketPreview(ticket);
 
                 return (
                   <button
@@ -1933,40 +1890,44 @@ export function OperationsDashboard({
                         : "bg-white/65 hover:bg-[color:var(--muted)]"
                     }`}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <TicketTypeBadge ticketType={ticket.ticketType} />
                           <StatusBadge status={ticket.status} />
-                          <span className="border border-[color:var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                            {ticket.priority}
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="truncate text-sm font-semibold leading-6 text-[color:var(--foreground)]">
+                            {ticket.teamName}
+                          </h3>
+                          <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                            {formatDateTime(new Date(latestActivityAt).toISOString())}
                           </span>
                         </div>
-                        <h3 className="text-sm font-semibold leading-6 text-[color:var(--foreground)]">
-                          {ticket.title}
-                        </h3>
+                        <p className="truncate text-sm text-[color:var(--muted-foreground)]">
+                          {ticket.factoryName}
+                        </p>
+                        <p className="line-clamp-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                          {latestPreview}
+                        </p>
                       </div>
-                      <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                        {formatDate(ticket.deploymentDate)}
-                      </span>
                     </div>
-                    <div className="mt-3 grid gap-3 text-sm text-[color:var(--muted-foreground)] sm:grid-cols-3">
-                      <p>Factory: {ticket.factoryName}</p>
-                      <p>Devices: {ticket.devicesRequested}</p>
-                      <p>SD cards: {ticket.sdCardsRequested}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                      <span>Deploy {formatDate(ticket.deploymentDate)}</span>
+                      <span>•</span>
+                      <span>SD {ticket.sdCardsRequested}</span>
+                      <span>•</span>
+                      <span>Devices {ticket.devicesRequested}</span>
                     </div>
                     {ticket.ticketType === "transfer" ? (
-                      <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
+                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                         Source: {ticket.sourceTeamName} / {ticket.sourceFactoryName}
                       </p>
                     ) : null}
-                    <p className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                      {ticket.summary}
-                    </p>
                   </button>
                 );
               })}
-              {filteredTickets.length === 0 ? (
+              {orderedTickets.length === 0 ? (
                 <div className="px-5 py-10 text-sm text-[color:var(--muted-foreground)]">
                   No tickets match the current filter.
                 </div>
@@ -1977,136 +1938,144 @@ export function OperationsDashboard({
           {selectedTicket ? (
             <section className="grid min-w-0 gap-4">
               <section className="panel-shell overflow-hidden">
-                <PanelHeader
-                  eyebrow="Request Focus"
-                  title={selectedTicket.teamName}
-                />
-
-                <div className="grid gap-4 p-4 lg:p-5 xl:grid-cols-[minmax(0,1.35fr)_320px]">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2 xl:grid-cols-5">
-                      <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                          Ticket type
-                        </p>
-                        <div className="mt-2">
-                          <TicketTypeBadge ticketType={selectedTicket.ticketType} />
-                        </div>
-                      </div>
-                      <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                          Factory
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
-                          {selectedTicket.factoryName}
-                        </p>
-                      </div>
-                      <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                          Owner
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
-                          {selectedTicket.requestOwner}
-                        </p>
-                      </div>
-                      <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                          Workers
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
-                          {selectedTicket.workerCount}
-                        </p>
-                      </div>
-                      <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                          Status
-                        </p>
-                        <div className="mt-2">
-                          <StatusBadge status={selectedTicket.status} />
-                        </div>
-                      </div>
-                  </div>
-                  <div className="min-w-0 space-y-4">
-                    {selectedTicket.ticketType === "transfer" ? (
-                      <div className="border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-4">
-                        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--info-foreground)]">
-                          Transfer chain
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-[color:var(--foreground)]">
-                          Source {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
-                          {" "}to destination {selectedTicket.teamName} / {selectedTicket.factoryName}.
-                        </p>
-                        {selectedTicket.linkedTicketId ? (
-                          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                            Linked ticket {selectedTicket.linkedTicketId}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <h3 className="text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-                          {selectedTicket.ticketType === "transfer"
-                            ? "Transfer inventory"
-                            : "Requested inventory"}
-                        </h3>
-                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                          Deploys {formatDate(selectedTicket.deploymentDate)}
+                <div className="border-b border-[color:var(--border)] px-4 py-4 lg:px-5">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <TicketTypeBadge ticketType={selectedTicket.ticketType} />
+                        <StatusBadge status={selectedTicket.status} />
+                        <span className="border border-[color:var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                          {selectedTicket.priority}
                         </span>
                       </div>
-                      <ItemTable items={selectedTicket.items} />
+                      <div>
+                        <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--foreground)]">
+                          {selectedTicket.teamName}
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                          {selectedTicket.factoryName} • Deploy {formatDate(selectedTicket.deploymentDate)} • Requested SD {selectedTicket.sdCardsRequested} • Devices {selectedTicket.devicesRequested}
+                        </p>
+                      </div>
+                      <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
+                        {selectedTicket.summary}
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="space-y-4 xl:row-span-2 xl:self-start">
-                    <div className="border border-[color:var(--border)] bg-white/78 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
-                          Ticket chat
-                        </h3>
+                    <div className="space-y-3 xl:w-[360px]">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                           {streamStatus}
                         </span>
+                        {quickHeaderActions.length > 0
+                          ? quickHeaderActions.map((action) => (
+                              <button
+                                key={`quick-${action}`}
+                                type="button"
+                                onClick={() => void handleStatusUpdate(action)}
+                                disabled={statusPending}
+                                className={`border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
+                                  action === "accepted"
+                                    ? "status-success"
+                                    : action === "rejected"
+                                      ? "status-error"
+                                      : "border-[color:var(--foreground)] bg-white text-[color:var(--foreground)]"
+                                } disabled:opacity-60`}
+                              >
+                                {statusPending ? "Updating..." : statusLabel(action)}
+                              </button>
+                            ))
+                          : null}
                       </div>
-                      <div
-                        ref={chatListRef}
-                        className="space-y-3 xl:max-h-[360px] xl:overflow-auto xl:pr-1"
-                      >
-                        {selectedTicket.messages.map((message) => (
-                          <div key={message.id} className="relative overflow-hidden">
-                            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                              <span className="border border-[color:var(--border)] bg-white/80 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                Reply
-                              </span>
-                            </div>
-                            <article
-                              className="border border-[color:var(--border)] bg-[color:var(--muted)] p-3 transition-transform duration-150"
-                              style={{
-                                transform:
-                                  activeSwipeMessageId === message.id
-                                    ? `translateX(${activeSwipeOffset}px)`
-                                    : "translateX(0px)",
-                              }}
-                              onTouchStart={(event) =>
-                                beginSwipe(message.id, event.touches[0]?.clientX ?? 0)
-                              }
-                              onTouchMove={(event) =>
-                                moveSwipe(message.id, event.touches[0]?.clientX ?? 0)
-                              }
-                              onTouchEnd={() => endSwipe(message)}
-                              onTouchCancel={() => {
-                                setActiveSwipeMessageId(null);
-                                setActiveSwipeOffset(0);
-                              }}
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-semibold text-[color:var(--foreground)]">
-                                    {message.author}
-                                  </p>
-                                  <RoleBadge role={message.role} />
+                      <div className="flex flex-wrap justify-end gap-2 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                        <span>{selectedTicket.requestOwner}</span>
+                        <span>•</span>
+                        <span>{selectedTicket.workerCount} workers</span>
+                        {selectedTicket.ticketType === "transfer" ? (
+                          <>
+                            <span>•</span>
+                            <span>
+                              {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
+                            </span>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid min-w-0 xl:grid-cols-[minmax(0,1fr)_360px]">
+                  <div className="min-w-0 border-b border-[color:var(--border)] bg-[color:var(--muted)]/35 xl:border-b-0 xl:border-r">
+                    <div
+                      ref={chatListRef}
+                      className="flex max-h-[720px] flex-col gap-3 overflow-auto px-4 py-5 lg:px-5"
+                    >
+                      {orderedMessages.map((message) => {
+                        const isOwnMessage = message.author === viewer.name;
+
+                        return (
+                          <div
+                            key={message.id}
+                            id={`chat-message-${message.id}`}
+                            className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                          >
+                            <div className="relative max-w-[86%] min-w-0 overflow-hidden">
+                              <article
+                                className={`border p-3 transition-transform duration-150 ${
+                                  isOwnMessage
+                                    ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]"
+                                    : "border-[color:var(--border)] bg-white"
+                                }`}
+                                style={{
+                                  transform:
+                                    activeSwipeMessageId === message.id
+                                      ? `translateX(${activeSwipeOffset}px)`
+                                      : "translateX(0px)",
+                                }}
+                                onTouchStart={(event) =>
+                                  beginSwipe(message.id, event.touches[0]?.clientX ?? 0)
+                                }
+                                onTouchMove={(event) =>
+                                  moveSwipe(message.id, event.touches[0]?.clientX ?? 0)
+                                }
+                                onTouchEnd={() => endSwipe(message)}
+                                onTouchCancel={() => {
+                                  setActiveSwipeMessageId(null);
+                                  setActiveSwipeOffset(0);
+                                }}
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-semibold text-[color:var(--foreground)]">
+                                      {message.author}
+                                    </p>
+                                    <RoleBadge role={message.role} />
+                                  </div>
+                                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                    {formatDateTime(message.sentAt)}
+                                  </span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                {message.replyToMessageId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const target = document.getElementById(
+                                        `chat-message-${message.replyToMessageId}`,
+                                      );
+                                      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                    }}
+                                    className="mt-3 block w-full border border-[color:var(--border)] bg-white/70 px-3 py-2 text-left"
+                                  >
+                                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                      Replying to {message.replyToAuthor ?? "message"}
+                                    </p>
+                                    <p className="mt-1 text-sm leading-5 text-[color:var(--foreground)]">
+                                      {message.replyToExcerpt}
+                                    </p>
+                                  </button>
+                                ) : null}
+                                <p className="mt-3 text-sm leading-6 text-[color:var(--foreground)]">
+                                  {message.message}
+                                </p>
+                                <div className="mt-3 flex justify-end">
                                   <button
                                     type="button"
                                     onClick={() => beginReply(message)}
@@ -2114,96 +2083,96 @@ export function OperationsDashboard({
                                   >
                                     Reply
                                   </button>
-                                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                    {formatDateTime(message.sentAt)}
-                                  </span>
                                 </div>
-                              </div>
-                              {message.replyToMessageId ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const target = document.getElementById(`chat-message-${message.replyToMessageId}`);
-                                    target?.scrollIntoView({ behavior: "smooth", block: "center" });
-                                  }}
-                                  className="mt-3 block w-full border border-[color:var(--border)] bg-white/70 px-3 py-2 text-left"
-                                >
-                                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                    Replying to {message.replyToAuthor ?? "message"}
-                                  </p>
-                                  <p className="mt-1 text-sm leading-5 text-[color:var(--foreground)]">
-                                    {message.replyToExcerpt}
-                                  </p>
-                                </button>
-                              ) : null}
-                              <p
-                                id={`chat-message-${message.id}`}
-                                className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]"
-                              >
-                                {message.message}
-                              </p>
-                            </article>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-4 border-t border-[color:var(--border)] pt-4">
-                        {replyTarget ? (
-                          <div className="mb-3 border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--info-foreground)]">
-                                  Replying to {replyTarget.author}
-                                </p>
-                                <p className="mt-1 text-sm text-[color:var(--foreground)]">
-                                  {replyExcerpt(replyTarget.message)}
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={clearReplyTarget}
-                                className="border border-[color:var(--border)] bg-white px-2 py-1 text-xs font-semibold text-[color:var(--foreground)]"
-                              >
-                                Cancel
-                              </button>
+                              </article>
                             </div>
                           </div>
-                        ) : null}
-                        <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
-                          Send chat update
-                          <textarea
-                            ref={messageComposerRef}
-                            value={messageDraft}
-                            onChange={(event) => setMessageDraft(event.target.value)}
-                            rows={3}
-                            disabled={!canChat || messagePending}
-                            className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
-                            placeholder="Send a logistics or admin update into the ticket thread"
-                          />
-                        </label>
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                            Posting as {viewerRoleLabel(viewer.role)}
-                          </span>
+                        );
+                      })}
+                    </div>
+
+                    <div className="border-t border-[color:var(--border)] bg-white px-4 py-4 lg:px-5">
+                      {replyTarget ? (
+                        <div className="mb-3 flex items-center justify-between gap-3 border border-[color:var(--border)] bg-[color:var(--accent-soft)] px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--info-foreground)]">
+                              Replying to {replyTarget.author}
+                            </p>
+                            <p className="truncate text-sm text-[color:var(--foreground)]">
+                              {replyExcerpt(replyTarget.message)}
+                            </p>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => void handleSendMessage()}
-                            disabled={!canChat || messagePending || !messageDraft.trim()}
-                            className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={clearReplyTarget}
+                            className="border border-[color:var(--border)] bg-white px-2 py-1 text-xs font-semibold text-[color:var(--foreground)]"
                           >
-                            {messagePending ? "Sending..." : "Send Message"}
+                            Cancel
                           </button>
                         </div>
-                        {messageFeedback ? (
-                          <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">
-                            {messageFeedback}
-                          </p>
-                        ) : null}
+                      ) : null}
+                      <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
+                        Message
+                        <textarea
+                          ref={messageComposerRef}
+                          value={messageDraft}
+                          onChange={(event) => setMessageDraft(event.target.value)}
+                          rows={3}
+                          disabled={!canChat || messagePending}
+                          className="border border-[color:var(--border)] bg-white px-3 py-2.5 text-[color:var(--foreground)] outline-none focus:border-[color:var(--accent)] disabled:opacity-60"
+                          placeholder="Type a message for this ticket"
+                        />
+                      </label>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                        <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                          Posting as {viewerRoleLabel(viewer.role)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleSendMessage()}
+                          disabled={!canChat || messagePending || !messageDraft.trim()}
+                          className="border border-[color:var(--foreground)] bg-[color:var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {messagePending ? "Sending..." : "Send Message"}
+                        </button>
+                      </div>
+                      {messageFeedback ? (
+                        <p className="mt-3 text-sm text-[color:var(--muted-foreground)]">
+                          {messageFeedback}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <aside className="grid gap-4 p-4 lg:p-5">
+                    <div className="border border-[color:var(--border)] bg-white/78 p-4">
+                      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                        Ticket tracking
+                      </p>
+                      <div className="mt-4">
+                        <TimelineList events={selectedTicket.timeline} />
+                      </div>
+                    </div>
+
+                    <div className="border border-[color:var(--border)] bg-white/78 p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <h3 className="text-base font-semibold text-[color:var(--foreground)]">
+                          {selectedTicket.ticketType === "transfer"
+                            ? "Transfer inventory"
+                            : "Requested inventory"}
+                        </h3>
+                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                          {selectedTicket.id}
+                        </span>
+                      </div>
+                      <div className="mt-4">
+                        <ItemTable items={selectedTicket.items} />
                       </div>
                     </div>
 
                     <div className="border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-4">
                       <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--info-foreground)]">
-                        Control actions
+                        Ticket actions
                       </p>
                       <label className="mt-3 grid gap-2 text-sm text-[color:var(--foreground)]">
                         Status note
@@ -2217,8 +2186,8 @@ export function OperationsDashboard({
                         />
                       </label>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {availableStatusActions.length > 0 ? (
-                          availableStatusActions.map((action) => (
+                        {sidebarStatusActions.length > 0 ? (
+                          sidebarStatusActions.map((action) => (
                             <button
                               key={action}
                               type="button"
@@ -2231,7 +2200,7 @@ export function OperationsDashboard({
                           ))
                         ) : (
                           <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                            No status actions available for this role at the current step.
+                            No more ticket state changes are available here.
                           </span>
                         )}
                       </div>
@@ -2240,6 +2209,7 @@ export function OperationsDashboard({
                           {statusFeedback}
                         </p>
                       ) : null}
+
                       <label className="mt-4 grid gap-2 text-sm text-[color:var(--foreground)]">
                         Closure note
                         <textarea
@@ -2253,7 +2223,7 @@ export function OperationsDashboard({
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                         <span className="text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
                           {canCloseTicket
-                            ? `Closing allowed for ${viewerRoleLabel(viewer.role)}`
+                            ? `Close available for ${viewerRoleLabel(viewer.role)}`
                             : `${viewerRoleLabel(viewer.role)} cannot close tickets`}
                         </span>
                         <button
@@ -2277,21 +2247,11 @@ export function OperationsDashboard({
                         </p>
                       ) : null}
                     </div>
-                  </div>
+                  </aside>
                 </div>
               </section>
 
               <section className="grid gap-4 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                <section className="panel-shell overflow-hidden">
-                  <PanelHeader
-                    eyebrow="Tracking"
-                    title="Operator-visible lifecycle"
-                  />
-                  <div className="p-5">
-                    <TimelineList events={selectedTicket.timeline} />
-                  </div>
-                </section>
-
                 <section className="grid gap-6">
                   <section className="panel-shell overflow-hidden">
                     <PanelHeader
@@ -2952,15 +2912,9 @@ export function OperationsDashboard({
           <MovementLedgerPanel movements={currentSnapshot.movementHistory} />
         ) : null}
 
-        <section className="grid gap-4 xl:grid-cols-2">
-          <RoleMatrixPanel
-            viewerRole={currentSnapshot.viewer.role}
-            roleMatrix={currentSnapshot.roleMatrix}
-          />
-          {viewer.role !== "factory_operator" ? (
-            <MeritPanel scores={currentSnapshot.meritScores} />
-          ) : null}
-        </section>
+        {viewer.role !== "factory_operator" ? (
+          <MeritPanel scores={currentSnapshot.meritScores} />
+        ) : null}
 
         <section className="panel-shell overflow-hidden">
           <PanelHeader
