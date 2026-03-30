@@ -186,8 +186,9 @@ function StatusBadge({ status }: { status: TicketStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${toneClass(tone)}`}
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${toneClass(tone)} transition-all duration-200`}
     >
+      <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current opacity-75" />
       {statusLabel(status)}
     </span>
   );
@@ -205,7 +206,7 @@ function RoleBadge({ role }: { role: ChatMessage["role"] }) {
 
   return (
     <span
-      className={`inline-flex items-center border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${toneClass(tone)}`}
+      className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest ${toneClass(tone)}`}
     >
       {role}
     </span>
@@ -254,17 +255,6 @@ function latestTicketTimestamp(ticket: TicketRecord) {
     ...timelineTimes.filter((value) => !Number.isNaN(value)),
     ...messageTimes.filter((value) => !Number.isNaN(value)),
   );
-}
-
-function latestTicketPreview(ticket: TicketRecord) {
-  const latestMessage = [...ticket.messages]
-    .sort((left, right) => Date.parse(right.sentAt) - Date.parse(left.sentAt))[0];
-
-  if (latestMessage) {
-    return `${latestMessage.author}: ${replyExcerpt(latestMessage.message)}`;
-  }
-
-  return ticket.summary;
 }
 
 function validatePackageBatchDraft(
@@ -318,16 +308,16 @@ function PanelHeader({
   helper?: string;
 }) {
   return (
-    <div className="flex flex-col gap-2 border-b border-[color:var(--border)] px-5 py-4">
-      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
+    <div className="flex flex-col gap-1.5 border-b border-[color:var(--border)] bg-[color:var(--card)]/50 px-6 py-5 backdrop-blur-sm">
+      <span className="font-mono text-[9px] font-bold uppercase tracking-[0.3em] text-[color:var(--muted-foreground)]">
         {eyebrow}
       </span>
       <div className="space-y-1">
-        <h2 className="font-display text-xl font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
+        <h2 className="font-display text-lg font-bold tracking-tight text-[color:var(--foreground)]">
           {title}
         </h2>
         {helper ? (
-          <p className="max-w-2xl text-sm leading-6 text-[color:var(--muted-foreground)]">
+          <p className="max-w-2xl text-xs leading-relaxed text-[color:var(--muted-foreground)]">
             {helper}
           </p>
         ) : null}
@@ -1868,7 +1858,6 @@ export function OperationsDashboard({
                   {orderedTickets.map((ticket) => {
                     const selected = ticket.id === selectedTicket?.id;
                     const latestActivityAt = latestTicketTimestamp(ticket);
-                    const latestPreview = latestTicketPreview(ticket);
                     const initials = ticket.teamName
                       .split(/\s+/)
                       .filter(Boolean)
@@ -1881,45 +1870,54 @@ export function OperationsDashboard({
                         key={ticket.id}
                         type="button"
                         onClick={() => setSelectedTicketId(ticket.id)}
-                        className={`flex w-full items-start gap-3 border-b border-[color:var(--border)] px-4 py-3 text-left transition ${
-                          selected ? "bg-[color:var(--secondary)]" : "bg-[color:var(--card)] hover:bg-[color:var(--muted)]"
+                        className={`group relative flex w-full flex-col gap-2.5 border-b border-[color:var(--border)] px-5 py-4 text-left transition-all duration-200 ${
+                          selected
+                            ? "bg-[color:var(--secondary)]/70 ring-1 ring-inset ring-[color:var(--accent)]/10 text-[color:var(--foreground)]"
+                            : "bg-[color:var(--card)] hover:bg-[color:var(--muted)]/50"
                         }`}
                       >
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[color:var(--secondary)] text-sm font-semibold text-[color:var(--foreground)]">
-                          {initials}
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)] group-hover:text-[color:var(--foreground)]">
+                            {ticket.id.split("-")[0]}
+                          </span>
+                          <span className="text-[10px] font-medium text-[color:var(--muted-foreground)]">
+                            {formatDateTime(new Date(latestActivityAt).toISOString())}
+                          </span>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="truncate text-sm font-semibold text-[color:var(--foreground)]">
-                                  {ticket.teamName}
-                                </p>
-                                <TicketTypeBadge ticketType={ticket.ticketType} />
-                              </div>
-                              <p className="truncate text-xs text-[color:var(--muted-foreground)]">{ticket.factoryName}</p>
-                            </div>
-                            <span className="shrink-0 text-xs font-medium text-[color:var(--muted-foreground)]">
-                              {formatDateTime(new Date(latestActivityAt).toISOString())}
-                            </span>
+
+                        <div className="flex items-start gap-3.5">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[color:var(--accent-soft)] text-[11px] font-bold text-[color:var(--accent)] ring-1 ring-inset ring-[color:var(--accent)]/20 shadow-sm transition-transform group-hover:scale-105">
+                            {initials}
                           </div>
-                          <p className="mt-2 line-clamp-2 text-sm text-[color:var(--muted-foreground)]">{latestPreview}</p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <StatusBadge status={ticket.status} />
-                            <span className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                              SD {ticket.sdCardsRequested}
-                            </span>
-                            <span className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                              Devices {ticket.devicesRequested}
-                            </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <h3 className="truncate font-display text-sm font-bold tracking-tight text-[color:var(--foreground)]">
+                                {ticket.teamName}
+                              </h3>
+                              <TicketTypeBadge ticketType={ticket.ticketType} />
+                            </div>
+                            <p className="mt-0.5 truncate text-[11px] font-medium text-[color:var(--muted-foreground)]">
+                              {ticket.factoryName}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <StatusBadge status={ticket.status} />
+                          <div className="flex items-center gap-1.5 px-1 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[color:var(--muted-foreground)] opacity-70">
+                            <span>SD {ticket.sdCardsRequested}</span>
+                            <span className="opacity-30">/</span>
+                            <span>DV {ticket.devicesRequested}</span>
                           </div>
                         </div>
                       </button>
                     );
                   })}
                   {orderedTickets.length === 0 ? (
-                    <div className="px-4 py-10 text-sm text-[color:var(--muted-foreground)]">
-                      No tickets match the current filter.
+                    <div className="px-6 py-12 text-center">
+                      <p className="text-xs font-medium text-[color:var(--muted-foreground)]">
+                        No tickets match the current filter.
+                      </p>
                     </div>
                   ) : null}
                 </div>
@@ -1978,9 +1976,9 @@ export function OperationsDashboard({
 
                       <div
                         ref={chatListRef}
-                        className="min-h-0 flex-1 overflow-y-auto bg-[#0f1a20] px-3 py-4 sm:px-4 lg:px-6"
+                        className="min-h-0 flex-1 overflow-y-auto bg-[color:var(--background)] p-4 lg:p-6"
                       >
-                        <div className="mx-auto flex max-w-4xl flex-col gap-3">
+                        <div className="mx-auto flex max-w-2xl flex-col gap-6">
                           {orderedMessages.map((message) => {
                             const isOwnMessage = message.author === viewer.name;
 
@@ -1988,21 +1986,21 @@ export function OperationsDashboard({
                               <div
                                 key={message.id}
                                 id={`chat-message-${message.id}`}
-                                className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                                className={`flex flex-col gap-1.5 ${isOwnMessage ? "items-end text-right" : "items-start text-left"}`}
                               >
-                                <div className="relative max-w-[92%] sm:max-w-[82%]">
+                                <div className={`flex items-center gap-2 px-1 ${isOwnMessage ? "flex-row-reverse" : "flex-row"}`}>
+                                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
+                                    {message.author}
+                                  </span>
+                                  <RoleBadge role={message.role} />
+                                </div>
+                                <div className={`group relative max-w-[92%] sm:max-w-[82%] lg:max-w-[75%]`}>
                                   <article
-                                    className={`rounded-2xl border px-4 py-3 shadow-sm transition-transform duration-150 ${
+                                    className={`relative overflow-hidden rounded-2xl px-4 py-3 shadow-md ring-1 ring-inset transition-all duration-200 ${
                                       isOwnMessage
-                                        ? "border-[color:var(--success)] bg-[color:var(--success-muted)]"
-                                        : "border-[color:var(--border)] bg-[color:var(--secondary)]"
+                                        ? "bg-[color:var(--primary)] text-[color:var(--primary-foreground)] ring-[color:var(--primary)]/10"
+                                        : "bg-[color:var(--card)] text-[color:var(--foreground)] ring-[color:var(--border)]"
                                     }`}
-                                    style={{
-                                      transform:
-                                        activeSwipeMessageId === message.id
-                                          ? `translateX(${activeSwipeOffset}px)`
-                                          : "translateX(0px)",
-                                    }}
                                     onTouchStart={(event) =>
                                       beginSwipe(message.id, event.touches[0]?.clientX ?? 0)
                                     }
@@ -2015,14 +2013,8 @@ export function OperationsDashboard({
                                       setActiveSwipeOffset(0);
                                     }}
                                   >
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                      <div className="flex items-center gap-2">
-                                        <p className="text-sm font-semibold text-[color:var(--foreground)]">
-                                          {message.author}
-                                        </p>
-                                        <RoleBadge role={message.role} />
-                                      </div>
-                                      <span className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                      <span className={`text-[10px] font-medium tracking-wide ${isOwnMessage ? "text-[color:var(--primary-foreground)]/60" : "text-[color:var(--muted-foreground)]"}`}>
                                         {formatDateTime(message.sentAt)}
                                       </span>
                                     </div>
@@ -2035,24 +2027,32 @@ export function OperationsDashboard({
                                           );
                                           target?.scrollIntoView({ behavior: "smooth", block: "center" });
                                         }}
-                                        className="mt-3 block w-full rounded-xl border border-[color:var(--border)] bg-black/10 px-3 py-2 text-left"
+                                        className={`mt-2.5 block w-full rounded-xl border p-2.5 text-left text-[11px] transition-all hover:opacity-80 ${
+                                          isOwnMessage
+                                            ? "border-white/10 bg-black/10"
+                                            : "border-[color:var(--border)] bg-[color:var(--muted)]/50"
+                                        }`}
                                       >
-                                        <p className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                          Replying to {message.replyToAuthor ?? "message"}
-                                        </p>
-                                        <p className="mt-1 text-sm leading-5 text-[color:var(--foreground)]">
+                                        <div className="font-bold uppercase tracking-wider opacity-60">
+                                          {message.replyToAuthor}
+                                        </div>
+                                        <div className="mt-1 line-clamp-1 italic opacity-80">
                                           {message.replyToExcerpt}
-                                        </p>
+                                        </div>
                                       </button>
                                     ) : null}
-                                    <p className="mt-3 text-sm leading-6 text-[color:var(--foreground)]">
+                                    <p className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-relaxed">
                                       {message.message}
                                     </p>
-                                    <div className="mt-3 flex justify-end">
+                                    <div className={`mt-3 flex gap-2 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
                                       <button
                                         type="button"
                                         onClick={() => beginReply(message)}
-                                        className="rounded-full border border-[color:var(--border)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]"
+                                        className={`transition-colors text-[10px] font-bold uppercase tracking-widest ${
+                                          isOwnMessage
+                                            ? "text-[color:var(--primary-foreground)]/60 hover:text-[color:var(--primary-foreground)]"
+                                            : "text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
+                                        }`}
                                       >
                                         Reply
                                       </button>
@@ -2094,11 +2094,11 @@ export function OperationsDashboard({
                                 onChange={(event) => setMessageDraft(event.target.value)}
                                 rows={3}
                                 disabled={!canChat || messagePending}
-                                className="rounded-[22px] border border-[color:var(--border)] bg-[color:var(--secondary)] px-4 py-3 text-sm text-[color:var(--foreground)] outline-none disabled:opacity-60"
-                                placeholder="Type a message for this ticket"
+                                className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] px-4 py-3 text-sm text-[color:var(--foreground)] outline-none shadow-sm focus:ring-1 focus:ring-[color:var(--accent)] disabled:opacity-60"
+                                placeholder="Type a message..."
                               />
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-[color:var(--muted-foreground)] opacity-70">
                                   Posting as {viewerRoleLabel(viewer.role)}
                                 </span>
                                 {messageFeedback ? (
@@ -2110,9 +2110,9 @@ export function OperationsDashboard({
                               type="button"
                               onClick={() => void handleSendMessage()}
                               disabled={!canChat || messagePending || !messageDraft.trim()}
-                              className="h-12 rounded-full bg-[#00a884] px-6 text-sm font-semibold text-[#0b141a] disabled:opacity-60"
+                              className="h-11 rounded-xl bg-[color:var(--foreground)] px-6 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
                             >
-                              {messagePending ? "Sending..." : "Send"}
+                              {messagePending ? "..." : "Send"}
                             </button>
                           </div>
                         </div>
@@ -2120,12 +2120,12 @@ export function OperationsDashboard({
                     </div>
 
                     <aside className="flex min-h-0 flex-col border-t border-[color:var(--border)] bg-[color:var(--card)] lg:border-t-0">
-                      <div className="border-b border-[color:var(--border)] p-3">
-                        <div className="flex gap-2 overflow-x-auto">
+                      <div className="border-b border-[color:var(--border)] bg-[color:var(--card)]/50 px-3 py-3 backdrop-blur-sm">
+                        <div className="flex gap-1 overflow-x-auto hover:scrollbar-thin">
                           {[
-                            { id: "tracking" as DetailPanelId, label: "Tracking" },
-                            { id: "actions" as DetailPanelId, label: "Actions" },
-                            { id: "packets" as DetailPanelId, label: "Packets" },
+                            { id: "tracking" as DetailPanelId, label: "Overview" },
+                            { id: "actions" as DetailPanelId, label: "Admin" },
+                            { id: "packets" as DetailPanelId, label: "Packages" },
                           ].map((tab) => {
                             const active = detailPanel === tab.id;
 
@@ -2134,10 +2134,10 @@ export function OperationsDashboard({
                                 key={tab.id}
                                 type="button"
                                 onClick={() => setDetailPanel(tab.id)}
-                                className={`whitespace-nowrap rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                                className={`whitespace-nowrap px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] transition-all duration-200 border-b-2 ${
                                   active
-                                    ? "border-[#00a884] bg-[color:var(--success-muted)] text-[color:var(--success-foreground)]"
-                                    : "border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--muted-foreground)]"
+                                    ? "border-[color:var(--accent)] text-[color:var(--foreground)]"
+                                    : "border-transparent text-[color:var(--muted-foreground)] hover:text-[color:var(--foreground)]"
                                 }`}
                               >
                                 {tab.label}
