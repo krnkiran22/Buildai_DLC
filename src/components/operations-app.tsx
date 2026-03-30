@@ -13,11 +13,40 @@ import type { AuthSession, BackendHealth, DashboardSnapshot } from "@/lib/operat
 
 const SESSION_STORAGE_KEY = "moto_ops_session";
 
+function healthPlaceholder(): BackendHealth {
+  return {
+    ok: false,
+    service: "DLC Service API",
+    environment: "loading",
+    baseUrl: "loading",
+  };
+}
+
+function sessionsEqual(left: AuthSession | null, right: AuthSession | null) {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  return (
+    left.token === right.token &&
+    left.expiresAt === right.expiresAt &&
+    left.user.id === right.user.id &&
+    left.user.email === right.user.email &&
+    left.user.displayName === right.user.displayName &&
+    left.user.role === right.user.role &&
+    left.permissions.join("|") === right.permissions.join("|")
+  );
+}
+
 export function OperationsApp() {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
-  const [health, setHealth] = useState<BackendHealth | null>(null);
+  const [health, setHealth] = useState<BackendHealth>(healthPlaceholder);
   const [loading, setLoading] = useState(true);
+  const [shouldVerifySession, setShouldVerifySession] = useState(false);
+  const sessionToken = session?.token ?? null;
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -25,6 +54,7 @@ export function OperationsApp() {
       if (rawSession) {
         try {
           setSession(JSON.parse(rawSession) as AuthSession);
+          setShouldVerifySession(true);
           return;
         } catch {
           window.localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -35,7 +65,32 @@ export function OperationsApp() {
   }, []);
 
   useEffect(() => {
-    if (!session) {
+    let active = true;
+
+    void getBackendHealth()
+      .then((nextHealth) => {
+        if (!active) {
+          return;
+        }
+        setHealth(nextHealth);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+        setHealth((current) => ({
+          ...current,
+          environment: current.environment === "loading" ? "unknown" : current.environment,
+        }));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionToken || !session) {
       return;
     }
 
@@ -43,47 +98,28 @@ export function OperationsApp() {
 
     Promise.resolve()
       .then(async () => {
-        const verifiedSession = await getCurrentSession(session).catch(() => session);
-        const nextSnapshot = await getOperationsSnapshot(verifiedSession);
+        const nextSession = shouldVerifySession
+          ? await getCurrentSession(session).catch(() => session)
+          : session;
+        const nextSnapshot = await getOperationsSnapshot(nextSession);
         if (!active) {
           return;
         }
-        window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(verifiedSession));
-        setSession(verifiedSession);
+        window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+        if (!sessionsEqual(session, nextSession)) {
+          setSession(nextSession);
+        }
         setSnapshot(nextSnapshot);
-
-        setHealth((current) => ({
-          ok: current?.ok ?? false,
-          service: current?.service ?? "DLC Service API",
-          environment: current?.environment ?? "loading",
-          baseUrl: current?.baseUrl ?? "loading",
-        }));
+        setShouldVerifySession(false);
         setLoading(false);
-
-        void getBackendHealth()
-          .then((nextHealth) => {
-            if (!active) {
-              return;
-            }
-            setHealth(nextHealth);
-          })
-          .catch(() => {
-            if (!active) {
-              return;
-            }
-            setHealth((current) => ({
-              ok: current?.ok ?? false,
-              service: current?.service ?? "DLC Service API",
-              environment: current?.environment ?? "unknown",
-              baseUrl: current?.baseUrl ?? "unknown",
-            }));
-          });
       })
       .catch(() => {
         if (!active) {
           return;
         }
         window.localStorage.removeItem(SESSION_STORAGE_KEY);
+        setSnapshot(null);
+        setShouldVerifySession(false);
         setSession(null);
       })
       .finally(() => {
@@ -95,10 +131,12 @@ export function OperationsApp() {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, [session, sessionToken, shouldVerifySession]);
 
   function handleAuthenticated(nextSession: AuthSession) {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+    setSnapshot(null);
+    setShouldVerifySession(false);
     setLoading(true);
     setSession(nextSession);
   }
@@ -108,6 +146,8 @@ export function OperationsApp() {
       void logoutCurrentSession(session).catch(() => undefined);
     }
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    setSnapshot(null);
+    setShouldVerifySession(false);
     setLoading(false);
     setSession(null);
   }
@@ -128,7 +168,7 @@ export function OperationsApp() {
     return <AuthPortal onAuthenticated={handleAuthenticated} />;
   }
 
-  if (loading || !snapshot || !health) {
+  if (loading || !snapshot) {
     return (
       <main className="grid-overlay min-h-screen">
         <div className="mx-auto flex min-h-screen w-full max-w-[960px] items-center justify-center px-4">
