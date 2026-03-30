@@ -92,6 +92,9 @@ const transitionMap: Record<TicketStatus, TicketStatus[]> = {
   closed: [],
 };
 
+const PUBLIC_SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "https://buildai-dlc.vercel.app";
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -1031,6 +1034,8 @@ export function OperationsDashboard({
     const editWindowExpiresAt = pkg.editWindowExpiresAt ?? null;
     const editable =
       !editWindowExpiresAt || new Date(editWindowExpiresAt).getTime() >= Date.now();
+    const scanBaseUrl =
+      typeof window !== "undefined" ? window.location.origin : PUBLIC_SITE_URL;
     return {
       ticketId: selectedTicket?.id ?? "",
       title: selectedTicket?.title ?? "",
@@ -1038,7 +1043,7 @@ export function OperationsDashboard({
       factoryName: pkg.factoryName ?? selectedTicket?.factoryName ?? "",
       deploymentDate: pkg.deploymentDate ?? "",
       package: pkg,
-      scanUrl: typeof window !== "undefined" ? `${window.location.origin}/qr/${pkg.qrToken}` : "",
+      scanUrl: `${scanBaseUrl}/qr/${pkg.qrToken}`,
       qrSvgPath: "",
       editable,
       publicAccess: true,
