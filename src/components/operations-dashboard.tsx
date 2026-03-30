@@ -1978,8 +1978,8 @@ export function OperationsDashboard({
                       <div className="border-b border-[color:var(--border)] bg-[color:var(--card)]/50 px-3 py-3 backdrop-blur-sm">
                         <div className="flex gap-1 overflow-x-auto hover:scrollbar-thin">
                           {[
-                            { id: "tracking" as DetailPanelId, label: "Overview" },
-                            { id: "actions" as DetailPanelId, label: "Admin" },
+                            { id: "tracking" as DetailPanelId, label: "Tracking" },
+                            { id: "actions" as DetailPanelId, label: "Actions" },
                             { id: "packets" as DetailPanelId, label: "Packages" },
                           ].map((tab) => {
                             const active = detailPanel === tab.id;
@@ -2005,54 +2005,6 @@ export function OperationsDashboard({
                       <div className="min-h-0 flex-1 overflow-y-auto p-4">
                         {detailPanel === "tracking" ? (
                           <div className="grid gap-4">
-                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                                    Ticket overview
-                                  </p>
-                                  <h3 className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
-                                    {selectedTicket.title}
-                                  </h3>
-                                </div>
-                                <span className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                                  {selectedTicket.id}
-                                </span>
-                              </div>
-                              <p className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                                {selectedTicket.summary}
-                              </p>
-                              <div className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
-                                <div className="flex items-center justify-between gap-3">
-                                  <span>Priority</span>
-                                  <span className="font-medium text-[color:var(--foreground)]">{selectedTicket.priority}</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                  <span>Workers</span>
-                                  <span className="font-medium text-[color:var(--foreground)]">{selectedTicket.workerCount}</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-3">
-                                  <span>Request owner</span>
-                                  <span className="font-medium text-[color:var(--foreground)]">{selectedTicket.requestOwner}</span>
-                                </div>
-                                {selectedTicket.ticketType === "transfer" ? (
-                                  <div className="flex items-start justify-between gap-3">
-                                    <span>Source</span>
-                                    <span className="max-w-[65%] text-right font-medium text-[color:var(--foreground)]">
-                                      {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
-                                    </span>
-                                  </div>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                                Requested inventory
-                              </p>
-                              <div className="mt-3">
-                                <ItemTable items={selectedTicket.items} />
-                              </div>
-                            </div>
                             <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--muted)] p-4">
                               <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                                 Tracking history
@@ -2904,6 +2856,59 @@ export function OperationsDashboard({
                             </Link>
                           ))}
                         </div>
+                        {selectedTicket ? (
+                          <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                                  Highlighted request
+                                </p>
+                                <h3 className="mt-2 text-base font-semibold text-[color:var(--foreground)]">
+                                  {selectedTicket.title}
+                                </h3>
+                              </div>
+                              <span className="rounded-full border border-[color:var(--border)] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                                {selectedTicket.id}
+                              </span>
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                              {selectedTicket.summary}
+                            </p>
+                            <div className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)] sm:grid-cols-3">
+                              <div className="flex items-center justify-between gap-3 sm:block">
+                                <p>Priority</p>
+                                <p className="mt-1 font-medium text-[color:var(--foreground)]">
+                                  {selectedTicket.priority}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between gap-3 sm:block">
+                                <p>Workers</p>
+                                <p className="mt-1 font-medium text-[color:var(--foreground)]">
+                                  {selectedTicket.workerCount}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between gap-3 sm:block">
+                                <p>Request owner</p>
+                                <p className="mt-1 font-medium text-[color:var(--foreground)]">
+                                  {selectedTicket.requestOwner}
+                                </p>
+                              </div>
+                            </div>
+                            {selectedTicket.ticketType === "transfer" ? (
+                              <div className="mt-4 rounded-2xl border border-[color:var(--border)] bg-[color:var(--muted)] px-4 py-3 text-sm text-[color:var(--muted-foreground)]">
+                                Source: {selectedTicket.sourceTeamName} / {selectedTicket.sourceFactoryName}
+                              </div>
+                            ) : null}
+                            <div className="mt-4">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                                Requested inventory
+                              </p>
+                              <div className="mt-3">
+                                <ItemTable items={selectedTicket.items} />
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="space-y-4">
                         <div className="rounded-3xl border border-[color:var(--border)] bg-[color:var(--card)] p-4">
