@@ -24,11 +24,14 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
+const PROD_API_BASE_URL =
+  process.env.NEXT_PUBLIC_OPERATIONS_PROD_API_BASE_URL?.replace(/\/+$/, "") ??
+  "https://marvelous-consideration-production.up.railway.app";
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_OPERATIONS_API_BASE_URL?.replace(/\/+$/, "") ?? "";
+  process.env.NEXT_PUBLIC_OPERATIONS_API_BASE_URL?.replace(/\/+$/, "") || PROD_API_BASE_URL;
 const PROD_HEALTH_BASE_URL =
   process.env.NEXT_PUBLIC_OPERATIONS_PROD_HEALTH_URL?.replace(/\/+$/, "") ??
-  "https://marvelous-consideration-production.up.railway.app";
+  PROD_API_BASE_URL;
 const ACTOR_ROLE = process.env.NEXT_PUBLIC_ACTOR_ROLE ?? "admin";
 const ACTOR_NAME = process.env.NEXT_PUBLIC_ACTOR_NAME ?? "Admin Console";
 
