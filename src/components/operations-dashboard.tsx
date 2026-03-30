@@ -445,14 +445,14 @@ function MeritPanel({ scores }: { scores: MeritScore[] }) {
           SD 50 / Devices 25 / Accessories 25
         </span>
       </div>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {scores.map((score) => (
           <article key={score.teamName} className="border border-[color:var(--border)] bg-[color:var(--muted)] p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-[color:var(--foreground)]">{score.teamName}</h3>
                 <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                  Updated {formatDateTime(score.updatedAt)}
+                  SD {score.sdCardShortfall} • Devices {score.deviceShortfall} • Accessories {score.accessoryShortfall}
                 </p>
               </div>
               <span
@@ -465,21 +465,21 @@ function MeritPanel({ scores }: { scores: MeritScore[] }) {
             </div>
             <dl className="mt-4 grid gap-2 text-sm text-[color:var(--muted-foreground)]">
               <div className="flex items-center justify-between gap-3">
-                <dt>SD card shortfall</dt>
+                <dt>SD card penalty</dt>
                 <dd className="font-medium text-[color:var(--foreground)]">
-                  {score.sdCardShortfall} / penalty {score.sdCardPenalty.toFixed(2)}
+                  {score.sdCardPenalty.toFixed(2)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt>Device shortfall</dt>
+                <dt>Device penalty</dt>
                 <dd className="font-medium text-[color:var(--foreground)]">
-                  {score.deviceShortfall} / penalty {score.devicePenalty.toFixed(2)}
+                  {score.devicePenalty.toFixed(2)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt>Accessory shortfall</dt>
+                <dt>Accessory penalty</dt>
                 <dd className="font-medium text-[color:var(--foreground)]">
-                  {score.accessoryShortfall} / penalty {score.accessoryPenalty.toFixed(2)}
+                  {score.accessoryPenalty.toFixed(2)}
                 </dd>
               </div>
             </dl>
@@ -533,6 +533,17 @@ function RoleMatrixPanel({
   viewerRole: UserRole;
   roleMatrix: RoleCapability[];
 }) {
+  function capabilitySummary(entry: RoleCapability) {
+    const items: string[] = [];
+    if (entry.canCreateTickets) items.push("Create");
+    if (entry.canUpdateStatus) items.push("Status");
+    if (entry.closeTickets) items.push("Close");
+    if (entry.editInventory) items.push("Inventory");
+    if (entry.permissions.includes("ingestion.reconcile")) items.push("Reconcile");
+    if (entry.permissions.includes("package.edit")) items.push("QR");
+    return items;
+  }
+
   return (
     <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
       <div className="flex items-center justify-between gap-4">
@@ -548,7 +559,7 @@ function RoleMatrixPanel({
           Viewing as {viewerRoleLabel(viewerRole)}
         </span>
       </div>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {roleMatrix.map((entry) => (
           <article
             key={entry.role}
@@ -563,9 +574,16 @@ function RoleMatrixPanel({
                 <h3 className="text-sm font-semibold text-[color:var(--foreground)]">
                   {viewerRoleLabel(entry.role)}
                 </h3>
-                <p className="mt-1 break-words text-xs uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                  {entry.permissions.join(" / ")}
-                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {capabilitySummary(entry).map((item) => (
+                    <span
+                      key={`${entry.role}-${item}`}
+                      className="border border-[color:var(--border)] bg-white/85 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
               <div className="flex flex-col gap-2 text-left sm:text-right">
                 <span
@@ -1438,22 +1456,29 @@ export function OperationsDashboard({
 
   return (
     <main className="grid-overlay min-h-screen">
-      <div className="mx-auto flex w-full max-w-[1920px] flex-col gap-5 px-3 py-4 sm:px-5 lg:px-8 lg:py-6 2xl:px-10">
+      <div className="mx-auto flex w-full max-w-[1920px] flex-col gap-4 px-3 py-4 sm:px-5 lg:px-7 lg:py-5 2xl:px-8">
         <section className="panel-shell overflow-hidden">
-          <div className="grid gap-5 border-b border-[color:var(--border)] px-4 py-4 lg:px-6 lg:py-5 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.95fr)]">
-            <div className="min-w-0 space-y-5">
+          <div className="grid gap-4 border-b border-[color:var(--border)] px-4 py-4 lg:px-6 lg:py-4 2xl:grid-cols-[minmax(0,1.65fr)_minmax(360px,0.75fr)]">
+            <div className="min-w-0 space-y-4">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="border border-[color:var(--border)] bg-white px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
                   Build AI // Logistics OS
                 </span>
+                <span
+                  className={`inline-flex items-center border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                    health.ok ? "status-success" : "status-error"
+                  }`}
+                >
+                  API {health.ok ? "Healthy" : "Unavailable"}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                  {health.environment}
+                </span>
               </div>
-              <div className="space-y-3">
-                <h1 className="max-w-4xl font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-5xl">
+              <div className="space-y-2">
+                <h1 className="max-w-4xl font-display text-3xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)] sm:text-4xl">
                   {currentSnapshot.productName}
                 </h1>
-                <p className="max-w-3xl text-sm leading-6 text-[color:var(--muted-foreground)]">
-                  Ticketing, packet tracking, QR-linked returns, and ingestion control in one workspace.
-                </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
@@ -1466,10 +1491,10 @@ export function OperationsDashboard({
                 </div>
                 <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Tickets in system
+                    Open tickets
                   </p>
                   <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
-                    {currentSnapshot.tickets.length}
+                    {openTicketCount}
                   </p>
                 </div>
                 <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
@@ -1482,7 +1507,7 @@ export function OperationsDashboard({
                 </div>
                 <div className="border border-[color:var(--border)] bg-white/78 px-4 py-4">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Merit watchlist
+                    Merit alerts
                   </p>
                   <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em] text-[color:var(--foreground)]">
                     {activeMeritAlertCount}
@@ -1491,7 +1516,7 @@ export function OperationsDashboard({
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
+            <div className="grid gap-4">
               <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -1506,18 +1531,6 @@ export function OperationsDashboard({
                     <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
                       Updated {formatDateTime(currentSnapshot.generatedAt)}
                     </span>
-                    <div className="mt-2 flex items-center justify-end gap-2">
-                      <span
-                        className={`inline-flex items-center border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
-                          health.ok ? "status-success" : "status-error"
-                        }`}
-                      >
-                        API {health.ok ? "Healthy" : "Unavailable"}
-                      </span>
-                      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                        {health.environment}
-                      </span>
-                    </div>
                   </div>
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1537,61 +1550,56 @@ export function OperationsDashboard({
                       {health.baseUrl.replace(/^https?:\/\//, "")}
                     </p>
                   </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                <RoleMatrixPanel
-                  viewerRole={currentSnapshot.viewer.role}
-                  roleMatrix={currentSnapshot.roleMatrix}
-                />
-                {viewer.role !== "factory_operator" ? (
-                  <MeritPanel scores={currentSnapshot.meritScores} />
-                ) : null}
-                <div className="border border-[color:var(--border)] bg-white/70 p-4 sm:p-5">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                    Session
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
-                    {session.user.displayName}
-                  </p>
-                  <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
-                    {session.user.email}
-                  </p>
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
-                      {viewerRoleLabel(session.user.role)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={onLogout}
-                      className="border border-[color:var(--border)] bg-white px-3 py-2 text-sm font-semibold text-[color:var(--foreground)]"
-                    >
-                      Sign Out
-                    </button>
+                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                      User
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[color:var(--foreground)]">
+                      {session.user.displayName}
+                    </p>
                   </div>
+                  <div className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                      Email
+                    </p>
+                    <p className="mt-2 break-all text-sm font-semibold text-[color:var(--foreground)]">
+                      {session.user.email}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <span className="border border-[color:var(--border)] bg-[color:var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--foreground)]">
+                    {viewerRoleLabel(session.user.role)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    className="border border-[color:var(--border)] bg-white px-3 py-2 text-sm font-semibold text-[color:var(--foreground)]"
+                  >
+                    Sign Out
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 px-4 py-4 md:grid-cols-2 xl:grid-cols-5 lg:px-6 lg:py-5">
+          <div className="grid gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-5 lg:px-6 lg:py-4">
             {currentSnapshot.metrics.map((metric) => (
               <article
                 key={metric.label}
-                className="panel-shell metric-glow min-h-[154px] p-4"
+                className="panel-shell metric-glow min-h-[126px] p-3.5"
               >
-                <div className="flex h-full flex-col justify-between gap-4">
+                <div className="flex h-full flex-col justify-between gap-3">
                   <div
                     className={`inline-flex self-start border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${toneClass(metric.tone)}`}
                   >
                     {metric.label}
                   </div>
                   <div className="space-y-2">
-                    <p className="font-display text-4xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)]">
+                    <p className="font-display text-3xl font-semibold tracking-[-0.06em] text-[color:var(--foreground)]">
                       {metric.value}
                     </p>
-                    <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
+                    <p className="text-xs leading-5 text-[color:var(--muted-foreground)]">
                       {metric.helper}
                     </p>
                   </div>
@@ -1601,7 +1609,7 @@ export function OperationsDashboard({
           </div>
         </section>
 
-        <section className="grid items-start gap-5 xl:grid-cols-[minmax(340px,0.9fr)_minmax(0,1.6fr)] 2xl:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.65fr)]">
+        <section className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
           <section className="panel-shell overflow-hidden xl:sticky xl:top-4">
             <PanelHeader
               eyebrow="Ticket Queue"
@@ -1881,14 +1889,14 @@ export function OperationsDashboard({
           </section>
 
           {selectedTicket ? (
-            <section className="grid min-w-0 gap-5">
+            <section className="grid min-w-0 gap-4">
               <section className="panel-shell overflow-hidden">
                 <PanelHeader
                   eyebrow="Request Focus"
                   title={selectedTicket.teamName}
                 />
 
-                <div className="grid gap-5 p-4 lg:p-5 xl:grid-cols-[minmax(0,1.28fr)_minmax(340px,0.92fr)]">
+                <div className="grid gap-4 p-4 lg:p-5 xl:grid-cols-[minmax(0,1.35fr)_320px]">
                   <div className="grid gap-3 sm:grid-cols-2 xl:col-span-2 xl:grid-cols-5">
                       <div className="border border-[color:var(--border)] bg-white/78 p-4">
                         <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
@@ -1931,7 +1939,7 @@ export function OperationsDashboard({
                         </div>
                       </div>
                   </div>
-                  <div className="min-w-0 space-y-5">
+                  <div className="min-w-0 space-y-4">
                     {selectedTicket.ticketType === "transfer" ? (
                       <div className="border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-4">
                         <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--info-foreground)]">
@@ -1964,7 +1972,7 @@ export function OperationsDashboard({
                     </div>
                   </div>
 
-                  <div className="space-y-4 xl:self-start">
+                  <div className="space-y-4 xl:row-span-2 xl:self-start">
                     <div className="border border-[color:var(--border)] bg-white/78 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-lg font-semibold tracking-[-0.03em] text-[color:var(--foreground)]">
@@ -2110,7 +2118,7 @@ export function OperationsDashboard({
                 </div>
               </section>
 
-              <section className="grid gap-5 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+              <section className="grid gap-4 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
                 <section className="panel-shell overflow-hidden">
                   <PanelHeader
                     eyebrow="Tracking"
@@ -2827,6 +2835,16 @@ export function OperationsDashboard({
         {viewer.role === "admin" || viewer.role === "logistics" ? (
           <MovementLedgerPanel movements={currentSnapshot.movementHistory} />
         ) : null}
+
+        <section className="grid gap-4 xl:grid-cols-2">
+          <RoleMatrixPanel
+            viewerRole={currentSnapshot.viewer.role}
+            roleMatrix={currentSnapshot.roleMatrix}
+          />
+          {viewer.role !== "factory_operator" ? (
+            <MeritPanel scores={currentSnapshot.meritScores} />
+          ) : null}
+        </section>
 
         <section className="panel-shell overflow-hidden">
           <PanelHeader
