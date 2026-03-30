@@ -335,6 +335,7 @@ export async function updateAdminInventoryItem(
 export async function sendTicketMessage(
   ticketId: string,
   message: string,
+  replyToMessageId?: string | null,
   session?: AuthSession | null,
 ): Promise<TicketRecord | null> {
   if (!API_BASE_URL) {
@@ -347,7 +348,10 @@ export async function sendTicketMessage(
       "Content-Type": "application/json",
       ...requestHeaders(session),
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({
+      message,
+      replyToMessageId: replyToMessageId ?? undefined,
+    }),
   });
 }
 

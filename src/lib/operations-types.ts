@@ -52,6 +52,9 @@ export type ChatMessage = {
   role: "admin" | "operator" | "logistics" | "ingestion";
   sentAt: string;
   message: string;
+  replyToMessageId?: string | null;
+  replyToAuthor?: string | null;
+  replyToExcerpt?: string | null;
 };
 
 export type TimelineEvent = {
@@ -363,6 +366,12 @@ export type LiveTicketEvent = {
     sentAt?: string;
     sent_at?: string;
     message: string;
+    replyToMessageId?: string | null;
+    reply_to_message_id?: string | null;
+    replyToAuthor?: string | null;
+    reply_to_author?: string | null;
+    replyToExcerpt?: string | null;
+    reply_to_excerpt?: string | null;
   };
   timelineEvent?: TimelineEvent;
   viewer?: ViewerContext;

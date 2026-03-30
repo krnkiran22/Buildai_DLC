@@ -1,7 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useDeferredValue, useEffect, useEffectEvent, useState } from "react";
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { AdminInventoryPanel } from "@/components/admin-inventory-panel";
 import {
   closeTicket,
@@ -226,6 +233,10 @@ function viewerRoleLabel(role: UserRole) {
     case "ingestion":
       return "Ingestion";
   }
+}
+
+function replyExcerpt(message: string) {
+  return message.replace(/\s+/g, " ").trim().slice(0, 160);
 }
 
 function validatePackageBatchDraft(
@@ -740,6 +751,10 @@ export function OperationsDashboard({
   const [qrPending, setQrPending] = useState(false);
   const [qrFeedback, setQrFeedback] = useState("");
   const [streamStatus, setStreamStatus] = useState("Live sync idle");
+  const [streamRetryKey, setStreamRetryKey] = useState(0);
+  const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+  const [activeSwipeMessageId, setActiveSwipeMessageId] = useState<string | null>(null);
+  const [activeSwipeOffset, setActiveSwipeOffset] = useState(0);
   const [reconciliationDraft, setReconciliationDraft] = useState<IngestionReconciliationInput>({
     station: "",
     expectedSdCards: 0,
@@ -768,6 +783,10 @@ export function OperationsDashboard({
     priority: "medium",
   });
   const deferredQuery = useDeferredValue(query);
+  const chatListRef = useRef<HTMLDivElement | null>(null);
+  const messageComposerRef = useRef<HTMLTextAreaElement | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const swipeStartXRef = useRef(0);
   const openTicketCount = currentSnapshot.tickets.filter(
     (ticket) => ticket.status !== "closed" && ticket.status !== "rejected",
   ).length;
@@ -791,6 +810,7 @@ export function OperationsDashboard({
   });
   const selectedTicket =
     filteredTickets.find((ticket) => ticket.id === selectedTicketId) ?? filteredTickets[0];
+  const activeTicketId = selectedTicket?.id ?? null;
   const seedSelectedTicketPanels = useEffectEvent((ticket: typeof selectedTicket) => {
     if (!ticket) {
       setQrDetail(null);
@@ -843,7 +863,7 @@ export function OperationsDashboard({
     if (event.ticket) {
       upsertTicket(event.ticket);
       if (event.ticket.id === selectedTicket?.id) {
-        setStreamStatus(`Live sync: ${event.eventType}`);
+        setStreamStatus(event.eventType === "ticket.message" ? "Live sync connected" : `Live sync: ${event.eventType}`);
       }
     }
   });
@@ -892,11 +912,12 @@ export function OperationsDashboard({
   }, [selectedTicket, qrDetail]);
 
   useEffect(() => {
-    if (!selectedTicket || !session.token) {
+    if (!activeTicketId || !session.token) {
       return;
     }
 
-    const socket = openTicketStream(selectedTicket.id, session, handleStreamEvent);
+    let closedByCleanup = false;
+    const socket = openTicketStream(activeTicketId, session, handleStreamEvent);
 
     if (!socket) {
       return;
@@ -905,7 +926,15 @@ export function OperationsDashboard({
     setStreamStatus("Live sync connecting");
     socket.onopen = () => setStreamStatus("Live sync connected");
     socket.onerror = () => setStreamStatus("Live sync error");
-    socket.onclose = () => setStreamStatus("Live sync disconnected");
+    socket.onclose = () => {
+      if (closedByCleanup) {
+        return;
+      }
+      setStreamStatus("Live sync reconnecting");
+      reconnectTimerRef.current = window.setTimeout(() => {
+        setStreamRetryKey((current) => current + 1);
+      }, 1500);
+    };
 
     const interval = window.setInterval(() => {
       if (socket.readyState === window.WebSocket.OPEN) {
@@ -914,10 +943,28 @@ export function OperationsDashboard({
     }, 15000);
 
     return () => {
+      closedByCleanup = true;
+      if (reconnectTimerRef.current) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       window.clearInterval(interval);
       socket.close();
     };
-  }, [selectedTicket, session]);
+  }, [activeTicketId, session, streamRetryKey]);
+
+  useEffect(() => {
+    setReplyTarget(null);
+    setActiveSwipeMessageId(null);
+    setActiveSwipeOffset(0);
+  }, [selectedTicket?.id]);
+
+  useEffect(() => {
+    if (!chatListRef.current) {
+      return;
+    }
+    chatListRef.current.scrollTop = chatListRef.current.scrollHeight;
+  }, [selectedTicket?.messages.length]);
 
   useEffect(() => {
     if (!prefilledQrToken || !selectedTicket) {
@@ -957,6 +1004,43 @@ export function OperationsDashboard({
       return "operator";
     }
     return role;
+  }
+
+  function beginReply(message: ChatMessage) {
+    setReplyTarget(message);
+    setActiveSwipeMessageId(null);
+    setActiveSwipeOffset(0);
+    messageComposerRef.current?.focus();
+  }
+
+  function clearReplyTarget() {
+    setReplyTarget(null);
+  }
+
+  function beginSwipe(messageId: string, clientX: number) {
+    swipeStartXRef.current = clientX;
+    setActiveSwipeMessageId(messageId);
+    setActiveSwipeOffset(0);
+  }
+
+  function moveSwipe(messageId: string, clientX: number) {
+    if (activeSwipeMessageId !== messageId) {
+      return;
+    }
+    const delta = clientX - swipeStartXRef.current;
+    const bounded = Math.max(-88, Math.min(88, delta));
+    setActiveSwipeOffset(bounded);
+  }
+
+  function endSwipe(message: ChatMessage) {
+    if (activeSwipeMessageId !== message.id) {
+      return;
+    }
+    if (Math.abs(activeSwipeOffset) >= 56) {
+      beginReply(message);
+    }
+    setActiveSwipeMessageId(null);
+    setActiveSwipeOffset(0);
   }
 
   function localQrDetail(pkg: PackageRecord): QrPackageDetail {
@@ -1009,11 +1093,23 @@ export function OperationsDashboard({
     }
 
     const message = messageDraft.trim();
+    const replyMetadata = replyTarget
+      ? {
+          replyToMessageId: replyTarget.id,
+          replyToAuthor: replyTarget.author,
+          replyToExcerpt: replyExcerpt(replyTarget.message),
+        }
+      : null;
     setMessagePending(true);
     setMessageFeedback("");
 
     try {
-      const updated = await sendTicketMessage(selectedTicket.id, message, session);
+      const updated = await sendTicketMessage(
+        selectedTicket.id,
+        message,
+        replyTarget?.id,
+        session,
+      );
       if (updated) {
         upsertTicket(updated);
       } else {
@@ -1028,11 +1124,13 @@ export function OperationsDashboard({
               role: localChatRole(viewer.role),
               sentAt: new Date().toISOString(),
               message,
+              ...(replyMetadata ?? {}),
             },
           ],
         });
       }
       setMessageDraft("");
+      setReplyTarget(null);
       setMessageFeedback("Message sent.");
     } catch (error) {
       if (error instanceof Error && /401|403/i.test(error.message)) {
@@ -1982,33 +2080,110 @@ export function OperationsDashboard({
                           {streamStatus}
                         </span>
                       </div>
-                      <div className="mt-4 space-y-3 xl:max-h-[360px] xl:overflow-auto xl:pr-1">
+                      <div
+                        ref={chatListRef}
+                        className="space-y-3 xl:max-h-[360px] xl:overflow-auto xl:pr-1"
+                      >
                         {selectedTicket.messages.map((message) => (
-                          <article
-                            key={message.id}
-                            className="border border-[color:var(--border)] bg-[color:var(--muted)] p-3"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-semibold text-[color:var(--foreground)]">
-                                  {message.author}
-                                </p>
-                                <RoleBadge role={message.role} />
-                              </div>
-                              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                                {formatDateTime(message.sentAt)}
+                          <div key={message.id} className="relative overflow-hidden">
+                            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                              <span className="border border-[color:var(--border)] bg-white/80 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                Reply
                               </span>
                             </div>
-                            <p className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                              {message.message}
-                            </p>
-                          </article>
+                            <article
+                              className="border border-[color:var(--border)] bg-[color:var(--muted)] p-3 transition-transform duration-150"
+                              style={{
+                                transform:
+                                  activeSwipeMessageId === message.id
+                                    ? `translateX(${activeSwipeOffset}px)`
+                                    : "translateX(0px)",
+                              }}
+                              onTouchStart={(event) =>
+                                beginSwipe(message.id, event.touches[0]?.clientX ?? 0)
+                              }
+                              onTouchMove={(event) =>
+                                moveSwipe(message.id, event.touches[0]?.clientX ?? 0)
+                              }
+                              onTouchEnd={() => endSwipe(message)}
+                              onTouchCancel={() => {
+                                setActiveSwipeMessageId(null);
+                                setActiveSwipeOffset(0);
+                              }}
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-semibold text-[color:var(--foreground)]">
+                                    {message.author}
+                                  </p>
+                                  <RoleBadge role={message.role} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => beginReply(message)}
+                                    className="border border-[color:var(--border)] bg-white px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--foreground)]"
+                                  >
+                                    Reply
+                                  </button>
+                                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                    {formatDateTime(message.sentAt)}
+                                  </span>
+                                </div>
+                              </div>
+                              {message.replyToMessageId ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const target = document.getElementById(`chat-message-${message.replyToMessageId}`);
+                                    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  }}
+                                  className="mt-3 block w-full border border-[color:var(--border)] bg-white/70 px-3 py-2 text-left"
+                                >
+                                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                                    Replying to {message.replyToAuthor ?? "message"}
+                                  </p>
+                                  <p className="mt-1 text-sm leading-5 text-[color:var(--foreground)]">
+                                    {message.replyToExcerpt}
+                                  </p>
+                                </button>
+                              ) : null}
+                              <p
+                                id={`chat-message-${message.id}`}
+                                className="mt-3 text-sm leading-6 text-[color:var(--muted-foreground)]"
+                              >
+                                {message.message}
+                              </p>
+                            </article>
+                          </div>
                         ))}
                       </div>
                       <div className="mt-4 border-t border-[color:var(--border)] pt-4">
+                        {replyTarget ? (
+                          <div className="mb-3 border border-[color:var(--border)] bg-[color:var(--accent-soft)] p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--info-foreground)]">
+                                  Replying to {replyTarget.author}
+                                </p>
+                                <p className="mt-1 text-sm text-[color:var(--foreground)]">
+                                  {replyExcerpt(replyTarget.message)}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={clearReplyTarget}
+                                className="border border-[color:var(--border)] bg-white px-2 py-1 text-xs font-semibold text-[color:var(--foreground)]"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                         <label className="grid gap-2 text-sm text-[color:var(--muted-foreground)]">
                           Send chat update
                           <textarea
+                            ref={messageComposerRef}
                             value={messageDraft}
                             onChange={(event) => setMessageDraft(event.target.value)}
                             rows={3}
