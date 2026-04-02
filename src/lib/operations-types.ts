@@ -101,6 +101,14 @@ export type IngestionReport = {
   note: string;
 };
 
+export type TicketMember = {
+  email: string;
+  displayName: string;
+  role: string;
+  addedAt: string;
+  addedBy: string;
+};
+
 export type TicketRecord = {
   id: string;
   title: string;
@@ -124,6 +132,14 @@ export type TicketRecord = {
   messages: ChatMessage[];
   timeline: TimelineEvent[];
   ingestionReport: IngestionReport | null;
+  members: TicketMember[]; // defaults to [] if not present
+};
+
+export type UserProfile = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
 };
 
 export type IngestionQueueItem = {

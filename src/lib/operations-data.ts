@@ -328,6 +328,7 @@ export const mockOperationsSnapshot: DashboardSnapshot = {
         faultySdCards: 12,
         note: "Red-marked cards separated for manual review before closure.",
       },
+      members: [],
     },
   ],
   ingestionQueue: [

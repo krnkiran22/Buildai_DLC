@@ -2,16 +2,21 @@
 
 import { useState } from "react";
 import {
+  addTicketMember,
   closeTicket,
   createTicketPackagesBatch,
+  lookupUserByEmail,
   qrSvgUrl,
+  removeTicketMember,
   updateTicketStatus,
 } from "@/lib/backend";
 import type {
   AuthSession,
   PackageBatchCreateInput,
+  TicketMember,
   TicketRecord,
   TicketStatus,
+  UserProfile,
 } from "@/lib/operations-types";
 
 /* ─── Ticket stages ────────────────────────────────────── */
@@ -97,7 +102,7 @@ type Props = {
 
 export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const role = session.user.role;
-  const [activeTab, setActiveTab] = useState<"tracker" | "details" | "packets">("tracker");
+  const [activeTab, setActiveTab] = useState<"tracker" | "details" | "packets" | "members">("tracker");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
@@ -197,15 +202,15 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
     }}>
       {/* Tab strip */}
       <div style={{ display: "flex", borderBottom: "1px solid #e9edef", flexShrink: 0 }}>
-        {(["tracker", "details", "packets"] as const).map((tab) => (
+        {(["tracker", "members", "details", "packets"] as const).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
-            flex: 1, padding: "10px 4px", fontSize: 10, fontFamily: "var(--font-mono)",
+            flex: 1, padding: "10px 2px", fontSize: 9, fontFamily: "var(--font-mono)",
             textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer",
             border: "none", borderBottom: `2px solid ${activeTab === tab ? "#128C7E" : "transparent"}`,
             background: "#fff", color: activeTab === tab ? "#111b21" : "#8696a0",
             fontWeight: activeTab === tab ? 700 : 400,
           }}>
-            {tab}
+            {tab === "members" ? `Members${(ticket.members?.length ?? 0) > 0 ? ` (${ticket.members.length})` : ""}` : tab}
           </button>
         ))}
       </div>
@@ -391,6 +396,11 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
               </div>
             )}
           </div>
+        )}
+
+        {/* ─── MEMBERS TAB ─── */}
+        {activeTab === "members" && (
+          <MembersTab ticket={ticket} session={session} onTicketUpdated={onTicketUpdated} />
         )}
 
         {/* ─── PACKETS TAB ─── */}
@@ -638,6 +648,179 @@ function ActionBtn({ action, loading, onClick }: { action: Action; loading: bool
         <span style={{ fontSize: 10, fontWeight: 400, opacity: 0.75 }}>{action.sublabel}</span>
       )}
     </button>
+  );
+}
+
+/* ─── Members Tab ──────────────────────────────────────────── */
+const ROLE_COLORS: Record<string, string> = {
+  admin: "#4B5563",
+  logistics: "#1D4ED8",
+  factory_operator: "#7E22CE",
+  ingestion: "#B45309",
+};
+
+function roleLabelShort(role: string) {
+  return role === "factory_operator" ? "Factory" : role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function memberInitial(name: string) {
+  return name ? name[0].toUpperCase() : "?";
+}
+
+function MembersTab({ ticket, session, onTicketUpdated }: {
+  ticket: TicketRecord;
+  session: AuthSession;
+  onTicketUpdated: (t: TicketRecord) => void;
+}) {
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [lookupResult, setLookupResult] = useState<import("@/lib/operations-types").UserProfile | null | "not_found">(null);
+  const [looking, setLooking] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+
+  const canManage = ["admin", "logistics"].includes(session.user.role);
+  const members: TicketMember[] = ticket.members ?? [];
+
+  async function handleLookup() {
+    if (!inviteEmail.trim()) return;
+    setLooking(true); setErr(""); setLookupResult(null);
+    const user = await lookupUserByEmail(inviteEmail.trim(), session);
+    setLooking(false);
+    if (user) setLookupResult(user);
+    else setLookupResult("not_found");
+  }
+
+  async function handleAdd(email: string) {
+    setAdding(true); setErr("");
+    try {
+      const updated = await addTicketMember(ticket.id, email, session);
+      if (updated) { onTicketUpdated(updated); setInviteEmail(""); setLookupResult(null); }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to add member.");
+    } finally { setAdding(false); }
+  }
+
+  async function handleRemove(email: string) {
+    setRemoving(email); setErr("");
+    try {
+      const updated = await removeTicketMember(ticket.id, email, session);
+      if (updated) onTicketUpdated(updated);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to remove member.");
+    } finally { setRemoving(null); }
+  }
+
+  return (
+    <div style={{ padding: 14 }}>
+      {canManage && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 9, color: "#8696a0", textTransform: "uppercase", fontFamily: "var(--font-mono)", letterSpacing: "0.08em", marginBottom: 6 }}>
+            Add Member by Email
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              className="input"
+              style={{ flex: 1, fontSize: 12 }}
+              placeholder="someone@company.com"
+              value={inviteEmail}
+              onChange={(e) => { setInviteEmail(e.target.value); setLookupResult(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleLookup(); } }}
+            />
+            <button
+              onClick={() => void handleLookup()}
+              disabled={looking || !inviteEmail.trim()}
+              style={{
+                padding: "0 12px", background: "#128C7E", border: "none",
+                color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                opacity: looking || !inviteEmail.trim() ? 0.6 : 1,
+              }}
+            >
+              {looking ? "…" : "Find"}
+            </button>
+          </div>
+          {err && <div style={{ marginTop: 6, fontSize: 11, color: "#dc2626" }}>{err}</div>}
+          {lookupResult === "not_found" && (
+            <div style={{ marginTop: 8, padding: "8px 10px", background: "#fef2f2", border: "1px solid #fecaca", fontSize: 12, color: "#dc2626" }}>
+              No registered user found with that email.
+            </div>
+          )}
+          {lookupResult && lookupResult !== "not_found" && (
+            <div style={{ marginTop: 8, padding: "10px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                background: ROLE_COLORS[lookupResult.role] ?? "#4B5563",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 700, color: "#fff",
+              }}>
+                {memberInitial(lookupResult.displayName)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#111b21" }}>{lookupResult.displayName}</div>
+                <div style={{ fontSize: 10, color: "#667781" }}>{lookupResult.email} · {roleLabelShort(lookupResult.role)}</div>
+              </div>
+              <button
+                onClick={() => void handleAdd(lookupResult.email)}
+                disabled={adding || members.some((m) => m.email.toLowerCase() === lookupResult.email.toLowerCase())}
+                style={{
+                  padding: "5px 12px", background: "#128C7E", border: "none",
+                  color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                  opacity: adding ? 0.6 : 1, flexShrink: 0,
+                }}
+              >
+                {adding ? "Adding…" : members.some((m) => m.email.toLowerCase() === lookupResult.email.toLowerCase()) ? "Added ✓" : "Add to Group"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ fontSize: 9, color: "#8696a0", textTransform: "uppercase", fontFamily: "var(--font-mono)", letterSpacing: "0.08em", marginBottom: 8 }}>
+        {members.length === 0 ? "No members yet" : `${members.length} Member${members.length !== 1 ? "s" : ""}`}
+      </div>
+
+      {members.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "20px 0", color: "#8696a0", fontSize: 12 }}>
+          <div style={{ fontSize: 28, marginBottom: 6 }}>👥</div>
+          {canManage ? "Invite people by entering their email above." : "No members have been added yet."}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {members.map((m) => (
+            <div key={m.email} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: "1px solid #e9edef", background: "#fff" }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                background: ROLE_COLORS[m.role] ?? "#4B5563",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 700, color: "#fff",
+              }}>
+                {memberInitial(m.displayName)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#111b21", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.displayName}</div>
+                <div style={{ fontSize: 10, color: "#667781", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                <span style={{
+                  fontSize: 9, padding: "1px 6px", display: "inline-block", marginTop: 2,
+                  background: `${ROLE_COLORS[m.role] ?? "#4B5563"}22`,
+                  color: ROLE_COLORS[m.role] ?? "#4B5563",
+                  borderRadius: 10, fontWeight: 600,
+                }}>
+                  {roleLabelShort(m.role)}
+                </span>
+              </div>
+              {canManage && (
+                <button
+                  onClick={() => void handleRemove(m.email)}
+                  disabled={removing === m.email}
+                  style={{ background: "none", border: "none", color: "#8696a0", cursor: "pointer", fontSize: 18, lineHeight: 1, flexShrink: 0, opacity: removing === m.email ? 0.4 : 1 }}
+                  title="Remove member"
+                >×</button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

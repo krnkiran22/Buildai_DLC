@@ -10,9 +10,9 @@ import type {
 } from "@/lib/operations-types";
 
 /* ─── Media encoding ───────────────────────────────────── */
-type MediaType = "text" | "voice" | "image" | "video";
+type MediaType = "text" | "voice" | "image" | "video" | "pdf";
 
-function encodeMedia(type: "voice" | "image" | "video", dataUrl: string): string {
+function encodeMedia(type: "voice" | "image" | "video" | "pdf", dataUrl: string): string {
   return `[${type.toUpperCase()}:${dataUrl}]`;
 }
 
@@ -28,6 +28,10 @@ function parseMessage(raw: string): { type: MediaType; content: string } {
   if (raw.startsWith("[VIDEO:") && raw.endsWith("]")) {
     const c = raw.slice(7, -1);
     if (c.startsWith("data:")) return { type: "video", content: c };
+  }
+  if (raw.startsWith("[PDF:") && raw.endsWith("]")) {
+    const c = raw.slice(5, -1);
+    if (c.startsWith("data:")) return { type: "pdf", content: c };
   }
   return { type: "text", content: raw };
 }
@@ -132,6 +136,14 @@ function IconReply({ size = 14, color = "#8696a0" }: { size?: number; color?: st
   );
 }
 
+/* ─── Member avatar colors ─────────────────────────────── */
+const ROLE_BG: Record<string, string> = {
+  admin: "#4B5563",
+  logistics: "#1D4ED8",
+  factory_operator: "#7E22CE",
+  ingestion: "#B45309",
+};
+
 /* ─── Main component ───────────────────────────────────── */
 type Props = {
   ticket: TicketRecord;
@@ -150,7 +162,7 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
   /* Media */
   const [recording, setRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [mediaPreview, setMediaPreview] = useState<{ type: MediaType; dataUrl: string } | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<{ type: MediaType; dataUrl: string; fileName?: string } | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -199,7 +211,7 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
 
   const handleSend = useCallback(async () => {
     const body = mediaPreview
-      ? encodeMedia(mediaPreview.type as "voice" | "image" | "video", mediaPreview.dataUrl)
+      ? encodeMedia(mediaPreview.type as "voice" | "image" | "video" | "pdf", mediaPreview.dataUrl)
       : text.trim();
     if (!body) return;
     setSending(true); setError("");
@@ -245,12 +257,17 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
-    if (file.size > 10 * 1024 * 1024) { setError("File too large (max 10 MB)."); return; }
+    const MAX_MB = file.type === "application/pdf" ? 8 : 10;
+    if (file.size > MAX_MB * 1024 * 1024) { setError(`File too large (max ${MAX_MB} MB).`); return; }
     if (file.type.startsWith("image/")) {
       setMediaPreview({ type: "image", dataUrl: await compressImage(file) });
     } else if (file.type.startsWith("video/")) {
       const reader = new FileReader();
       reader.onloadend = () => setMediaPreview({ type: "video", dataUrl: reader.result as string });
+      reader.readAsDataURL(file);
+    } else if (file.type === "application/pdf") {
+      const reader = new FileReader();
+      reader.onloadend = () => setMediaPreview({ type: "pdf", dataUrl: reader.result as string, fileName: file.name });
       reader.readAsDataURL(file);
     }
   }
@@ -279,25 +296,52 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
       overflow: "hidden", background: "#f0f2f5", borderRight: "1px solid var(--border)",
     }}>
 
-      {/* ── WhatsApp-style header ── */}
+      {/* ── WhatsApp-style group header ── */}
       <div style={{
-        height: 56, background: "#ffffff", borderBottom: "1px solid #e9edef",
+        minHeight: 56, background: "#ffffff", borderBottom: "1px solid #e9edef",
         display: "flex", alignItems: "center", padding: "0 14px", gap: 12, flexShrink: 0,
       }}>
-        {/* Avatar */}
-        <div style={{
-          width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
-          background: "#128C7E", display: "flex", alignItems: "center",
-          justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#fff",
-        }}>
-          {roleInitial(ticket.teamName)}
+        {/* Stacked member avatars (WhatsApp group style) */}
+        <div style={{ position: "relative", width: 40, height: 38, flexShrink: 0 }}>
+          {(ticket.members?.length ?? 0) === 0 ? (
+            <div style={{
+              width: 38, height: 38, borderRadius: "50%",
+              background: "#128C7E", display: "flex", alignItems: "center",
+              justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#fff",
+            }}>
+              {roleInitial(ticket.teamName)}
+            </div>
+          ) : (
+            ticket.members.slice(0, 3).map((m, i) => (
+              <div
+                key={m.email}
+                title={`${m.displayName} (${m.role})`}
+                style={{
+                  position: "absolute",
+                  left: i * 10,
+                  top: i === 1 ? 8 : 0,
+                  width: 26, height: 26, borderRadius: "50%",
+                  background: ROLE_BG[m.role] ?? "#667781",
+                  border: "2px solid #fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 700, color: "#fff",
+                  zIndex: 3 - i,
+                }}
+              >
+                {m.displayName[0]?.toUpperCase() ?? "?"}
+              </div>
+            ))
+          )}
         </div>
+
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#111b21", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {ticket.teamName}
           </div>
           <div style={{ fontSize: 11, color: "#667781", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {ticket.factoryName} · {ticket.title.slice(0, 50)}
+            {(ticket.members?.length ?? 0) > 0
+              ? ticket.members.map((m) => m.displayName).join(", ")
+              : `${ticket.factoryName} · ${ticket.title.slice(0, 40)}`}
           </div>
         </div>
         <span style={{
@@ -454,6 +498,43 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
                       />
                     )}
 
+                    {parsed.type === "pdf" && (
+                      <a
+                        href={parsed.content}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          padding: "10px 12px", textDecoration: "none",
+                          background: isSelf ? "rgba(18,140,126,0.08)" : "#f0f2f5",
+                          borderRadius: 8, minWidth: 180, maxWidth: 240,
+                        }}
+                      >
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 6, flexShrink: 0,
+                          background: "#dc2626", display: "flex", alignItems: "center",
+                          justifyContent: "center",
+                        }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" fill="white" opacity="0.9"/>
+                            <path d="M14 2v6h6" stroke="white" strokeWidth="1.5" fill="none"/>
+                            <text x="5" y="18" fontSize="6" fill="white" fontWeight="bold">PDF</text>
+                          </svg>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#111b21", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            Document
+                          </div>
+                          <div style={{ fontSize: 10, color: "#667781" }}>Tap to open PDF</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667781" strokeWidth="2">
+                          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                          <polyline points="15,3 21,3 21,9"/>
+                          <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                      </a>
+                    )}
+
                     {/* Timestamp */}
                     <div style={{
                       display: "flex", justifyContent: "flex-end",
@@ -508,7 +589,18 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
               {mediaPreview.type === "voice" && (
                 <audio controls src={mediaPreview.dataUrl} style={{ height: 32, flex: 1 }} />
               )}
-              {mediaPreview.type !== "voice" && (
+              {mediaPreview.type === "pdf" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 6, background: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 10, color: "#fff", fontWeight: 800 }}>PDF</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#111b21" }}>{mediaPreview.fileName ?? "Document.pdf"}</div>
+                    <div style={{ fontSize: 10, color: "#667781" }}>Ready to send</div>
+                  </div>
+                </div>
+              )}
+              {mediaPreview.type !== "voice" && mediaPreview.type !== "pdf" && (
                 <div style={{ flex: 1, fontSize: 12, color: "#667781" }}>
                   {mediaPreview.type === "image" ? "Photo ready to send" : "Video ready to send"}
                 </div>
@@ -656,7 +748,7 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
             )}
           </div>
 
-          <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={handleFile} />
+          <input ref={fileInputRef} type="file" accept="image/*,video/*,application/pdf" style={{ display: "none" }} onChange={handleFile} />
         </div>
       ) : (
         <div style={{

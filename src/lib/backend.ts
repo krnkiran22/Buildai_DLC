@@ -579,6 +579,48 @@ export async function loginUser(payload: {
   });
 }
 
+/* ── Ticket Members ──────────────────────────────────────────────── */
+
+export async function lookupUserByEmail(
+  email: string,
+  session: AuthSession,
+): Promise<import("@/lib/operations-types").UserProfile | null> {
+  try {
+    return await requestJson<import("@/lib/operations-types").UserProfile>(
+      `/api/v1/tickets/users/lookup?email=${encodeURIComponent(email)}`,
+      { headers: requestHeaders(session) },
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function addTicketMember(
+  ticketId: string,
+  email: string,
+  session: AuthSession,
+): Promise<import("@/lib/operations-types").TicketRecord | null> {
+  return requestJson<import("@/lib/operations-types").TicketRecord>(
+    `/api/v1/tickets/${encodeURIComponent(ticketId)}/members`,
+    {
+      method: "POST",
+      headers: { ...requestHeaders(session), "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    },
+  );
+}
+
+export async function removeTicketMember(
+  ticketId: string,
+  email: string,
+  session: AuthSession,
+): Promise<import("@/lib/operations-types").TicketRecord | null> {
+  return requestJson<import("@/lib/operations-types").TicketRecord>(
+    `/api/v1/tickets/${encodeURIComponent(ticketId)}/members/${encodeURIComponent(email)}`,
+    { method: "DELETE", headers: requestHeaders(session) },
+  );
+}
+
 export function qrSvgUrl(qrToken: string) {
   if (!API_BASE_URL) {
     return "";
