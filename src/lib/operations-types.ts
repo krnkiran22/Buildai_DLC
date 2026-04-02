@@ -289,6 +289,7 @@ export type TicketCreateInput = {
   devicesRequested: number;
   sdCardsRequested: number;
   priority: Priority;
+  title?: string;
 };
 
 export type TicketStatusUpdateInput = {

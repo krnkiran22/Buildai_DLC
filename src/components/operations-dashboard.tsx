@@ -898,40 +898,20 @@ export function OperationsDashboard({
       return;
     }
 
-    let closedByCleanup = false;
-    const socket = openTicketStream(activeTicketId, session, handleStreamEvent);
+    const stream = openTicketStream(activeTicketId, session, handleStreamEvent);
 
-    if (!socket) {
+    if (!stream) {
       return;
     }
 
-    setStreamStatus("Live sync connecting");
-    socket.onopen = () => setStreamStatus("Live sync connected");
-    socket.onerror = () => setStreamStatus("Live sync error");
-    socket.onclose = () => {
-      if (closedByCleanup) {
-        return;
-      }
-      setStreamStatus("Live sync reconnecting");
-      reconnectTimerRef.current = window.setTimeout(() => {
-        setStreamRetryKey((current) => current + 1);
-      }, 1500);
-    };
-
-    const interval = window.setInterval(() => {
-      if (socket.readyState === window.WebSocket.OPEN) {
-        socket.send("ping");
-      }
-    }, 15000);
+    setStreamStatus("Live sync connected");
 
     return () => {
-      closedByCleanup = true;
       if (reconnectTimerRef.current) {
         window.clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
-      window.clearInterval(interval);
-      socket.close();
+      stream.close();
     };
   }, [activeTicketId, session, streamRetryKey]);
 

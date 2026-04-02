@@ -3,8 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Build AI",
-  description:
-    "Operations dashboard for deployment requests, shipment tracking, return handling, and SD card ingestion flow.",
+  description: "Internal operations platform for deployment hardware tracking, logistics, QR packaging, and SD card ingestion.",
 };
 
 export default function RootLayout({
@@ -13,8 +12,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full scroll-smooth antialiased">
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+    <html lang="en" className="h-full" style={{ background: "#ffffff" }}>
+      <body style={{ height: "100%", background: "#ffffff", color: "#111111" }}>
+        {children}
+      </body>
     </html>
   );
 }

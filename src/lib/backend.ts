@@ -223,6 +223,20 @@ function normalizeSnapshot(
   };
 }
 
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("SESSION_EXPIRED");
+    this.name = "SessionExpiredError";
+  }
+}
+
+export function isSessionExpiredError(err: unknown): boolean {
+  return (
+    err instanceof SessionExpiredError ||
+    (err instanceof Error && err.message === "SESSION_EXPIRED")
+  );
+}
+
 async function requestJson<T>(
   path: string,
   init?: RequestInit,
@@ -235,6 +249,10 @@ async function requestJson<T>(
     cache: "no-store",
     ...init,
   });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new SessionExpiredError();
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
@@ -577,25 +595,88 @@ export function ticketStreamUrl(ticketId: string, session: AuthSession | null) {
 
 export type TicketStreamHandler = (event: LiveTicketEvent) => void;
 
+type TicketStreamOptions = {
+  onAuthExpired?: () => void;
+};
+
+/**
+ * Opens a live WebSocket stream for a ticket.
+ * Automatically reconnects with exponential backoff on unexpected close.
+ * Calls onAuthExpired() if the server rejects the token (close code 4001/4003/1008).
+ * Returns a controller object with a `close()` method.
+ */
 export function openTicketStream(
   ticketId: string,
   session: AuthSession,
   onEvent: TicketStreamHandler,
-) {
+  options: TicketStreamOptions = {},
+): { close: () => void } | null {
+  if (typeof window === "undefined") return null;
+
   const streamUrl = ticketStreamUrl(ticketId, session);
-  if (!streamUrl || typeof window === "undefined") {
-    return null;
+  if (!streamUrl) return null;
+
+  let socket: WebSocket | null = null;
+  let destroyed = false;
+  let retryCount = 0;
+  const MAX_RETRIES = 6;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function connect() {
+    if (destroyed) return;
+
+    socket = new window.WebSocket(streamUrl!);
+
+    socket.onopen = () => {
+      retryCount = 0; // reset backoff on successful connection
+    };
+
+    socket.onmessage = (ev) => {
+      try {
+        onEvent(JSON.parse(ev.data as string) as LiveTicketEvent);
+      } catch {
+        // ignore malformed events
+      }
+    };
+
+    socket.onerror = () => {
+      // onerror is always followed by onclose, handle there
+    };
+
+    socket.onclose = (ev) => {
+      if (destroyed) return;
+
+      // Auth rejection codes
+      const isAuthError = ev.code === 4001 || ev.code === 4003 || ev.code === 1008;
+      if (isAuthError) {
+        options.onAuthExpired?.();
+        return;
+      }
+
+      // Normal / intentional close (1000, 1001) — don't reconnect
+      if (ev.code === 1000 || ev.code === 1001) return;
+
+      // Unexpected close — reconnect with exponential backoff
+      if (retryCount < MAX_RETRIES) {
+        const delay = Math.min(1000 * 2 ** retryCount, 30000);
+        retryCount++;
+        retryTimer = setTimeout(connect, delay);
+      }
+    };
   }
 
-  const socket = new window.WebSocket(streamUrl);
-  socket.onmessage = (event) => {
-    try {
-      onEvent(JSON.parse(event.data) as LiveTicketEvent);
-    } catch {
-      // Ignore malformed stream events.
-    }
+  connect();
+
+  return {
+    close() {
+      destroyed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close(1000, "component unmounted");
+      }
+      socket = null;
+    },
   };
-  return socket;
 }
 
 export { apiBaseUrl };
