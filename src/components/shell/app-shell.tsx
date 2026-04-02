@@ -354,6 +354,27 @@ export function AppShell({ workspace }: Props) {
               <span>{item.label}</span>
             </Link>
           ))}
+
+          {/* Scanner Station — external link, opens in new tab */}
+          <a
+            href="/scan"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "8px 14px", fontSize: 13,
+              color: "var(--text-secondary)", cursor: "pointer",
+              borderLeft: "2px solid transparent",
+              textDecoration: "none", marginTop: 4,
+              borderTop: "1px dashed var(--border)",
+              paddingTop: 10,
+            }}
+          >
+            <span style={{ fontSize: 11, width: 18, textAlign: "center", flexShrink: 0 }}>⬡</span>
+            <span>Scanner Station</span>
+            <span style={{ fontSize: 9, marginLeft: "auto", color: "var(--text-muted)" }}>↗</span>
+          </a>
         </nav>
 
         {/* User info */}
