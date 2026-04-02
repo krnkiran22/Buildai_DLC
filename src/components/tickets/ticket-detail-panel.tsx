@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   addTicketMember,
+  claimTicket,
   closeTicket,
   createTicketPackagesBatch,
   lookupUserByEmail,
@@ -103,6 +104,7 @@ type Props = {
 export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const role = session.user.role;
   const [activeTab, setActiveTab] = useState<"tracker" | "details" | "packets" | "members">("tracker");
+  const [claiming, setClaiming] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
@@ -275,6 +277,58 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
                 </div>
               )}
             </div>
+
+            {/* ── Assignment card ── */}
+            {(() => {
+              const canClaim = ["logistics", "admin"].includes(role) && ticket.status !== "closed" && ticket.status !== "rejected";
+              const isMyTicket = ticket.assignedToEmail && ticket.assignedToEmail === session.user.email;
+              if (!canClaim && !ticket.assignedToName) return null;
+              return (
+                <div style={{
+                  marginBottom: 14, padding: "10px 12px",
+                  background: ticket.assignedToName ? "#f0fdf4" : "#fffbeb",
+                  border: `1px solid ${ticket.assignedToName ? "#bbf7d0" : "#fde68a"}`,
+                  display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  <div style={{ flex: 1 }}>
+                    {ticket.assignedToName ? (
+                      <>
+                        <div style={{ fontSize: 10, color: "#667781", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>
+                          Assigned To
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#111b21" }}>
+                          {ticket.assignedToName}{isMyTicket ? " (you)" : ""}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12, color: "#b45309", fontWeight: 600 }}>
+                        Unassigned — claim to handle this ticket
+                      </div>
+                    )}
+                  </div>
+                  {canClaim && !isMyTicket && (
+                    <button
+                      disabled={claiming}
+                      onClick={async () => {
+                        setClaiming(true);
+                        try {
+                          const updated = await claimTicket(ticket.id, session);
+                          if (updated) onTicketUpdated(updated);
+                        } catch { /* noop */ }
+                        finally { setClaiming(false); }
+                      }}
+                      style={{
+                        padding: "5px 14px", background: "#128C7E", border: "none",
+                        color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                        opacity: claiming ? 0.6 : 1, flexShrink: 0,
+                      }}
+                    >
+                      {claiming ? "…" : ticket.assignedToName ? "Re-assign to me" : "Claim"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Error */}
             {actionError && (

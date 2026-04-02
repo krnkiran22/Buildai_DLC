@@ -132,7 +132,9 @@ export type TicketRecord = {
   messages: ChatMessage[];
   timeline: TimelineEvent[];
   ingestionReport: IngestionReport | null;
-  members: TicketMember[]; // defaults to [] if not present
+  members: TicketMember[];
+  assignedToEmail?: string | null;
+  assignedToName?: string | null;
 };
 
 export type UserProfile = {

@@ -192,10 +192,31 @@ export function TicketListPanel({ tickets, selectedId, session, onSelect, onCrea
                   {t.teamName}
                 </div>
 
-                {/* Row 3: factory + last message preview */}
-                <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {t.factoryName}
-                  {lastMsg && <span style={{ color: "var(--text-placeholder)" }}> · {lastMsg.message.slice(0, 40)}</span>}
+                {/* Row 3: factory + assignee or last message */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                    {t.factoryName}
+                    {lastMsg && !t.assignedToName && (
+                      <span style={{ color: "var(--text-placeholder)" }}> · {lastMsg.message.slice(0, 30)}</span>
+                    )}
+                  </span>
+                  {t.assignedToName ? (
+                    <span style={{
+                      fontSize: 9, padding: "1px 6px", flexShrink: 0,
+                      background: "#dbeafe", color: "#1d4ed8",
+                      borderRadius: 10, fontWeight: 600, whiteSpace: "nowrap",
+                    }}>
+                      {t.assignedToName.split(" ")[0]}
+                    </span>
+                  ) : (["logistics", "admin"].includes(role) && t.status !== "closed" && t.status !== "rejected") ? (
+                    <span style={{
+                      fontSize: 9, padding: "1px 6px", flexShrink: 0,
+                      background: "#fef3c7", color: "#b45309",
+                      borderRadius: 10, fontWeight: 600, whiteSpace: "nowrap",
+                    }}>
+                      Unassigned
+                    </span>
+                  ) : null}
                 </div>
               </div>
             );

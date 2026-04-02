@@ -329,6 +329,8 @@ export const mockOperationsSnapshot: DashboardSnapshot = {
         note: "Red-marked cards separated for manual review before closure.",
       },
       members: [],
+      assignedToEmail: null,
+      assignedToName: null,
     },
   ],
   ingestionQueue: [

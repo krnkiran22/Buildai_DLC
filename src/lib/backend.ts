@@ -579,6 +579,18 @@ export async function loginUser(payload: {
   });
 }
 
+/* ── Ticket Assignment ───────────────────────────────────────────── */
+
+export async function claimTicket(
+  ticketId: string,
+  session: AuthSession,
+): Promise<import("@/lib/operations-types").TicketRecord | null> {
+  return requestJson<import("@/lib/operations-types").TicketRecord>(
+    `/api/v1/tickets/${encodeURIComponent(ticketId)}/claim`,
+    { method: "POST", headers: requestHeaders(session) },
+  );
+}
+
 /* ── Ticket Members ──────────────────────────────────────────────── */
 
 export async function lookupUserByEmail(

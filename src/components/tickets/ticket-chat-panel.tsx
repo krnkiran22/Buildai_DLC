@@ -334,14 +334,19 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
           )}
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#111b21", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {ticket.teamName}
           </div>
           <div style={{ fontSize: 11, color: "#667781", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {(ticket.members?.length ?? 0) > 0
               ? ticket.members.map((m) => m.displayName).join(", ")
-              : `${ticket.factoryName} · ${ticket.title.slice(0, 40)}`}
+              : `${ticket.factoryName} · ${ticket.title.slice(0, 35)}`}
+            {ticket.assignedToName && (
+              <span style={{ marginLeft: 6, padding: "0 5px", background: "#dbeafe", color: "#1d4ed8", borderRadius: 8, fontSize: 10, fontWeight: 600 }}>
+                {ticket.assignedToName}
+              </span>
+            )}
           </div>
         </div>
         <span style={{
