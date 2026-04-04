@@ -214,6 +214,31 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
         borderLeft: "1px solid #e9edef",
       }}
     >
+      {/* ── Ticket Title — read-only, always visible at the top ── */}
+      <div style={{
+        padding: "10px 14px 8px",
+        borderBottom: "1px solid #f0f2f5",
+        flexShrink: 0,
+        background: "#fafafa",
+      }}>
+        <div style={{
+          fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase",
+          letterSpacing: "0.08em", color: "#8696a0", marginBottom: 4,
+        }}>
+          Ticket Title
+        </div>
+        <div style={{
+          width: "100%", padding: "7px 10px",
+          background: "#f0f2f5", border: "1px solid #e9edef", borderRadius: 6,
+          fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 600,
+          color: "#111b21", lineHeight: 1.4,
+          userSelect: "text", pointerEvents: "none",
+          wordBreak: "break-word",
+        }}>
+          {ticket.title || `Ticket #${ticket.id.slice(0, 8).toUpperCase()}`}
+        </div>
+      </div>
+
       {/* Tab strip — bigger touch targets */}
       <div style={{
         display: "flex", borderBottom: "1px solid #e9edef", flexShrink: 0,
