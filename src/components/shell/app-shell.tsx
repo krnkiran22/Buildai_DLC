@@ -25,6 +25,15 @@ import type {
 
 const SESSION_KEY = "moto_ops_session";
 
+/** Returns true if the stored session's expiresAt has already passed. */
+function isSessionExpired(s: AuthSession): boolean {
+  try {
+    return new Date(s.expiresAt).getTime() <= Date.now();
+  } catch {
+    return true; // unparseable → treat as expired
+  }
+}
+
 export type WorkspaceId =
   | "home"
   | "tickets"
@@ -121,6 +130,11 @@ export function AppShell({ workspace }: Props) {
     if (recheckTimerRef.current) clearInterval(recheckTimerRef.current);
 
     recheckTimerRef.current = setInterval(async () => {
+      // Fast client-side check first
+      if (isSessionExpired(session)) {
+        handleLogout(true);
+        return;
+      }
       try {
         await getCurrentSession(session);
       } catch (err) {
@@ -141,8 +155,17 @@ export function AppShell({ workspace }: Props) {
     const raw = window.localStorage.getItem(SESSION_KEY);
     if (raw) {
       try {
-        setSession(JSON.parse(raw) as AuthSession);
-        verifyRef.current = true;
+        const stored = JSON.parse(raw) as AuthSession;
+        // Client-side expiry check: if the stored token is already past expiresAt,
+        // discard it immediately without a backend round-trip.
+        if (isSessionExpired(stored)) {
+          window.localStorage.removeItem(SESSION_KEY);
+          setSessionExpiredBanner(true);
+          setLoading(false);
+          return;
+        }
+        setSession(stored);
+        verifyRef.current = true; // still verify with backend on first load
         return;
       } catch {
         window.localStorage.removeItem(SESSION_KEY);
