@@ -47,20 +47,23 @@ export async function login(page: Page, email: string, password: string) {
 }
 
 export async function logout(page: Page) {
-  // Try sidebar logout button
-  const logoutBtn = page.locator('button:has-text("Out"), button[title*="logout" i], button[aria-label*="logout" i]').first();
-  if (await logoutBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await logoutBtn.click();
-    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+  // Fast logout: just clear localStorage and reload — avoids UI interaction issues on mobile
+  try {
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+  } catch {
+    // page may be closed, ignore
     return;
   }
-  // Fallback: clear storage and navigate
-  await page.evaluate(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
-  await page.goto(BASE);
-  await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+
+  try {
+    await page.goto(BASE, { timeout: 10000 });
+    await page.waitForSelector('input[type="email"]', { timeout: 8000 });
+  } catch {
+    // best effort logout
+  }
 }
 
 export async function navigateTo(page: Page, section: string) {

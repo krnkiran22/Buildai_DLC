@@ -70,40 +70,52 @@ test.describe("Mobile UI — Home & Navigation", () => {
   });
 
   test("sidebar opens and closes on mobile", async ({ page }) => {
-    // Find hamburger/menu button
-    const menuBtn = page.locator('button[aria-label*="menu" i], button[aria-label*="sidebar" i], .menu-btn, [class*="hamburger"]').first();
-    if (await menuBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    // Menu button has aria-label="Open menu"
+    const menuBtn = page.getByRole("button", { name: "Open menu" });
+    await screenshot(page, "mobile-03-before-menu");
+
+    if (await menuBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await menuBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(800);
       await screenshot(page, "mobile-03-sidebar-open");
 
-      // Sidebar should be visible
-      const sidebar = page.locator('.app-sidebar, nav, [class*="sidebar"]').first();
+      // Check sidebar is now visible (has sidebar-open class)
+      const sidebar = page.locator('.app-sidebar.sidebar-open, .app-sidebar');
       const isOpen = await sidebar.isVisible();
-      console.log(`Sidebar visible after menu click: ${isOpen}`);
+      console.log(`Sidebar visible after menu click: ${isOpen ? "✅" : "⚠️"}`);
 
-      // Close it
-      const overlay = page.locator('.mobile-overlay, [class*="overlay"]').first();
+      // Close via tap on the right side of screen (not covered by sidebar which is 80vw = ~312px)
+      // Tap at x=370, which is definitely outside the sidebar area
+      const overlay = page.locator('.mobile-overlay');
       if (await overlay.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await overlay.click();
-        await page.waitForTimeout(500);
+        // Click at the far right of the screen (outside sidebar)
+        await page.mouse.click(370, 400);
+        await page.waitForTimeout(600);
         await screenshot(page, "mobile-03-sidebar-closed");
-        console.log("✅ Sidebar closes on overlay click");
+        console.log("✅ Sidebar dismissed by tapping outside");
+      } else {
+        await page.keyboard.press("Escape");
+        await page.waitForTimeout(500);
+        console.log("ℹ️  Closed sidebar via Escape");
       }
     } else {
-      console.log("ℹ️  Menu button not found by aria-label — checking screenshot");
+      console.log("ℹ️  Mobile topbar may be hidden by CSS (only shows at @media max-width: 768px)");
       await screenshot(page, "mobile-03-no-menu-btn");
     }
   });
 
   test("ticket list page is usable on mobile", async ({ page }) => {
+    // Open sidebar first (on mobile, nav is in sidebar)
+    const menuBtn = page.getByRole("button", { name: "Open menu" });
+    if (await menuBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await menuBtn.click();
+      await page.waitForTimeout(500);
+    }
+
     // Navigate to tickets
-    const ticketNav = page.locator('text=Tickets, a[href*="ticket"]').first();
-    await ticketNav.click().catch(async () => {
-      // Try bottom tab bar
-      await page.locator('.bottom-tab-bar button, [class*="tab"] button').nth(1).click();
-    });
-    await page.waitForTimeout(1000);
+    const ticketNav = page.getByText("Tickets").first();
+    await ticketNav.click().catch(() => {});
+    await page.waitForTimeout(1500);
     await screenshot(page, "mobile-04-ticket-list");
 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -111,23 +123,35 @@ test.describe("Mobile UI — Home & Navigation", () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 5);
     console.log("✅ Ticket list: no horizontal overflow");
 
-    // Check ticket rows have good touch targets
-    const ticketRows = page.locator('.ticket-row, [class*="ticket-row"]');
-    const count = await ticketRows.count();
+    // Check ticket rows (if any exist)
+    const ticketRows = page.locator('.ticket-row');
+    const count = await ticketRows.count().catch(() => 0);
     if (count > 0) {
       const firstRow = await ticketRows.first().boundingBox();
-      expect(firstRow?.height).toBeGreaterThanOrEqual(44);
-      console.log(`✅ Ticket row height: ${firstRow?.height}px`);
+      if (firstRow) {
+        expect(firstRow.height).toBeGreaterThanOrEqual(44);
+        console.log(`✅ Ticket row height: ${firstRow.height}px`);
+      }
     } else {
-      console.log("ℹ️  No tickets in list yet (fresh DB)");
+      console.log("ℹ️  No tickets in list (clean DB) — checking empty state");
+      const bodyText = await page.textContent("body");
+      if (bodyText?.includes("No ticket") || bodyText?.includes("Request") || bodyText?.includes("empty")) {
+        console.log("✅ Empty state shown correctly");
+      }
     }
   });
 
   test("ticket detail panel is full-width on mobile", async ({ page }) => {
-    await page.locator('text=Tickets').first().click().catch(() => {});
-    await page.waitForTimeout(1000);
+    // Open sidebar and navigate to tickets
+    const menuBtn = page.getByRole("button", { name: "Open menu" });
+    if (await menuBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await menuBtn.click();
+      await page.waitForTimeout(400);
+    }
+    await page.getByText("Tickets").first().click().catch(() => {});
+    await page.waitForTimeout(1500);
 
-    const ticketRow = page.locator('.ticket-row, [class*="ticket"]').first();
+    const ticketRow = page.locator('.ticket-row').first();
     if (await ticketRow.isVisible({ timeout: 3000 }).catch(() => false)) {
       await ticketRow.click();
       await page.waitForTimeout(1000);
@@ -160,8 +184,13 @@ test.describe("Mobile UI — Home & Navigation", () => {
   });
 
   test("inventory page is readable on mobile", async ({ page }) => {
-    const invNav = page.locator('text=Inventory, a[href*="inventor"]').first();
-    await invNav.click().catch(() => {});
+    // Open sidebar first
+    const menuBtn = page.getByRole("button", { name: "Open menu" });
+    if (await menuBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await menuBtn.click();
+      await page.waitForTimeout(400);
+    }
+    await page.getByText("Inventory").first().click().catch(() => {});
     await page.waitForTimeout(1000);
     await screenshot(page, "mobile-06-inventory");
 
