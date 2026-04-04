@@ -259,6 +259,11 @@ async function requestJson<T>(
       const payload = await response.json().catch(() => null);
       throw new Error(extractApiErrorMessage(payload, 401) || "Invalid credentials.");
     }
+    // Broadcast a global event so AppShell can immediately log the user out,
+    // regardless of which component made the API call.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("dlc:session-expired"));
+    }
     throw new SessionExpiredError();
   }
   if (response.status === 403) {

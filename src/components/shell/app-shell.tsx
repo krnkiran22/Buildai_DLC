@@ -75,7 +75,7 @@ type Props = {
   workspace: WorkspaceId;
 };
 
-const SESSION_RECHECK_MS = 8 * 60 * 1000; // re-verify token every 8 minutes
+const SESSION_RECHECK_MS = 3 * 60 * 1000; // re-verify token every 3 minutes
 
 export function AppShell({ workspace }: Props) {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -105,6 +105,15 @@ export function AppShell({ workspace }: Props) {
     setLoading(false);
     if (expired) setSessionExpiredBanner(true);
   }, [session]);
+
+  /* ── Global session-expired event (fired by any API call that gets 401) ── */
+  useEffect(() => {
+    function onGlobalExpiry() {
+      if (session) handleLogout(true);
+    }
+    window.addEventListener("dlc:session-expired", onGlobalExpiry);
+    return () => window.removeEventListener("dlc:session-expired", onGlobalExpiry);
+  }, [session, handleLogout]);
 
   /* ── periodic token re-check ── */
   useEffect(() => {

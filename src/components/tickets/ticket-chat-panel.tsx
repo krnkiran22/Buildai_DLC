@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { openTicketStream, sendTicketMessage } from "@/lib/backend";
+import { isSessionExpiredError, openTicketStream, sendTicketMessage } from "@/lib/backend";
 import type {
   AuthSession,
   ChatMessage,
@@ -221,7 +221,7 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
       setText(""); setReplyTo(null); setMediaPreview(null);
       setTimeout(() => textareaRef.current?.focus(), 50);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send.");
+      setError(isSessionExpiredError(err) ? "Session expired. Redirecting to login…" : (err instanceof Error ? err.message : "Failed to send."));
     } finally { setSending(false); }
   }, [text, replyTo, mediaPreview, ticket.id, session, onTicketUpdated]);
 

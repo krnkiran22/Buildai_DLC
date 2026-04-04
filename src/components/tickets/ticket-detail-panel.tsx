@@ -6,6 +6,7 @@ import {
   claimTicket,
   closeTicket,
   createTicketPackagesBatch,
+  isSessionExpiredError,
   lookupUserByEmail,
   qrSvgUrl,
   removeTicketMember,
@@ -145,7 +146,11 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
       setPendingAction(null);
       setCarrier(""); setTrackingNo(""); setCarrierNote("");
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Action failed.");
+      if (isSessionExpiredError(err)) {
+        setActionError("Your session has expired. Redirecting to login…");
+      } else {
+        setActionError(err instanceof Error ? err.message : "Action failed.");
+      }
     } finally {
       setActionLoading(null);
     }
@@ -174,7 +179,11 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
       if (updated) onTicketUpdated(updated);
       setShowClose(false); setCloseNote("");
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Close failed.");
+      if (isSessionExpiredError(err)) {
+        setActionError("Your session has expired. Redirecting to login…");
+      } else {
+        setActionError(err instanceof Error ? err.message : "Close failed.");
+      }
     } finally { setActionLoading(null); }
   }
 
@@ -185,7 +194,7 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
       const updated = await createTicketPackagesBatch(ticket.id, qrBatch, session);
       if (updated) { onTicketUpdated(updated); setShowQrForm(false); }
     } catch (err) {
-      setQrError(err instanceof Error ? err.message : "QR generation failed.");
+      setQrError(isSessionExpiredError(err) ? "Session expired. Please log in again." : (err instanceof Error ? err.message : "QR generation failed."));
     } finally { setQrLoading(false); }
   }
 

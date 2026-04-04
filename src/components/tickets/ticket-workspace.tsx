@@ -70,8 +70,6 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
     if (isMobile) navigateTo("chat");
   }
 
-  void onSessionChange;
-
   // ── Mobile ─────────────────────────────────────────────────
   if (isMobile) {
     const canShowChat = !!selectedTicket;
