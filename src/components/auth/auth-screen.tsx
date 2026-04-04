@@ -51,13 +51,25 @@ export function AuthScreen({ onAuthenticated }: Props) {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!loginEmail || !loginPassword) { setError("Email and password are required."); return; }
+    if (!loginEmail || !loginPassword) { setError("Please enter your email and password."); return; }
     setLoading(true);
     try {
       const session = await loginUser({ email: loginEmail, password: loginPassword });
       onAuthenticated(session);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed. Check your credentials.");
+      const raw = err instanceof Error ? err.message : "";
+      // Map backend messages to human-friendly text
+      if (!raw || raw === "SESSION_EXPIRED" || raw === "Request failed with 401") {
+        setError("Incorrect email or password. Please try again.");
+      } else if (raw.toLowerCase().includes("not found") || raw.toLowerCase().includes("no account")) {
+        setError("No account found with that email. Please check or create an account.");
+      } else if (raw.toLowerCase().includes("incorrect") || raw.toLowerCase().includes("wrong") || raw.toLowerCase().includes("invalid")) {
+        setError("Incorrect password. Please try again.");
+      } else if (raw.toLowerCase().includes("inactive") || raw.toLowerCase().includes("disabled")) {
+        setError("Your account is inactive. Please contact your admin.");
+      } else {
+        setError(raw || "Sign in failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -80,7 +92,14 @@ export function AuthScreen({ onAuthenticated }: Props) {
       setOtpDebug(challenge.otpDebugCode ?? null);
       goTo("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed.");
+      const raw = err instanceof Error ? err.message : "";
+      if (!raw || raw === "SESSION_EXPIRED") {
+        setError("Registration failed. Please try again.");
+      } else if (raw.toLowerCase().includes("already") || raw.toLowerCase().includes("exists")) {
+        setError("An account with this email already exists. Please sign in instead.");
+      } else {
+        setError(raw || "Registration failed. Please check your details.");
+      }
     } finally {
       setLoading(false);
     }
@@ -89,13 +108,22 @@ export function AuthScreen({ onAuthenticated }: Props) {
   async function handleOtp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!otpCode || otpCode.length < 4) { setError("Enter the OTP sent to your email."); return; }
+    if (!otpCode || otpCode.length < 4) { setError("Please enter the 6-digit code sent to your email."); return; }
     setLoading(true);
     try {
       const session = await verifyRegistrationOtp({ email: otpEmail, otp: otpCode });
       onAuthenticated(session);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "OTP verification failed.");
+      const raw = err instanceof Error ? err.message : "";
+      if (!raw || raw === "SESSION_EXPIRED") {
+        setError("Verification failed. Please check the code and try again.");
+      } else if (raw.toLowerCase().includes("expired")) {
+        setError("The code has expired. Please go back and request a new one.");
+      } else if (raw.toLowerCase().includes("invalid") || raw.toLowerCase().includes("incorrect") || raw.toLowerCase().includes("wrong")) {
+        setError("Incorrect code. Please check your email and try again.");
+      } else {
+        setError(raw || "Verification failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
