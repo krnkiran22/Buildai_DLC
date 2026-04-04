@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CreateTicketModal } from "@/components/tickets/create-ticket-modal";
 import { TicketChatPanel } from "@/components/tickets/ticket-chat-panel";
 import { TicketDetailPanel } from "@/components/tickets/ticket-detail-panel";
@@ -8,6 +8,9 @@ import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
 import type { AuthSession, DashboardSnapshot, TicketRecord } from "@/lib/operations-types";
 
 type MobileView = "list" | "chat" | "detail";
+
+// View depth: higher = further into the stack (determines slide direction)
+const VIEW_DEPTH: Record<MobileView, number> = { list: 0, chat: 1, detail: 2 };
 
 type Props = {
   snapshot: DashboardSnapshot;
@@ -23,6 +26,8 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>("list");
   const [isMobile, setIsMobile] = useState(false);
+  const [slideDir, setSlideDir] = useState<"right" | "left">("right");
+  const prevViewRef = useRef<MobileView>("list");
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -49,106 +54,183 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
     setTickets((prev) => [ticket, ...prev]);
     setSelectedId(ticket.id);
     setShowCreateModal(false);
-    if (isMobile) setMobileView("chat");
+    if (isMobile) navigateTo("chat");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
+
+  function navigateTo(view: MobileView) {
+    const isForward = VIEW_DEPTH[view] > VIEW_DEPTH[prevViewRef.current];
+    setSlideDir(isForward ? "right" : "left");
+    prevViewRef.current = view;
+    setMobileView(view);
+  }
 
   function handleSelectTicket(id: string) {
     setSelectedId(id);
-    if (isMobile) setMobileView("chat");
+    if (isMobile) navigateTo("chat");
   }
 
   void onSessionChange;
 
+  // ── Mobile ─────────────────────────────────────────────────
   if (isMobile) {
-    const tabLabel = (v: MobileView) => ({ list: "Tickets", chat: "Chat", detail: "Info" }[v]);
-    const tabIcon  = (v: MobileView) => ({ list: "☰", chat: "💬", detail: "ℹ" }[v]);
     const canShowChat = !!selectedTicket;
+    const animClass = slideDir === "right" ? "anim-slide-right" : "anim-slide-left";
 
     return (
-      <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Active ticket title bar (when inside a ticket) */}
+      <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg)" }}>
+
+        {/* ── Ticket header bar (when inside a ticket) ── */}
         {mobileView !== "list" && selectedTicket && (
           <div style={{
-            padding: "8px 14px 6px", background: "var(--bg)",
-            borderBottom: "1px solid var(--border)", flexShrink: 0,
-            display: "flex", alignItems: "center", gap: 10,
+            padding: "0 14px",
+            height: 52,
+            background: "rgba(255,255,255,0.92)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            zIndex: 10,
           }}>
             <button
-              onClick={() => setMobileView("list")}
+              onClick={() => navigateTo(mobileView === "detail" ? "chat" : "list")}
               style={{
-                background: "none", border: "none", fontSize: 20, lineHeight: 1,
-                cursor: "pointer", color: "var(--text-secondary)", padding: "2px 4px",
+                background: "none", border: "none", fontSize: 24, lineHeight: 1,
+                cursor: "pointer", color: "var(--text-primary)", padding: "4px",
+                display: "flex", alignItems: "center", flexShrink: 0,
+                WebkitTapHighlightColor: "transparent",
               }}
-              aria-label="Back to list"
-            >←</button>
+              aria-label="Back"
+            >
+              ‹
+            </button>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{
+                fontSize: 15, fontWeight: 700, color: "var(--text-primary)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
                 {selectedTicket.teamName}
               </div>
-              <div style={{ fontSize: 10, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{
+                fontSize: 11, color: "var(--text-muted)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
                 {selectedTicket.factoryName} · {selectedTicket.status.replace(/_/g, " ")}
               </div>
             </div>
           </div>
         )}
 
-        {/* Pane content */}
-        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          {mobileView === "list" && (
-            <TicketListPanel
-              tickets={tickets}
-              selectedId={selectedId}
-              session={session}
-              onSelect={handleSelectTicket}
-              onCreateNew={() => setShowCreateModal(true)}
-            />
-          )}
-          {mobileView === "chat" && selectedTicket && (
-            <TicketChatPanel
-              ticket={selectedTicket}
-              session={session}
-              onTicketUpdated={handleTicketUpdated}
-            />
-          )}
-          {mobileView === "chat" && !selectedTicket && (
-            <div className="empty-state" style={{ flex: 1 }}>
-              <div className="empty-state-title">Select a ticket</div>
-              <div className="empty-state-desc">Go back to the list and pick a ticket.</div>
-            </div>
-          )}
-          {mobileView === "detail" && selectedTicket && (
-            <TicketDetailPanel
-              ticket={selectedTicket}
-              session={session}
-              onTicketUpdated={handleTicketUpdated}
-            />
-          )}
+        {/* ── Animated pane container ── */}
+        <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          <div
+            key={`${mobileView}-${selectedId}`}
+            className={animClass}
+            style={{
+              position: "absolute", inset: 0,
+              display: "flex", flexDirection: "column",
+              background: "var(--bg)",
+              willChange: "transform",
+            }}
+          >
+            {mobileView === "list" && (
+              <TicketListPanel
+                tickets={tickets}
+                selectedId={selectedId}
+                session={session}
+                onSelect={handleSelectTicket}
+                onCreateNew={() => setShowCreateModal(true)}
+              />
+            )}
+
+            {mobileView === "chat" && selectedTicket && (
+              <TicketChatPanel
+                ticket={selectedTicket}
+                session={session}
+                onTicketUpdated={handleTicketUpdated}
+              />
+            )}
+
+            {mobileView === "chat" && !selectedTicket && (
+              <div className="empty-state anim-fade" style={{ flex: 1 }}>
+                <div style={{ fontSize: 32 }}>💬</div>
+                <div className="empty-state-title" style={{ marginTop: 12 }}>No ticket selected</div>
+                <div className="empty-state-desc">Go back and pick a ticket.</div>
+              </div>
+            )}
+
+            {mobileView === "detail" && selectedTicket && (
+              <TicketDetailPanel
+                ticket={selectedTicket}
+                session={session}
+                onTicketUpdated={handleTicketUpdated}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Bottom tab bar */}
+        {/* ── Bottom tab bar ── */}
         <div style={{
-          display: "flex", borderTop: "1px solid var(--border)",
-          background: "var(--bg)", flexShrink: 0,
+          display: "flex",
+          borderTop: "1px solid rgba(0,0,0,0.07)",
+          background: "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          flexShrink: 0,
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          zIndex: 20,
         }}>
-          {(["list", "chat", "detail"] as MobileView[]).map((v) => {
+          {([
+            { v: "list" as MobileView, icon: "☰", label: "Tickets", always: true },
+            { v: "chat" as MobileView, icon: "💬", label: "Chat",    always: false },
+            { v: "detail" as MobileView, icon: "ℹ", label: "Info",  always: false },
+          ]).map(({ v, icon, label, always }) => {
             const active = mobileView === v;
-            const disabled = v !== "list" && !canShowChat;
+            const disabled = !always && !canShowChat;
             return (
               <button
                 key={v}
-                onClick={() => { if (!disabled) setMobileView(v); }}
+                onClick={() => { if (!disabled) navigateTo(v); }}
                 style={{
-                  flex: 1, padding: "10px 4px 8px", border: "none",
-                  background: "none", cursor: disabled ? "not-allowed" : "pointer",
+                  flex: 1,
+                  padding: "9px 4px 8px",
+                  border: "none",
+                  background: "none",
+                  cursor: disabled ? "not-allowed" : "pointer",
                   display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                  borderTop: `2px solid ${active ? "var(--action)" : "transparent"}`,
                   opacity: disabled ? 0.3 : 1,
+                  transition: "opacity 0.15s var(--ease-out)",
+                  WebkitTapHighlightColor: "transparent",
+                  position: "relative",
                 }}
               >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{tabIcon(v)}</span>
-                <span style={{ fontSize: 10, fontWeight: active ? 700 : 400, color: active ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  {tabLabel(v)}
+                {/* Active indicator bar */}
+                <div style={{
+                  position: "absolute", top: 0, left: "25%", right: "25%",
+                  height: 2,
+                  background: active ? "var(--action)" : "transparent",
+                  borderRadius: "0 0 2px 2px",
+                  transition: "background 0.2s var(--ease-out)",
+                }} />
+                <span style={{
+                  fontSize: 20, lineHeight: 1,
+                  transform: active ? "scale(1.1)" : "scale(1)",
+                  transition: "transform 0.2s var(--ease-spring)",
+                  display: "block",
+                }}>{icon}</span>
+                <span style={{
+                  fontSize: 10,
+                  fontWeight: active ? 700 : 400,
+                  color: active ? "var(--text-primary)" : "var(--text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  fontFamily: "var(--font-mono)",
+                  transition: "color 0.15s, font-weight 0.15s",
+                }}>
+                  {label}
                 </span>
               </button>
             );
@@ -166,7 +248,7 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
     );
   }
 
-  // Desktop: three-pane
+  // ── Desktop: three-pane ────────────────────────────────────
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
       <TicketListPanel
@@ -188,7 +270,7 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
           flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
           borderRight: "1px solid var(--border)", background: "var(--bg)",
         }}>
-          <div className="empty-state">
+          <div className="empty-state anim-scale">
             <div className="empty-state-icon">◫</div>
             <div className="empty-state-title">No ticket selected</div>
             <div className="empty-state-desc">

@@ -288,9 +288,9 @@ function RoleQuickActions({ role, tickets }: { role: UserRole; tickets: { status
   if (actions.length === 0) return null;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+    <div className="stagger" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
       {actions.map((a) => (
-        <a key={a.label} href={a.href} style={{
+        <a key={a.label} href={a.href} className="anim-scale" style={{
           display: "flex", flexDirection: "column", gap: 6, padding: "14px 16px",
           background: a.highlight ? "var(--action)" : "var(--bg)",
           border: `1px solid ${a.highlight ? "var(--action)" : "var(--border)"}`,

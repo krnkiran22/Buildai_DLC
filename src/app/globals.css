@@ -84,6 +84,76 @@ textarea {
   background: #aaaaaa;
 }
 
+/* ─── Apple-style keyframes ─────────────────────────────── */
+/* iOS spring easing: cubic-bezier(0.5, 0, 0, 1.25) overshoots a little */
+:root {
+  --ease-spring: cubic-bezier(0.5, 0, 0, 1.25);
+  --ease-out:    cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast:  220ms;
+  --dur-mid:   320ms;
+  --dur-slow:  420ms;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes slideInUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes slideInDown {
+  from { transform: translateY(-16px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scaleInFade {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+@keyframes popIn {
+  0%   { transform: scale(0.94); opacity: 0; }
+  60%  { transform: scale(1.02); }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* ─── Animation utility classes ─────────────────────────── */
+.anim-slide-right { animation: slideInRight var(--dur-mid) var(--ease-spring) both; }
+.anim-slide-left  { animation: slideInLeft  var(--dur-mid) var(--ease-spring) both; }
+.anim-slide-up    { animation: slideInUp    var(--dur-mid) var(--ease-spring) both; }
+.anim-slide-down  { animation: slideInDown  var(--dur-fast) var(--ease-out) both; }
+.anim-fade        { animation: fadeIn       var(--dur-fast) var(--ease-out) both; }
+.anim-scale       { animation: scaleInFade  var(--dur-fast) var(--ease-out) both; }
+.anim-pop         { animation: popIn        var(--dur-mid) var(--ease-spring) both; }
+
+/* Staggered children: add .stagger class to parent, children get delay */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 50ms; }
+.stagger > *:nth-child(3) { animation-delay: 100ms; }
+.stagger > *:nth-child(4) { animation-delay: 150ms; }
+.stagger > *:nth-child(5) { animation-delay: 200ms; }
+.stagger > *:nth-child(6) { animation-delay: 250ms; }
+
+/* ─── Touch press states (Apple haptic feel) ────────────── */
+@media (hover: none) {
+  .btn:active,
+  .ticket-row:active {
+    transform: scale(0.97);
+    transition: transform 0.08s var(--ease-out);
+  }
+  .btn-primary:active {
+    background: var(--action-hover);
+  }
+}
+
 /* ─── Layout shells ─────────────────────────────────────── */
 .app-layout {
   display: flex;
@@ -160,9 +230,15 @@ textarea {
   font-weight: 500;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  transition: background 0.15s var(--ease-out),
+              border-color 0.15s var(--ease-out),
+              color 0.15s var(--ease-out),
+              transform 0.1s var(--ease-out),
+              box-shadow 0.15s var(--ease-out);
   white-space: nowrap;
   line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .btn-primary {
@@ -841,67 +917,54 @@ textarea {
 
 /* ─── Responsive / Mobile ────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Show mobile topbar */
+  /* ── Mobile top bar ── */
   .mobile-topbar {
     display: flex !important;
+    height: 52px;
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   }
 
-  /* Hide sidebar by default on mobile */
+  /* ── Sidebar: transform-based slide (GPU accelerated) ── */
   .app-sidebar {
     position: fixed !important;
-    left: -240px !important;
     top: 0 !important;
     bottom: 0 !important;
-    z-index: 50 !important;
-    transition: left 0.22s ease !important;
-    box-shadow: none;
-  }
-
-  /* Show sidebar when open */
-  .app-sidebar.sidebar-open {
     left: 0 !important;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
+    z-index: 100 !important;
+    transform: translateX(-110%) !important;
+    transition: transform var(--dur-mid) var(--ease-spring),
+                box-shadow var(--dur-mid) var(--ease-out) !important;
+    box-shadow: none;
+    width: 80vw !important;
+    max-width: 300px !important;
+    min-width: 0 !important;
   }
 
-  /* Show close button inside sidebar on mobile */
+  .app-sidebar.sidebar-open {
+    transform: translateX(0) !important;
+    box-shadow: 8px 0 40px rgba(0, 0, 0, 0.18) !important;
+  }
+
   .sidebar-close-btn {
     display: flex !important;
   }
 
-  /* Show overlay when sidebar is open */
+  /* ── Overlay: fades in when sidebar opens ── */
   .mobile-overlay {
     display: block !important;
+    animation: fadeIn var(--dur-mid) var(--ease-out) both;
   }
 
-  /* Ticket three-pane: stack on mobile */
+  /* ── Ticket panes: handled by React with CSS classes ── */
   .ticket-workspace {
     flex-direction: column;
-    overflow: auto;
+    overflow: hidden;
   }
 
-  .ticket-list-pane {
-    width: 100% !important;
-    min-width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
-    border-right: none !important;
-    border-bottom: 1px solid var(--border);
-    max-height: 280px;
-  }
-
-  .ticket-chat-pane {
-    border-right: none !important;
-    min-height: 320px;
-  }
-
-  .ticket-detail-pane {
-    width: 100% !important;
-    min-width: 100% !important;
-    border-top: 1px solid var(--border);
-    min-height: 300px;
-  }
-
-  /* Tables: horizontal scroll */
+  /* ── Tables: horizontal scroll ── */
   .data-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -911,12 +974,12 @@ textarea {
     min-width: 560px;
   }
 
-  /* Metric grid: 2 columns on mobile */
+  /* ── Metric grid: 2 col ── */
   .metric-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 
-  /* Modal: full screen on mobile */
+  /* ── Modal: slides up from bottom ── */
   .modal-backdrop {
     padding: 0;
     align-items: flex-end;
@@ -925,11 +988,14 @@ textarea {
   .modal-box {
     max-width: 100% !important;
     width: 100% !important;
-    max-height: 92vh !important;
+    max-height: 94vh !important;
     border-bottom: none;
+    border-radius: 18px 18px 0 0 !important;
+    animation: slideInUp var(--dur-mid) var(--ease-spring) both !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Ingestion split: stack */
+  /* ── Ingestion split: stack ── */
   .ingestion-split {
     flex-direction: column !important;
   }
@@ -942,34 +1008,62 @@ textarea {
     border-bottom: 1px solid var(--border);
   }
 
-  /* Auth box: full width */
+  /* ── Auth box ── */
   .auth-box {
     max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    margin-top: auto;
   }
 
-  /* Bigger touch targets on mobile */
+  .auth-screen {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  /* ── Touch targets ── */
   .btn {
-    min-height: 40px;
-    font-size: 14px !important;
+    min-height: 44px;
+    font-size: 15px !important;
+    border-radius: 12px !important;
   }
 
   .btn-sm {
-    min-height: 34px;
+    min-height: 36px;
+    border-radius: 10px !important;
   }
 
-  /* Larger inputs on mobile */
-  .input, input[type="text"], input[type="email"], input[type="password"], select, textarea {
-    font-size: 16px !important; /* prevents iOS zoom on focus */
-    min-height: 42px;
+  .btn-xs {
+    min-height: 30px;
   }
 
-  /* Chat input: full keyboard safe */
+  /* ── Inputs: prevent iOS keyboard zoom (need >= 16px) ── */
+  .input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 46px;
+    border-radius: 12px !important;
+  }
+
+  textarea {
+    min-height: 80px;
+  }
+
+  /* ── Chat input safe area ── */
   .chat-input-row {
     padding-bottom: env(safe-area-inset-bottom, 8px);
   }
 
-  /* Quick action grid: 2 columns */
-  .quick-actions-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+  /* ── Ticket row: bigger touch area ── */
+  .ticket-row {
+    padding: 14px 14px !important;
+    -webkit-tap-highlight-color: transparent;
   }
 }

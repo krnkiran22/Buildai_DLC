@@ -259,7 +259,8 @@ export function AppShell({ workspace }: Props) {
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
             zIndex: 40, display: "none",
           }}
           className="mobile-overlay"
@@ -409,36 +410,45 @@ export function AppShell({ workspace }: Props) {
         overflow: "hidden", display: "flex", flexDirection: "column",
         background: "var(--bg-subtle)",
       }}>
-        {/* Mobile top bar */}
+        {/* ── Mobile top bar (frosted glass iOS-style) ── */}
         <div
           className="mobile-topbar"
           style={{
-            display: "none", alignItems: "center", gap: 10,
-            padding: "0 14px", height: 44, borderBottom: "1px solid var(--border)",
-            background: "var(--bg)", flexShrink: 0,
+            display: "none", alignItems: "center", gap: 12,
+            padding: "0 16px", height: 52, flexShrink: 0,
+            // frosted-glass handled by CSS media query
           }}
         >
           <button
             onClick={() => setSidebarOpen(true)}
             style={{
-              background: "none", border: "none", fontSize: 18,
-              cursor: "pointer", color: "var(--text-primary)", padding: "0 4px",
+              background: "none", border: "none", fontSize: 22, lineHeight: 1,
+              cursor: "pointer", color: "var(--text-primary)", padding: "6px",
+              display: "flex", alignItems: "center",
+              WebkitTapHighlightColor: "transparent",
             }}
             aria-label="Open menu"
           >
             ☰
           </button>
-          <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.02em" }}>Build AI</span>
-          <span style={{
-            fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-mono)",
-            textTransform: "uppercase", letterSpacing: "0.06em",
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em", color: "#111" }}>
+              Build AI
+            </div>
+          </div>
+          {/* Avatar / user initial */}
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "var(--action)", color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, fontWeight: 700, flexShrink: 0,
           }}>
-            {workspace}
-          </span>
+            {session.user.displayName?.[0]?.toUpperCase() ?? "?"}
+          </div>
         </div>
 
-        {/* Workspace */}
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        {/* ── Workspace (animate entrance per page) ── */}
+        <div key={workspace} className="anim-fade" style={{ flex: 1, overflow: "hidden" }}>
           {workspace === "home" && <HomeWorkspace snapshot={snapshot} session={session} />}
           {workspace === "tickets" && (
             <TicketWorkspace
@@ -466,17 +476,19 @@ function SessionExpiredOverlay({ onDismiss }: { onDismiss: () => void }) {
   }, [onDismiss]);
 
   return (
-    <div style={{
+    <div className="anim-fade" style={{
       position: "fixed", inset: 0, zIndex: 9999,
-      background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)",
+      background: "rgba(0,0,0,0.7)",
+      backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
       display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20,
     }}
       onClick={onDismiss}
     >
-      <div style={{
-        background: "#1a0000", border: "1px solid #dc2626", borderRadius: 10,
-        padding: "28px 36px", maxWidth: 340, textAlign: "center",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+      <div className="anim-pop" style={{
+        background: "#1a0000", border: "1px solid #dc2626", borderRadius: 20,
+        padding: "32px 32px", maxWidth: 340, width: "100%", textAlign: "center",
+        boxShadow: "0 24px 80px rgba(220,38,38,0.25), 0 4px 24px rgba(0,0,0,0.5)",
       }}
         onClick={(e) => e.stopPropagation()}
       >
