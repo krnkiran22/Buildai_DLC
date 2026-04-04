@@ -556,6 +556,18 @@ export async function saveIngestionReconciliation(
   });
 }
 
+export async function createIngestionRun(
+  ticketId: string,
+  payload: import("@/lib/operations-types").IngestionRunCreateInput,
+  session: AuthSession,
+): Promise<TicketRecord> {
+  return requestJson<TicketRecord>(`/api/v1/tickets/${encodeURIComponent(ticketId)}/ingestion/runs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...requestHeaders(session) },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function requestRegistrationOtp(payload: {
   email: string;
   password: string;

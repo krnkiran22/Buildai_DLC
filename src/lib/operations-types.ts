@@ -101,6 +101,33 @@ export type IngestionReport = {
   note: string;
 };
 
+export type IngestionRun = {
+  id: string;
+  ticketId: string;
+  runNumber: number;
+  qrCode?: string | null;
+  packageLabel?: string | null;
+  totalInPacket: number;
+  goodSdCards: number;
+  badSdCards: number;
+  missingSdCards: number;
+  notes: string;
+  processedBy: string;
+  processedByName: string;
+  processedAt: string;
+};
+
+export type IngestionRunCreateInput = {
+  qrCode?: string | null;
+  packageLabel?: string | null;
+  totalInPacket: number;
+  goodSdCards: number;
+  badSdCards: number;
+  missingSdCards: number;
+  notes?: string;
+  markCompleted?: boolean;
+};
+
 export type TicketMember = {
   email: string;
   displayName: string;
@@ -132,6 +159,7 @@ export type TicketRecord = {
   messages: ChatMessage[];
   timeline: TimelineEvent[];
   ingestionReport: IngestionReport | null;
+  ingestionRuns: IngestionRun[];
   members: TicketMember[];
   assignedToEmail?: string | null;
   assignedToName?: string | null;
