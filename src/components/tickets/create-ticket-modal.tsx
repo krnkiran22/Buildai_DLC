@@ -10,10 +10,22 @@ type Props = {
   onClose: () => void;
 };
 
+function buildTitle(
+  teamName: string,
+  factoryName: string,
+  deploymentDate: string,
+  devicesRequested: number,
+  sdCardsRequested: number,
+) {
+  const t  = teamName        || "—";
+  const fc = factoryName     || "—";
+  const d  = deploymentDate  || "—";
+  return `${t} | ${fc} | Deploy ${d} | Devices ${devicesRequested} | SD ${sdCardsRequested}`;
+}
+
 export function CreateTicketModal({ session, onCreated, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [titleEdited, setTitleEdited] = useState(false);
   const [form, setForm] = useState<{
     ticketType: TicketType;
     teamName: string;
@@ -26,8 +38,6 @@ export function CreateTicketModal({ session, onCreated, onClose }: Props) {
     devicesRequested: number;
     sdCardsRequested: number;
     priority: Priority;
-    notes: string;
-    title: string;
   }>({
     ticketType: "deployment",
     teamName: "",
@@ -40,61 +50,43 @@ export function CreateTicketModal({ session, onCreated, onClose }: Props) {
     devicesRequested: 0,
     sdCardsRequested: 0,
     priority: "medium",
-    notes: "",
-    title: "",
   });
 
+  // Title is always derived from form — never manually edited
+  const autoTitle = buildTitle(
+    form.teamName,
+    form.factoryName,
+    form.deploymentDate,
+    form.devicesRequested,
+    form.sdCardsRequested,
+  );
+
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((f) => {
-      const next = { ...f, [key]: value };
-      // Auto-update title whenever form fields change, unless user manually edited it
-      if (key !== "title" && !titleEdited) {
-        const t = (key === "teamName" ? String(value) : f.teamName) || "[Team]";
-        const fc = (key === "factoryName" ? String(value) : f.factoryName) || "[Factory]";
-        const d = (key === "deploymentDate" ? String(value) : f.deploymentDate) || "[Date]";
-        const dev = key === "devicesRequested" ? Number(value) : f.devicesRequested;
-        const sd = key === "sdCardsRequested" ? Number(value) : f.sdCardsRequested;
-        next.title = `${t} | ${fc} | Deploy ${d} | Devices ${dev} | SD ${sd}`;
-      }
-      return next;
-    });
-  }
-
-  function handleTitleChange(val: string) {
-    setTitleEdited(true);
-    setForm((f) => ({ ...f, title: val }));
-  }
-
-  function resetTitle() {
-    setTitleEdited(false);
-    const t = form.teamName || "[Team]";
-    const f2 = form.factoryName || "[Factory]";
-    const d = form.deploymentDate || "[Date]";
-    setForm((f) => ({ ...f, title: `${t} | ${f2} | Deploy ${d} | Devices ${f.devicesRequested} | SD ${f.sdCardsRequested}` }));
+    setForm((f) => ({ ...f, [key]: value }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.teamName) { setError("Team name is required."); return; }
-    if (!form.factoryName) { setError("Factory name is required."); return; }
-    if (!form.deploymentDate) { setError("Deployment date is required."); return; }
+    if (!form.teamName.trim())      { setError("Team name is required.");       return; }
+    if (!form.factoryName.trim())   { setError("Factory name is required.");    return; }
+    if (!form.deploymentDate)       { setError("Deployment date is required."); return; }
 
     const payload: TicketCreateInput = {
-      ticketType: form.ticketType,
-      teamName: form.teamName,
-      factoryName: form.factoryName,
-      deploymentDate: form.deploymentDate,
-      workerCount: form.workerCount,
-      devicesRequested: form.devicesRequested,
-      sdCardsRequested: form.sdCardsRequested,
-      priority: form.priority,
-      title: form.title || undefined,
+      ticketType:        form.ticketType,
+      teamName:          form.teamName.trim(),
+      factoryName:       form.factoryName.trim(),
+      deploymentDate:    form.deploymentDate,
+      workerCount:       form.workerCount,
+      devicesRequested:  form.devicesRequested,
+      sdCardsRequested:  form.sdCardsRequested,
+      priority:          form.priority,
+      title:             autoTitle,
     };
     if (form.ticketType === "transfer") {
-      if (form.sourceTeamName) payload.sourceTeamName = form.sourceTeamName;
+      if (form.sourceTeamName)   payload.sourceTeamName   = form.sourceTeamName;
       if (form.sourceFactoryName) payload.sourceFactoryName = form.sourceFactoryName;
-      if (form.linkedTicketId) payload.linkedTicketId = form.linkedTicketId;
+      if (form.linkedTicketId)   payload.linkedTicketId   = form.linkedTicketId;
     }
 
     setLoading(true);
@@ -108,6 +100,8 @@ export function CreateTicketModal({ session, onCreated, onClose }: Props) {
     }
   }
 
+  const titleReady = form.teamName && form.factoryName;
+
   return (
     <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-box" style={{ maxWidth: 580 }}>
@@ -115,7 +109,7 @@ export function CreateTicketModal({ session, onCreated, onClose }: Props) {
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>New Ticket Request</div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              Title auto-fills as you type — you can edit it anytime
+              Fill in the details below — the ticket title is generated automatically
             </div>
           </div>
           <button onClick={onClose} style={{ fontSize: 20, color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", lineHeight: 1 }}>×</button>
@@ -125,32 +119,22 @@ export function CreateTicketModal({ session, onCreated, onClose }: Props) {
           <div className="modal-body">
             {error && <div className="alert alert-error">{error}</div>}
 
-            {/* Ticket title — editable, auto-filled from form fields */}
-            <div className="form-group" style={{ marginBottom: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <label className="form-label" style={{ margin: 0 }}>Ticket Title</label>
-                {titleEdited && (
-                  <button
-                    type="button"
-                    onClick={resetTitle}
-                    style={{ fontSize: 10, color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-                  >
-                    Reset to auto
-                  </button>
-                )}
-              </div>
-              <input
-                className="input"
-                style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
-                value={form.title}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Title will auto-fill as you type below…"
-              />
-              {!titleEdited && (
-                <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3 }}>
-                  Auto-generated from your inputs — click to edit
-                </div>
-              )}
+            {/* Auto-generated title preview — read-only */}
+            <div style={{
+              padding: "9px 12px", marginBottom: 14,
+              background: "var(--bg-muted)", border: "1px solid var(--border)",
+              borderRadius: 6, display: "flex", alignItems: "flex-start", gap: 8,
+            }}>
+              <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", paddingTop: 2, flexShrink: 0 }}>
+                TICKET TITLE
+              </span>
+              <span style={{
+                fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 500,
+                color: titleReady ? "var(--text-primary)" : "var(--text-muted)",
+                lineHeight: 1.4, flex: 1,
+              }}>
+                {titleReady ? autoTitle : "Fill in Team Name and Factory Name to generate title…"}
+              </span>
             </div>
 
             {/* Ticket type */}
@@ -179,11 +163,22 @@ export function CreateTicketModal({ session, onCreated, onClose }: Props) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div className="form-group">
                 <label className="form-label">Team Name *</label>
-                <input className="input" placeholder="e.g. Tata Team A" value={form.teamName} onChange={(e) => set("teamName", e.target.value)} />
+                <input
+                  className="input"
+                  placeholder="e.g. Tata Team A"
+                  value={form.teamName}
+                  onChange={(e) => set("teamName", e.target.value)}
+                  autoFocus
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Factory Name *</label>
-                <input className="input" placeholder="e.g. Pune Factory 2" value={form.factoryName} onChange={(e) => set("factoryName", e.target.value)} />
+                <input
+                  className="input"
+                  placeholder="e.g. Pune Factory 2"
+                  value={form.factoryName}
+                  onChange={(e) => set("factoryName", e.target.value)}
+                />
               </div>
             </div>
 
