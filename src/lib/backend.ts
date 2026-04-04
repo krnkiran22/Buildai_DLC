@@ -250,8 +250,15 @@ async function requestJson<T>(
     ...init,
   });
 
-  if (response.status === 401 || response.status === 403) {
+  // 401 = token missing/expired → session expired
+  // 403 = authenticated but insufficient permission → show the backend's error message
+  if (response.status === 401) {
     throw new SessionExpiredError();
+  }
+  if (response.status === 403) {
+    const payload = await response.json().catch(() => null);
+    const msg = extractApiErrorMessage(payload, 403);
+    throw new Error(msg || "You don't have permission to do that.");
   }
 
   if (!response.ok) {

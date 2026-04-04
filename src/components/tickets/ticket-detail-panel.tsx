@@ -197,31 +197,54 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const dangerActions = actions.filter((a) => a.variant === "danger");
 
   return (
-    <div style={{
-      width: 300, minWidth: 300, background: "#ffffff",
-      display: "flex", flexDirection: "column", overflow: "hidden",
-      borderLeft: "1px solid #e9edef",
-    }}>
-      {/* Tab strip */}
-      <div style={{ display: "flex", borderBottom: "1px solid #e9edef", flexShrink: 0 }}>
-        {(["tracker", "members", "details", "packets"] as const).map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{
-            flex: 1, padding: "10px 2px", fontSize: 9, fontFamily: "var(--font-mono)",
-            textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer",
-            border: "none", borderBottom: `2px solid ${activeTab === tab ? "#128C7E" : "transparent"}`,
-            background: "#fff", color: activeTab === tab ? "#111b21" : "#8696a0",
-            fontWeight: activeTab === tab ? 700 : 400,
-          }}>
-            {tab === "members" ? `Members${(ticket.members?.length ?? 0) > 0 ? ` (${ticket.members.length})` : ""}` : tab}
-          </button>
-        ))}
+    <div
+      className="ticket-detail-pane"
+      style={{
+        background: "#ffffff",
+        display: "flex", flexDirection: "column", overflow: "hidden",
+        borderLeft: "1px solid #e9edef",
+      }}
+    >
+      {/* Tab strip — bigger touch targets */}
+      <div style={{
+        display: "flex", borderBottom: "1px solid #e9edef", flexShrink: 0,
+        overflowX: "auto",
+      }}>
+        {(["tracker", "members", "details", "packets"] as const).map((tab) => {
+          const isActive = activeTab === tab;
+          const label = tab === "members"
+            ? `Members${(ticket.members?.length ?? 0) > 0 ? ` (${ticket.members.length})` : ""}`
+            : tab.charAt(0).toUpperCase() + tab.slice(1);
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                flex: "1 0 auto", padding: "12px 8px",
+                fontSize: 11, fontFamily: "var(--font-mono)",
+                textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer",
+                border: "none",
+                borderBottom: `2.5px solid ${isActive ? "#128C7E" : "transparent"}`,
+                background: "#fff",
+                color: isActive ? "#128C7E" : "#8696a0",
+                fontWeight: isActive ? 700 : 500,
+                transition: "color 0.15s, border-color 0.15s",
+                WebkitTapHighlightColor: "transparent",
+                minWidth: 70,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
 
         {/* ─── TRACKER TAB ─── */}
         {activeTab === "tracker" && (
-          <div style={{ padding: "16px 14px" }}>
+          <div style={{ padding: "16px 14px 80px" }}>
             {/* Vertical stepper */}
             <div style={{ marginBottom: 20 }}>
               {STAGES.filter((s) => s.status !== "rejected" || ticket.status === "rejected").map((stage, i) => {
@@ -318,12 +341,15 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
                         finally { setClaiming(false); }
                       }}
                       style={{
-                        padding: "5px 14px", background: "#128C7E", border: "none",
-                        color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                        padding: "8px 16px", background: "#128C7E", border: "none",
+                        borderRadius: 8,
+                        color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
                         opacity: claiming ? 0.6 : 1, flexShrink: 0,
+                        minHeight: 38,
+                        WebkitTapHighlightColor: "transparent",
                       }}
                     >
-                      {claiming ? "…" : ticket.assignedToName ? "Re-assign to me" : "Claim"}
+                      {claiming ? "…" : ticket.assignedToName ? "Re-assign" : "Claim"}
                     </button>
                   )}
                 </div>
@@ -332,8 +358,14 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
 
             {/* Error */}
             {actionError && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 10px", fontSize: 12, color: "#dc2626", marginBottom: 10 }}>
-                {actionError}
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fecaca",
+                borderRadius: 10, padding: "10px 12px",
+                fontSize: 13, color: "#dc2626", marginBottom: 12,
+                lineHeight: 1.4, display: "flex", gap: 8, alignItems: "flex-start",
+              }}>
+                <span style={{ flexShrink: 0 }}>⚠️</span>
+                <span>{actionError}</span>
               </div>
             )}
 
@@ -690,16 +722,30 @@ function ActionBtn({ action, loading, onClick }: { action: Action; loading: bool
       onClick={onClick}
       disabled={loading}
       style={{
-        width: "100%", padding: "10px 12px", marginBottom: 6,
-        background: bg, border, color, fontSize: 13,
-        fontWeight: 600, cursor: "pointer", display: "flex",
-        flexDirection: "column", alignItems: "flex-start", gap: 1,
-        opacity: loading ? 0.7 : 1,
+        width: "100%",
+        padding: "13px 16px",
+        marginBottom: 8,
+        background: loading ? "#aaa" : bg,
+        border,
+        borderRadius: 12,
+        color,
+        fontSize: 14,
+        fontWeight: 700,
+        cursor: loading ? "not-allowed" : "pointer",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        gap: 3,
+        opacity: loading ? 0.8 : 1,
+        transition: "opacity 0.15s, background 0.15s",
+        WebkitTapHighlightColor: "transparent",
+        minHeight: 52,
+        justifyContent: "center",
       }}
     >
-      <span>{loading ? "Working..." : action.label}</span>
-      {action.sublabel && (
-        <span style={{ fontSize: 10, fontWeight: 400, opacity: 0.75 }}>{action.sublabel}</span>
+      <span>{loading ? "Working…" : action.label}</span>
+      {action.sublabel && !loading && (
+        <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.72 }}>{action.sublabel}</span>
       )}
     </button>
   );
