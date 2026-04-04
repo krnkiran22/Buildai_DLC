@@ -17,6 +17,7 @@ import {
   logoutCurrentSession,
   pingBackend,
 } from "@/lib/backend";
+import { APP_VERSION, BUILD_DATE } from "@/lib/build-info";
 import type {
   AuthSession,
   BackendHealth,
@@ -483,6 +484,9 @@ export function AppShell({ workspace }: Props) {
             >
               Out
             </button>
+          </div>
+          <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginTop: 4, opacity: 0.6 }}>
+            v{APP_VERSION} · {BUILD_DATE}
           </div>
         </div>
       </aside>
