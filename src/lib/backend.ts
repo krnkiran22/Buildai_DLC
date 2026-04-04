@@ -240,6 +240,7 @@ export function isSessionExpiredError(err: unknown): boolean {
 async function requestJson<T>(
   path: string,
   init?: RequestInit,
+  opts?: { skipSessionExpired?: boolean },
 ): Promise<T> {
   if (!API_BASE_URL) {
     throw new Error("Backend API base URL is not configured.");
@@ -251,8 +252,13 @@ async function requestJson<T>(
   });
 
   // 401 = token missing/expired → session expired
+  // Exception: auth endpoints (login/register) use 401 for "wrong credentials"
   // 403 = authenticated but insufficient permission → show the backend's error message
   if (response.status === 401) {
+    if (opts?.skipSessionExpired) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(extractApiErrorMessage(payload, 401) || "Invalid credentials.");
+    }
     throw new SessionExpiredError();
   }
   if (response.status === 403) {
@@ -551,39 +557,45 @@ export async function requestRegistrationOtp(payload: {
   displayName: string;
   role: "factory_operator" | "ingestion";
 }): Promise<RegistrationChallenge> {
-  return requestJson<RegistrationChallenge>("/api/v1/auth/register/request-otp", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return requestJson<RegistrationChallenge>(
+    "/api/v1/auth/register/request-otp",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+    { skipSessionExpired: true },
+  );
 }
 
 export async function verifyRegistrationOtp(payload: {
   email: string;
   otp: string;
 }): Promise<AuthSession> {
-  return requestJson<AuthSession>("/api/v1/auth/register/verify-otp", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return requestJson<AuthSession>(
+    "/api/v1/auth/register/verify-otp",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+    { skipSessionExpired: true },
+  );
 }
 
 export async function loginUser(payload: {
   email: string;
   password: string;
 }): Promise<AuthSession> {
-  return requestJson<AuthSession>("/api/v1/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return requestJson<AuthSession>(
+    "/api/v1/auth/login",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+    { skipSessionExpired: true },
+  );
 }
 
 /* ── Ticket Assignment ───────────────────────────────────────────── */
