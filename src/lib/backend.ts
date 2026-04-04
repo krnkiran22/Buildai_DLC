@@ -349,6 +349,22 @@ export async function getBackendHealth(): Promise<BackendHealth> {
   }
 }
 
+/**
+ * Lightweight keep-alive ping to prevent Railway from sleeping.
+ * Hits /ping which does zero DB/Redis queries.
+ * Returns true if server responded, false if unreachable.
+ */
+export async function pingBackend(): Promise<boolean> {
+  const baseUrl = API_BASE_URL || PROD_HEALTH_BASE_URL;
+  if (!baseUrl) return false;
+  try {
+    const res = await fetch(`${baseUrl}/ping`, { cache: "no-store" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function updateAdminInventoryItem(
   itemId: string,
   patch: AdminInventoryPatch,

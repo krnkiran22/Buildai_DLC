@@ -15,6 +15,7 @@ import {
   getOperationsSnapshot,
   isSessionExpiredError,
   logoutCurrentSession,
+  pingBackend,
 } from "@/lib/backend";
 import type {
   AuthSession,
@@ -98,8 +99,10 @@ export function AppShell({ workspace }: Props) {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sessionExpiredBanner, setSessionExpiredBanner] = useState(false);
+  const [serverWaking, setServerWaking] = useState(false);
   const verifyRef = useRef(false);
   const recheckTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const token = session?.token ?? null;
 
   /* ── force-logout helper ── */
@@ -174,13 +177,43 @@ export function AppShell({ workspace }: Props) {
     setLoading(false);
   }, []);
 
-  /* ── Health check ── */
+  /* ── Health check + keep-alive ping ── */
   useEffect(() => {
+    const KEEP_ALIVE_MS = 4 * 60 * 1000; // ping every 4 minutes
     let active = true;
+
+    // On mount: check if server is reachable; show "waking up" if it's cold
+    const wakeTimer = setTimeout(() => {
+      if (active && !health.ok) setServerWaking(true);
+    }, 2500); // show banner if no response within 2.5s
+
     getBackendHealth()
-      .then((h) => { if (active) setHealth(h); })
-      .catch(() => {});
-    return () => { active = false; };
+      .then((h) => {
+        if (!active) return;
+        clearTimeout(wakeTimer);
+        setHealth(h);
+        setServerWaking(false);
+      })
+      .catch(() => {
+        if (active) setServerWaking(true);
+      });
+
+    // Periodic keep-alive: ping lightweight /ping endpoint every 4 minutes
+    // so Railway never idles long enough to sleep (sleep threshold ~15 min).
+    if (keepAliveRef.current) clearInterval(keepAliveRef.current);
+    keepAliveRef.current = setInterval(() => {
+      void pingBackend();
+    }, KEEP_ALIVE_MS);
+
+    return () => {
+      active = false;
+      clearTimeout(wakeTimer);
+      if (keepAliveRef.current) {
+        clearInterval(keepAliveRef.current);
+        keepAliveRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Load snapshot (and verify token on first restore) ── */
@@ -239,13 +272,22 @@ export function AppShell({ workspace }: Props) {
   if (loading && !session) {
     return (
       <div style={{
-        minHeight: "100vh", display: "flex", alignItems: "center",
-        justifyContent: "center", background: "var(--bg)",
+        minHeight: "100vh", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", background: "var(--bg)", gap: 16,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-muted)", fontSize: 13 }}>
           <span className="spinner" />
-          Loading Build AI...
+          {serverWaking ? "Waking up server..." : "Loading Build AI..."}
         </div>
+        {serverWaking && (
+          <div style={{
+            fontSize: 11, color: "var(--text-muted)", maxWidth: 260, textAlign: "center",
+            padding: "8px 14px", border: "1px solid var(--border)", borderRadius: 6,
+            background: "var(--bg-muted)", lineHeight: 1.5,
+          }}>
+            The server was sleeping due to inactivity. It will be ready in a few seconds.
+          </div>
+        )}
       </div>
     );
   }
@@ -269,13 +311,22 @@ export function AppShell({ workspace }: Props) {
       <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
         <SidebarSkeleton />
         <div style={{
-          flex: 1, display: "flex", alignItems: "center",
-          justifyContent: "center", background: "var(--bg-subtle)",
+          flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", background: "var(--bg-subtle)", gap: 12,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-muted)", fontSize: 13 }}>
             <span className="spinner" />
-            Loading workspace...
+            {serverWaking ? "Waking up server..." : "Loading workspace..."}
           </div>
+          {serverWaking && (
+            <div style={{
+              fontSize: 11, color: "var(--text-muted)", maxWidth: 260, textAlign: "center",
+              padding: "8px 14px", border: "1px solid var(--border)", borderRadius: 6,
+              background: "var(--bg-muted)", lineHeight: 1.5,
+            }}>
+              Server is starting up. This takes a few seconds after a period of inactivity.
+            </div>
+          )}
         </div>
       </div>
     );
