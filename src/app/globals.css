@@ -946,4 +946,30 @@ textarea {
   .auth-box {
     max-width: 100% !important;
   }
+
+  /* Bigger touch targets on mobile */
+  .btn {
+    min-height: 40px;
+    font-size: 14px !important;
+  }
+
+  .btn-sm {
+    min-height: 34px;
+  }
+
+  /* Larger inputs on mobile */
+  .input, input[type="text"], input[type="email"], input[type="password"], select, textarea {
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+    min-height: 42px;
+  }
+
+  /* Chat input: full keyboard safe */
+  .chat-input-row {
+    padding-bottom: env(safe-area-inset-bottom, 8px);
+  }
+
+  /* Quick action grid: 2 columns */
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }

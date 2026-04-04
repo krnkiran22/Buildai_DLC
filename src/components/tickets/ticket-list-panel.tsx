@@ -120,13 +120,17 @@ function avatarColor(name: string): string {
 
 /* ─── Component ────────────────────────────────────────────── */
 export function TicketListPanel({ tickets, selectedId, session, onSelect, onCreateNew }: Props) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [personFilter, setPersonFilter] = useState("");
-  const [showPersonFilter, setShowPersonFilter] = useState(false);
-
   const role = session.user.role;
   const myName = session.user.displayName;
+
+  // Smart defaults: factory → show mine; logistics/admin → show all active
+  const defaultStatus = (role === "logistics" || role === "admin") ? "open" : "";
+  const defaultPerson = role === "factory_operator" ? "__mine__" : "";
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState(defaultStatus);
+  const [personFilter, setPersonFilter] = useState(defaultPerson);
+  const [showPersonFilter, setShowPersonFilter] = useState(false);
   const people = useMemo(() => derivePeople(tickets), [tickets]);
 
   const filtered = useMemo(() => tickets
@@ -282,18 +286,37 @@ export function TicketListPanel({ tickets, selectedId, session, onSelect, onCrea
       <div style={{ flex: 1, overflowY: "auto" }}>
         {filtered.length === 0 ? (
           <div className="empty-state" style={{ padding: "32px 16px" }}>
-            <div className="empty-state-title">No tickets</div>
+            <div className="empty-state-icon" style={{ fontSize: 28, marginBottom: 8 }}>
+              {search ? "🔍" : role === "factory_operator" ? "📦" : role === "logistics" ? "🚚" : "📋"}
+            </div>
+            <div className="empty-state-title">
+              {search ? "No results" : (search || statusFilter || personFilter) ? "No tickets match" : "No tickets yet"}
+            </div>
             <div className="empty-state-desc">
-              {search || statusFilter || personFilter
-                ? "No tickets match your filters."
-                : "No tickets yet."}
+              {search
+                ? `Nothing matches "${search}".`
+                : (statusFilter || personFilter)
+                  ? "Try clearing the filters below."
+                  : role === "factory_operator"
+                    ? "Tap + New to request devices for your factory."
+                    : role === "logistics"
+                      ? "No open tickets right now. Check All status."
+                      : "No tickets in the system yet."}
             </div>
             {(search || statusFilter || personFilter) && (
               <button
                 onClick={() => { setSearch(""); setStatusFilter(""); setPersonFilter(""); }}
-                style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary)", background: "none", border: "1px solid var(--border)", padding: "4px 10px", cursor: "pointer" }}
+                style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary)", background: "none", border: "1px solid var(--border)", padding: "6px 14px", cursor: "pointer", borderRadius: 4 }}
               >
-                Clear filters
+                Clear all filters
+              </button>
+            )}
+            {!search && !statusFilter && !personFilter && role === "factory_operator" && (
+              <button
+                onClick={onCreateNew}
+                style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: "var(--action-text)", background: "var(--action)", border: "none", padding: "8px 18px", cursor: "pointer", borderRadius: 4 }}
+              >
+                + Request Devices
               </button>
             )}
           </div>

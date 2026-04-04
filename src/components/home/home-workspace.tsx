@@ -78,6 +78,9 @@ export function HomeWorkspace({ snapshot, session }: Props) {
 
       <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 20 }}>
 
+        {/* Role-aware Quick Actions */}
+        <RoleQuickActions role={role} tickets={tickets} />
+
         {/* Metric strip */}
         <div className="metric-grid">
           <MetricCell label="Open Tickets" value={openCount} />
@@ -253,6 +256,53 @@ export function HomeWorkspace({ snapshot, session }: Props) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ─── Role Quick Actions ────────────────────────────────────── */
+function RoleQuickActions({ role, tickets }: { role: UserRole; tickets: { status: string; assignedToName?: string | null }[] }) {
+  const unassigned = tickets.filter((t) => t.status === "open" && !t.assignedToName).length;
+  const inIngestion = tickets.filter((t) => t.status === "transferred_to_ingestion" || t.status === "ingestion_processing").length;
+
+  const actions: { label: string; desc: string; href: string; icon: string; highlight?: boolean }[] = [];
+
+  if (role === "factory_operator") {
+    actions.push({ label: "Request Devices", desc: "Open a new ticket to request SD cards and devices", href: "/tickets", icon: "📦", highlight: true });
+    actions.push({ label: "My Tickets", desc: "View status of your requests", href: "/tickets", icon: "📋" });
+  } else if (role === "logistics") {
+    if (unassigned > 0) actions.push({ label: `${unassigned} Unassigned`, desc: "Open tickets waiting for someone to claim", href: "/tickets", icon: "🔔", highlight: true });
+    actions.push({ label: "All Tickets", desc: "View and manage all deployment requests", href: "/tickets", icon: "🚚" });
+    actions.push({ label: "Inventory", desc: "Check stock levels before accepting requests", href: "/inventory", icon: "📊" });
+  } else if (role === "ingestion") {
+    if (inIngestion > 0) actions.push({ label: `${inIngestion} Pending`, desc: "SD cards waiting to be processed", href: "/ingestion", icon: "⚡", highlight: true });
+    actions.push({ label: "Ingestion Queue", desc: "Process returned SD cards", href: "/ingestion", icon: "🗂" });
+    actions.push({ label: "Movement Log", desc: "View full device movement history", href: "/movement", icon: "↔️" });
+  } else if (role === "admin") {
+    if (unassigned > 0) actions.push({ label: `${unassigned} Unassigned`, desc: "Open tickets waiting for logistics to claim", href: "/tickets", icon: "🔔", highlight: true });
+    actions.push({ label: "All Tickets", desc: "Manage all deployment requests", href: "/tickets", icon: "📋" });
+    actions.push({ label: "Inventory", desc: "Manage stock levels", href: "/inventory", icon: "📊" });
+    actions.push({ label: "Merit Scores", desc: "Team performance overview", href: "/merit", icon: "⭐" });
+  }
+
+  if (actions.length === 0) return null;
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+      {actions.map((a) => (
+        <a key={a.label} href={a.href} style={{
+          display: "flex", flexDirection: "column", gap: 6, padding: "14px 16px",
+          background: a.highlight ? "var(--action)" : "var(--bg)",
+          border: `1px solid ${a.highlight ? "var(--action)" : "var(--border)"}`,
+          borderRadius: 6, textDecoration: "none",
+          boxShadow: a.highlight ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
+          transition: "opacity 0.15s",
+        }}>
+          <span style={{ fontSize: 22 }}>{a.icon}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: a.highlight ? "#fff" : "var(--text-primary)" }}>{a.label}</span>
+          <span style={{ fontSize: 11, color: a.highlight ? "rgba(255,255,255,0.75)" : "var(--text-muted)", lineHeight: 1.4 }}>{a.desc}</span>
+        </a>
+      ))}
     </div>
   );
 }

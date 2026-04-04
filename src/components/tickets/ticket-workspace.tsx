@@ -60,42 +60,39 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
   void onSessionChange;
 
   if (isMobile) {
+    const tabLabel = (v: MobileView) => ({ list: "Tickets", chat: "Chat", detail: "Info" }[v]);
+    const tabIcon  = (v: MobileView) => ({ list: "☰", chat: "💬", detail: "ℹ" }[v]);
+    const canShowChat = !!selectedTicket;
+
     return (
       <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Mobile breadcrumb nav */}
-        {mobileView !== "list" && (
+        {/* Active ticket title bar (when inside a ticket) */}
+        {mobileView !== "list" && selectedTicket && (
           <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "8px 12px", borderBottom: "1px solid var(--border)",
-            background: "var(--bg)", flexShrink: 0,
+            padding: "8px 14px 6px", background: "var(--bg)",
+            borderBottom: "1px solid var(--border)", flexShrink: 0,
+            display: "flex", alignItems: "center", gap: 10,
           }}>
             <button
-              onClick={() => setMobileView(mobileView === "detail" ? "chat" : "list")}
+              onClick={() => setMobileView("list")}
               style={{
-                background: "none", border: "none", fontSize: 13,
-                cursor: "pointer", color: "var(--text-secondary)",
-                display: "flex", alignItems: "center", gap: 4, padding: "2px 0",
+                background: "none", border: "none", fontSize: 20, lineHeight: 1,
+                cursor: "pointer", color: "var(--text-secondary)", padding: "2px 4px",
               }}
-            >
-              ← {mobileView === "detail" ? "Chat" : "Tickets"}
-            </button>
-            {selectedTicket && mobileView === "chat" && (
-              <button
-                onClick={() => setMobileView("detail")}
-                style={{
-                  marginLeft: "auto", background: "none",
-                  border: "1px solid var(--border)", fontSize: 11,
-                  cursor: "pointer", color: "var(--text-secondary)",
-                  padding: "3px 10px",
-                }}
-              >
-                Details →
-              </button>
-            )}
+              aria-label="Back to list"
+            >←</button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {selectedTicket.teamName}
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {selectedTicket.factoryName} · {selectedTicket.status.replace(/_/g, " ")}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Mobile pane views */}
+        {/* Pane content */}
         <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           {mobileView === "list" && (
             <TicketListPanel
@@ -114,8 +111,9 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
             />
           )}
           {mobileView === "chat" && !selectedTicket && (
-            <div className="empty-state">
-              <div className="empty-state-title">No ticket selected</div>
+            <div className="empty-state" style={{ flex: 1 }}>
+              <div className="empty-state-title">Select a ticket</div>
+              <div className="empty-state-desc">Go back to the list and pick a ticket.</div>
             </div>
           )}
           {mobileView === "detail" && selectedTicket && (
@@ -125,6 +123,36 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
               onTicketUpdated={handleTicketUpdated}
             />
           )}
+        </div>
+
+        {/* Bottom tab bar */}
+        <div style={{
+          display: "flex", borderTop: "1px solid var(--border)",
+          background: "var(--bg)", flexShrink: 0,
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}>
+          {(["list", "chat", "detail"] as MobileView[]).map((v) => {
+            const active = mobileView === v;
+            const disabled = v !== "list" && !canShowChat;
+            return (
+              <button
+                key={v}
+                onClick={() => { if (!disabled) setMobileView(v); }}
+                style={{
+                  flex: 1, padding: "10px 4px 8px", border: "none",
+                  background: "none", cursor: disabled ? "not-allowed" : "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                  borderTop: `2px solid ${active ? "var(--action)" : "transparent"}`,
+                  opacity: disabled ? 0.3 : 1,
+                }}
+              >
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{tabIcon(v)}</span>
+                <span style={{ fontSize: 10, fontWeight: active ? 700 : 400, color: active ? "var(--text-primary)" : "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {tabLabel(v)}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {showCreateModal && (

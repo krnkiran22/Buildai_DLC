@@ -218,24 +218,13 @@ export function AppShell({ workspace }: Props) {
     );
   }
 
-  // Not authenticated (or session expired → show login with banner)
+  // Not authenticated (or session expired)
   if (!session) {
     return (
       <>
+        {/* Session expired: full overlay that auto-dismisses after 3 s */}
         {sessionExpiredBanner && (
-          <div style={{
-            position: "fixed", top: 0, left: 0, right: 0, zIndex: 999,
-            background: "#7f1d1d", color: "#fecaca", padding: "10px 20px",
-            fontSize: 13, fontWeight: 600, display: "flex",
-            alignItems: "center", justifyContent: "center", gap: 10,
-          }}>
-            <span>🔒</span>
-            Your session has expired. Please log in again.
-            <button
-              onClick={() => setSessionExpiredBanner(false)}
-              style={{ background: "none", border: "none", color: "#fecaca", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
-            >×</button>
-          </div>
+          <SessionExpiredOverlay onDismiss={() => setSessionExpiredBanner(false)} />
         )}
         <AuthScreen onAuthenticated={handleAuthenticated} />
       </>
@@ -462,6 +451,53 @@ export function AppShell({ workspace }: Props) {
           {workspace === "movement" && <MovementWorkspace snapshot={snapshot} session={session} />}
           {workspace === "merit" && <MeritWorkspace snapshot={snapshot} session={session} />}
           {workspace === "inventory" && <InventoryWorkspace snapshot={snapshot} session={session} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Session Expired Overlay ────────────────────────────────── */
+function SessionExpiredOverlay({ onDismiss }: { onDismiss: () => void }) {
+  // Auto-dismiss after 3 s — login form is already visible behind it
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 3000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}
+      onClick={onDismiss}
+    >
+      <div style={{
+        background: "#1a0000", border: "1px solid #dc2626", borderRadius: 10,
+        padding: "28px 36px", maxWidth: 340, textAlign: "center",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+      }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: "#fca5a5", marginBottom: 8 }}>
+          Session Expired
+        </div>
+        <div style={{ fontSize: 13, color: "#fca5a5", opacity: 0.8, marginBottom: 20, lineHeight: 1.5 }}>
+          Your session has timed out. Please log in again to continue.
+        </div>
+        <button
+          onClick={onDismiss}
+          style={{
+            padding: "10px 28px", background: "#dc2626", border: "none",
+            color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", borderRadius: 6,
+          }}
+        >
+          Log In Again
+        </button>
+        <div style={{ marginTop: 10, fontSize: 11, color: "#fca5a5", opacity: 0.5 }}>
+          Redirecting automatically…
         </div>
       </div>
     </div>
