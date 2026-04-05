@@ -21,6 +21,12 @@ const STATUS_FILTERS = [
   { label: "Closed", value: "closed" },
 ];
 
+const INGESTION_ONLY_STATUSES = new Set([
+  "transferred_to_ingestion",
+  "ingestion_processing",
+  "ingestion_completed",
+]);
+
 function formatRelative(s: string) {
   try {
     const diff = Date.now() - new Date(s).getTime();
@@ -135,6 +141,8 @@ export function TicketListPanel({ tickets, selectedId, session, onSelect, onCrea
 
   const filtered = useMemo(() => tickets
     .filter((t) => {
+      // Ingestion team: hard-restrict to ingestion-stage tickets only
+      if (role === "ingestion" && !INGESTION_ONLY_STATUSES.has(t.status)) return false;
       const q = search.toLowerCase();
       if (q && !t.title.toLowerCase().includes(q) &&
         !t.teamName.toLowerCase().includes(q) &&

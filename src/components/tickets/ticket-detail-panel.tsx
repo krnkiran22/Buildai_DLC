@@ -84,9 +84,7 @@ function getActions(role: string, status: TicketStatus): Action[] {
     if (status === "ingestion_processing") {
       a.push({ label: "Mark Ingestion Done", sublabel: "Processing completed", targetStatus: "ingestion_completed", variant: "primary" });
     }
-    if (!["closed", "rejected"].includes(status) && role === "ingestion") {
-      a.push({ label: "Close Ticket", sublabel: "", targetStatus: "closed", variant: "danger" });
-    }
+    // Ingestion role cannot close tickets — only logistics/admin can
   }
 
   return a;
