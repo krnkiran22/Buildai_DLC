@@ -426,6 +426,19 @@ export async function closeTicket(
   });
 }
 
+export async function listTickets(
+  session?: AuthSession | null,
+): Promise<TicketRecord[] | null> {
+  if (!API_BASE_URL) return null;
+  try {
+    return await requestJson<TicketRecord[]>("/api/v1/tickets", {
+      headers: requestHeaders(session),
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function createTicket(
   payload: TicketCreateInput,
   session?: AuthSession | null,

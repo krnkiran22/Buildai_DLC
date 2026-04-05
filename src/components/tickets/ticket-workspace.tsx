@@ -5,7 +5,10 @@ import { CreateTicketModal } from "@/components/tickets/create-ticket-modal";
 import { TicketChatPanel } from "@/components/tickets/ticket-chat-panel";
 import { TicketDetailPanel } from "@/components/tickets/ticket-detail-panel";
 import { TicketListPanel } from "@/components/tickets/ticket-list-panel";
+import { listTickets } from "@/lib/backend";
 import type { AuthSession, DashboardSnapshot, TicketRecord } from "@/lib/operations-types";
+
+const POLL_INTERVAL_MS = 30_000; // refresh ticket list every 30 seconds
 
 type MobileView = "list" | "chat" | "detail";
 
@@ -35,6 +38,30 @@ export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  // Poll the ticket list every 30 s so all roles (logistics, admin, etc.)
+  // see new tickets without a manual page refresh.
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const fresh = await listTickets(session);
+        if (fresh) {
+          setTickets((prev) => {
+            // Merge: keep any optimistic local-only tickets, update the rest
+            const freshMap = new Map(fresh.map((t) => [t.id, t]));
+            const merged = prev.map((t) => freshMap.get(t.id) ?? t);
+            const existingIds = new Set(prev.map((t) => t.id));
+            const newOnes = fresh.filter((t) => !existingIds.has(t.id));
+            return [...newOnes, ...merged];
+          });
+        }
+      } catch {
+        // Silent — don't disrupt the UI on poll failure
+      }
+    };
+    const id = setInterval(() => { void poll(); }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [session]);
 
   const selectedTicket = tickets.find((t) => t.id === selectedId) ?? null;
 
