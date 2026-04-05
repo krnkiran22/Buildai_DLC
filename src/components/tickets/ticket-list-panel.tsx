@@ -139,10 +139,17 @@ export function TicketListPanel({ tickets, selectedId, session, onSelect, onCrea
   const [showPersonFilter, setShowPersonFilter] = useState(false);
   const people = useMemo(() => derivePeople(tickets), [tickets]);
 
+  const myEmail = session.user.email ?? "";
+
   const filtered = useMemo(() => tickets
     .filter((t) => {
       // Ingestion team: hard-restrict to ingestion-stage tickets only
       if (role === "ingestion" && !INGESTION_ONLY_STATUSES.has(t.status)) return false;
+      // Factory operators: only see tickets they are a member of (own or invited)
+      if (role === "factory_operator" && myEmail) {
+        const isMember = (t.members ?? []).some((m) => m.email.toLowerCase() === myEmail.toLowerCase());
+        if (!isMember) return false;
+      }
       const q = search.toLowerCase();
       if (q && !t.title.toLowerCase().includes(q) &&
         !t.teamName.toLowerCase().includes(q) &&
