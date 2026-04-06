@@ -472,7 +472,18 @@ export async function updateTicketStatus(
       "Content-Type": "application/json",
       ...requestHeaders(session),
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      status: payload.status,
+      note: payload.note,
+      new_title: payload.newTitle,
+      shipped_quantities: payload.shippedQuantities ? {
+        devices: payload.shippedQuantities.devices,
+        sd_cards: payload.shippedQuantities.sdCards,
+        cables: payload.shippedQuantities.cables,
+        usb_hubs: payload.shippedQuantities.usbHubs,
+        extension_boxes: payload.shippedQuantities.extensionBoxes,
+      } : undefined,
+    }),
   });
 }
 

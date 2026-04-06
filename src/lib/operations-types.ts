@@ -338,9 +338,19 @@ export type TicketCreateInput = {
   title?: string;
 };
 
+export type ShippedQuantities = {
+  devices: number;
+  sdCards: number;
+  cables: number;
+  usbHubs: number;
+  extensionBoxes: number;
+};
+
 export type TicketStatusUpdateInput = {
   status: TicketStatus;
   note?: string;
+  newTitle?: string;
+  shippedQuantities?: ShippedQuantities;
 };
 
 export type PackageCreateInput = {

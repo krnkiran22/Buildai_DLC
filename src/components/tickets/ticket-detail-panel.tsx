@@ -112,6 +112,7 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const [carrier, setCarrier] = useState("");
   const [trackingNo, setTrackingNo] = useState("");
   const [carrierNote, setCarrierNote] = useState("");
+  const [shipQty, setShipQty] = useState({ devices: 0, sdCards: 0, cables: 0, usbHubs: 0, extensionBoxes: 0 });
 
   /* Close confirm */
   const [showClose, setShowClose] = useState(false);
@@ -156,17 +157,59 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
 
   function handleActionClick(action: Action) {
     if (action.targetStatus === "closed") { setShowClose(true); return; }
-    if (action.needsCarrier) { setPendingAction(action); return; }
+    if (action.needsCarrier) {
+      // Pre-fill quantities from ticket data
+      setShipQty({
+        devices: ticket.devicesRequested,
+        sdCards: ticket.sdCardsRequested,
+        cables: ticket.devicesRequested, // 1 cable per device is default
+        usbHubs: 0,
+        extensionBoxes: 0,
+      });
+      setPendingAction(action);
+      return;
+    }
     void executeAction(action);
   }
 
   async function handleCarrierSubmit() {
     if (!pendingAction) return;
-    const noteParts = [];
+    const noteParts: string[] = [];
     if (carrier) noteParts.push(`Carrier: ${carrier}`);
     if (trackingNo) noteParts.push(`Tracking: ${trackingNo}`);
     if (carrierNote) noteParts.push(carrierNote);
-    await executeAction(pendingAction, noteParts.join(" | ") || undefined);
+
+    // Build updated title from actual shipped quantities
+    const isShipAction = ["outbound_shipped", "return_shipped"].includes(pendingAction.targetStatus);
+    let newTitle: string | undefined;
+    if (isShipAction) {
+      const parts = [ticket.teamName, ticket.factoryName, `Deploy ${ticket.deploymentDate}`];
+      if (shipQty.devices > 0)   parts.push(`Devices ${shipQty.devices}`);
+      if (shipQty.sdCards > 0)   parts.push(`SD ${shipQty.sdCards}`);
+      newTitle = parts.join(" | ");
+    }
+
+    setActionLoading(pendingAction.targetStatus);
+    setActionError("");
+    try {
+      const updated = await updateTicketStatus(ticket.id, {
+        status: pendingAction.targetStatus,
+        note: noteParts.join(" | ") || undefined,
+        newTitle,
+        shippedQuantities: isShipAction ? shipQty : undefined,
+      }, session);
+      if (updated) onTicketUpdated(updated);
+      setPendingAction(null);
+      setCarrier(""); setTrackingNo(""); setCarrierNote("");
+    } catch (err) {
+      if (isSessionExpiredError(err)) {
+        setActionError("Your session has expired. Redirecting to login…");
+      } else {
+        setActionError(err instanceof Error ? err.message : "Action failed.");
+      }
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   async function handleClose() {
@@ -630,10 +673,44 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
               <div style={{ fontSize: 14, fontWeight: 700 }}>{pendingAction.label}</div>
               <div style={{ fontSize: 11, marginTop: 2, opacity: 0.8 }}>Carrier info is optional — skip if not available</div>
             </div>
-            <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12, maxHeight: "70vh", overflowY: "auto" }}>
               {actionError && (
                 <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "6px 10px", fontSize: 12, color: "#dc2626" }}>{actionError}</div>
               )}
+
+              {/* Quantities — shown for outbound and return shipments */}
+              {["outbound_shipped", "return_shipped"].includes(pendingAction?.targetStatus ?? "") && (
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 12px", borderRadius: 4 }}>
+                  <div style={{ fontSize: 10, color: "#15803d", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, fontWeight: 700 }}>
+                    Actual Quantities Being Shipped
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {[
+                      { label: "Devices", key: "devices" as const },
+                      { label: "SD Cards", key: "sdCards" as const },
+                      { label: "Cables", key: "cables" as const },
+                      { label: "USB Hubs", key: "usbHubs" as const },
+                      { label: "Extension Boxes", key: "extensionBoxes" as const },
+                    ].map(({ label, key }) => (
+                      <div key={key}>
+                        <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>{label}</div>
+                        <input
+                          type="number"
+                          className="input"
+                          style={{ fontSize: 13, fontFamily: "var(--font-mono)" }}
+                          min={0}
+                          value={shipQty[key]}
+                          onChange={(e) => setShipQty((q) => ({ ...q, [key]: parseInt(e.target.value, 10) || 0 }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 10, color: "#667781", fontStyle: "italic" }}>
+                    Ticket title and item records will be updated with these numbers.
+                  </div>
+                </div>
+              )}
+
               <div>
                 <div style={{ fontSize: 10, color: "#8696a0", textTransform: "uppercase", fontFamily: "var(--font-mono)", marginBottom: 4 }}>
                   Carrier (optional)

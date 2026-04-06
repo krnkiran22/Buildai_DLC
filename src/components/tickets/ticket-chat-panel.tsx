@@ -253,6 +253,19 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
     setRecording(false);
   }
 
+  function cancelRecording() {
+    if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+    // Override onstop so it discards the chunks instead of setting preview
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = () => {
+        audioChunksRef.current = [];
+        mediaRecorderRef.current?.stream?.getTracks().forEach((t) => t.stop());
+      };
+      mediaRecorderRef.current.stop();
+    }
+    setRecording(false);
+  }
+
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -698,16 +711,18 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
             {/* Voice / Stop / Send */}
             {!mediaPreview ? (
               recording ? (
-                // while recording, stop button is in the bar above; show cancel
+                // Top bar has the real Stop (sends recording); this is Cancel (discards)
                 <button
-                  onClick={() => { stopRecording(); }}
+                  onClick={cancelRecording}
                   style={{
-                    background: "#ef4444", border: "none", borderRadius: "50%",
+                    background: "#8696a0", border: "none", borderRadius: "50%",
                     width: 44, height: 44, cursor: "pointer", flexShrink: 0,
                     display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 20, color: "#fff", fontWeight: 700, lineHeight: 1,
                   }}
+                  title="Cancel recording"
                 >
-                  <IconStop size={18} color="#fff" />
+                  ✕
                 </button>
               ) : text.trim() ? (
                 <button
