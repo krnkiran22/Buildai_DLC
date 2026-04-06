@@ -1,292 +1,459 @@
-# Build AI — Test Flow Guide
-**Pre-deployment checklist · Updated April 2026**
+# Build AI — Complete Testing Guide
+**Version:** v1.5.1 | **Updated:** 2026-04-01
+
+This document walks through **every feature** in the application, step by step.  
+Follow each section in order. Each step tells you exactly what to do and what you should see.
 
 ---
 
-## Accounts You Need
+## ACCOUNTS TO USE
 
-Open **3 browser tabs** (or 3 phones/devices), each logged in as a different person.
+| Person | Email | Password | Role |
+|--------|-------|----------|------|
+| Admin | your admin email | your password | admin |
+| Logistics 1 | ram@build.ai | Ram@12345 | logistics |
+| Factory Person | register a new account | any | factory_operator |
+| Ingestion Person | register a new account | any | ingestion |
 
-| Who | Email | Password | Role |
-|---|---|---|---|
-| **Factory person** | Register below | Your choice | Factory Operator |
-| **Logistics — Ram** | ram@build.ai | Ram@12345 | Logistics (pre-created) |
-| **Ingestion person** | Register below | Your choice | Ingestion Operator |
-
-### How to register (Factory / Ingestion)
-1. Open the app → tap **Create account**
-2. Enter your name, email, password, and pick your role
-3. Tap **Continue →** → enter the 6-digit OTP sent to your email
-4. You're in — the app loads your dashboard automatically
-
-> **On mobile:** the login screen slides up from the bottom. Type the OTP in the big box — it accepts only numbers.
+> **Tip:** Use different browsers or incognito windows to be logged in as multiple people at the same time.
 
 ---
 
-## Full Test Flow — Do Steps In Order
+## PART 1 — REGISTRATION & LOGIN
+
+### Test 1.1 — Register a new Factory Operator account
+
+1. Open the app URL in a browser.
+2. Click **"Sign Up"** or **"Register"**.
+3. Enter your name, email, and choose role **"Factory Operator"**.
+4. Enter a password.
+5. An OTP will be sent to your email — enter it.
+6. **Expected:** You land on the Factory Operator dashboard.
+
+### Test 1.2 — Register a new Ingestion account
+
+1. Open the app in a new incognito window.
+2. Register with a different email, choose role **"Ingestion"**.
+3. **Expected:** You land on the Ingestion dashboard (which shows no tickets yet — that is correct).
+
+### Test 1.3 — Wrong password shows proper error
+
+1. Go to login page.
+2. Enter a valid email but wrong password.
+3. **Expected:** See "Incorrect password" error. **NOT** "Session expired".
+
+### Test 1.4 — Non-existent account shows proper error
+
+1. Go to login page.
+2. Enter an email that was never registered.
+3. **Expected:** See "Account not found" or similar error. **NOT** "Session expired".
+
+### Test 1.5 — Expired session redirects to login
+
+1. Log in successfully.
+2. Open browser DevTools → Application → Local Storage.
+3. Find the session entry and change `expiresAt` to a past timestamp (e.g. `"2020-01-01T00:00:00Z"`).
+4. Refresh the page.
+5. **Expected:** You are redirected to the login page and see "Session expired" message.
 
 ---
 
-### Step 1 — Factory: Create a Ticket
+## PART 2 — TICKET CREATION (Factory Operator)
 
-1. Log in as the Factory person
-2. You land on the **Home** screen — tap **Request Devices** (the black card)
-   - Or go to **Tickets** → tap **+ New**
-3. Fill in the form:
-   - Team name: e.g. `Tata Team A`
-   - Factory name: e.g. `Pune Factory 1`
-   - Deployment date: any future date *(edit the title if you like — it's now editable)*
-   - Devices: `10` · SD Cards: `10`
-4. Tap **Submit**
-5. ✅ Ticket appears in your list with status `OPEN`
-6. ✅ You are automatically added as a member of the ticket group
+### Test 2.1 — Create a new ticket
 
-> **On mobile:** tap the ticket row → slides to the Chat pane. Use the bottom tab bar to switch between Tickets / Chat / Info.
+1. Log in as **Factory Operator**.
+2. Click **"New Request"** or **"+ New Ticket"** button.
+3. Fill in:
+   - Team Name: `Test Team Alpha`
+   - Factory Name: `Factory Bangalore`
+   - Deployment Date: pick any future date
+   - Devices Requested: `5`
+   - SD Cards Requested: `10`
+4. **Expected:** The ticket title is **auto-generated** (you cannot type in the title field). It should look like: `"Test Team Alpha · Factory Bangalore — 5 devices, 10 SD cards (DD/MM/YYYY)"`.
+5. Click **Submit**.
+6. **Expected:** Modal closes and the new ticket appears in your ticket list.
 
----
+### Test 2.2 — Ticket appears for Logistics within 30 seconds
 
-### Step 2 — Logistics: Claim the Ticket
+1. After creating the ticket (Test 2.1), switch to the **Logistics** browser window (logged in as ram@build.ai).
+2. Wait up to 30 seconds **without refreshing**.
+3. **Expected:** The new ticket appears automatically in the Logistics ticket list.
 
-1. Log in as Ram
-2. Go to **Tickets** — the list defaults to **Open** tickets
-3. You'll see the new ticket marked **Unassigned** (orange badge)
-4. Tap the ticket → tap the **Info** tab (bottom bar) → **Tracker**
-5. Tap **Claim** (green card at the top of the tracker)
-6. ✅ Ticket now shows `Ram` as the assigned person in the list and tracker
-7. ✅ Ram is also automatically added to the group — check the **Members** tab
+### Test 2.3 — Ticket appears for Admin within 30 seconds
 
----
+1. Switch to the **Admin** window.
+2. Wait up to 30 seconds.
+3. **Expected:** Same ticket appears.
 
-### Step 3 — Chat (Both sides, real-time)
+### Test 2.4 — Ingestion does NOT see the ticket yet
 
-1. As Ram → tap the **Chat** tab
-2. Type a message → send
-3. Switch to the Factory person's window — the message appears instantly
-4. Factory person replies — Ram sees it instantly
-5. ✅ Real-time chat works
-
-**Try media in chat:**
-- Tap 📎 → send a photo, video, or PDF → it shows as a preview bubble
-- Tap 🎤 → hold to record a voice message → send → it plays back with a waveform
-- Tap any image → it opens full-screen
-- Tap a PDF card → it opens in the browser
+1. Switch to the **Ingestion** window.
+2. **Expected:** The new ticket does NOT appear. The ingestion person only sees tickets that are in the ingestion stage.
 
 ---
 
-### Step 4 — Logistics: Accept the Ticket
+## PART 3 — LOGISTICS: ACCEPT OR REJECT TICKET
 
-1. As Ram → **Info** tab → **Tracker**
-2. Tap **Accept Request**
-3. ✅ Status → `ACCEPTED`
+### Test 3.1 — Claim the ticket (self-assign)
 
-> If you need to reject: tap **Reject** instead. Ticket closes. Flow ends.
+1. As **Logistics** (ram@build.ai), click on the new ticket.
+2. Click **"Claim Ticket"** or **"Assign to Me"**.
+3. **Expected:** Your name appears as the assigned logistics person on the ticket.
 
----
+### Test 3.2 — Accept the ticket
 
-### Step 5 — Logistics: Ship to Factory
+1. As **Logistics**, open the ticket.
+2. Click **"Accept"**.
+3. **Expected:** Ticket status changes to `Accepted`. A timeline event is added.
 
-1. As Ram → **Tracker** → tap **Ship to Factory**
-2. Optionally pick a courier (DTDC, Porter, etc.) and enter a tracking number
-3. Tap **Confirm Ship**
-4. ✅ Status → `SHIPPED`
+### Test 3.3 — Reject a ticket (separate test)
 
----
-
-### Step 6 — Factory: Mark Received
-
-1. As Factory person → open the ticket → **Info / Tracker**
-2. Tap **I've Received the Shipment**
-3. ✅ Status → `AT FACTORY`
+1. As **Factory Operator**, create another ticket.
+2. As **Logistics**, open it and click **"Reject"**.
+3. **Expected:** Status changes to `Rejected`. Factory person should see the updated status.
 
 ---
 
-### Step 7 — Factory: Ship Back to HQ
+## PART 4 — CHAT (WhatsApp-style)
 
-1. As Factory person → **Tracker** → tap **Ship Return to HQ**
-2. Optionally enter courier + tracking number → confirm
-3. ✅ Status → `RETURN SHIPPED`
+### Test 4.1 — Send a text message
 
----
+1. As **Logistics**, open the accepted ticket.
+2. Type a message in the chat box and press Send.
+3. **Expected:** Message appears in a bubble on the right side (your message).
+4. Switch to **Factory Operator** window — **Expected:** Message appears on the left side without refreshing (real-time via WebSocket).
 
-### Step 8 — Logistics: Confirm HQ Receipt
+### Test 4.2 — Send an image
 
-1. As Ram → **Tracker** → tap **HQ Received Return**
-2. ✅ Status → `HQ RECEIVED`
+1. In the chat, click the **📎 paperclip** or **image** icon.
+2. Select an image file from your computer.
+3. **Expected:** Image preview shows before sending. Click Send.
+4. **Expected:** Image appears as a thumbnail in the chat bubble.
+5. **Expected:** Image sends quickly (compressed to under 200KB automatically).
 
----
+### Test 4.3 — Send a voice message
 
-### Step 9 — Logistics: Send to Ingestion
+1. Click the **🎤 microphone** button.
+2. Speak for a few seconds.
+3. Click **Stop** (red button in the recording bar).
+4. **Expected:** A voice message bubble appears with a play button.
+5. The other person should be able to click Play and hear the audio.
 
-1. As Ram → **Tracker** → tap **Send to Ingestion Team**
-2. ✅ Status → `INGESTION`
+### Test 4.4 — Cancel a voice recording
 
----
+1. Click the microphone to start recording.
+2. Click the **✕ grey cancel button** (NOT the red stop button).
+3. **Expected:** Recording is discarded. No message is sent.
 
-### Step 10 — Ingestion: Log Processing Batches
+### Test 4.5 — Send a PDF
 
-> Ingestion people **only see tickets that have been sent to them** (status = Pending / Processing / Done). Earlier-stage tickets are hidden.
+1. Click the attachment icon.
+2. Select a PDF file.
+3. **Expected:** PDF appears in chat as a file with a link/preview.
+4. Click on it — **Expected:** PDF opens or downloads.
 
-**Concept:** SD cards arrive in multiple packets over multiple days (e.g. 1000 total, sent 100 at a time). Each batch is logged separately. The ticket shows a running total.
+### Test 4.6 — Invite a member to the ticket group (Admin/Logistics only)
 
-**Example:** Ticket has 1000 SD cards. Today they send 100.
+1. As **Logistics** or **Admin**, open a ticket.
+2. Find the **"Members"** or **"Invite"** section.
+3. Enter the email of another registered user.
+4. **Expected:** User is instantly added to the ticket group (no accept/reject).
+5. Log in as the invited user — **Expected:** They can now see that specific ticket's chat, but NOT other tickets.
 
-1. Log in as Ingestion person → go to **Ingestion** in the sidebar
-2. You'll see the ticket in the list marked **Pending** — tap it
-3. You see:
-   - **Ticket info** (team, factory, total SD cards)
-   - **Progress bar** (0/1000 processed)
-   - An empty batch list
-4. Tap **+ Log New Batch**
-5. A form slides in. Either:
-   - **Scan the QR code on the packet** using your scanner — it auto-fills the QR field
-   - Or type the packet ID manually
-6. Enter the counts for this batch:
-   - Total in Packet: `100`
-   - Good Cards: `90` (the ones that work)
-   - Bad / Faulty: `5` (red cards, broken)
-   - Missing: auto-calculated → `5` (100 − 90 − 5)
-7. Optionally add a label (`Box 1`, `Day 1 packet`) and any notes
-8. Tap **Save Batch (Continue Later)**
-9. ✅ Batch 1 appears in the list → Progress bar shows `90/1000 (9%)`
+### Test 4.7 — Remove a member from the ticket group (Admin/Logistics only)
 
-**Day 2 — another 100 cards arrive:**
-1. Open the same ticket → tap **+ Log New Batch**
-2. Scan the new packet's QR code
-3. Enter: Total=100, Good=95, Bad=3, Missing=2
-4. Tap **Save Batch**
-5. ✅ Batch 2 appears → Progress: `185/1000`
-
-**When all cards are processed (total = 1000):**
-1. Log the final batch
-2. Instead of "Save Batch", tap **Save & Mark Ingestion Done**
-3. ✅ Status → `DONE`
-
-> You can also mark done any time without hitting 1000 — just tap "Save & Mark Done" on any batch.
+1. As **Admin** or **Logistics**, open the ticket.
+2. Find the member list and click Remove next to a user.
+3. **Expected:** User is removed from the ticket group and can no longer see it.
 
 ---
 
-### Step 11 — Ingestion: Mark Done (alternative)
+## PART 5 — LOGISTICS: SHIP TO FACTORY
 
-If all batches are already saved and you want to mark complete without a new batch:
-1. As Ingestion → **Tracker** → tap **Mark Ingestion Done**
-2. ✅ Status → `DONE`
+### Test 5.1 — Click "Ship to Factory"
 
----
-
-### Step 12 — Close the Ticket
-
-1. As Ram or Admin → **Tracker** → tap **Close Ticket**
-2. Enter a closing note → confirm
-3. ✅ Status → `CLOSED`
-
----
-
-## Extra Features to Test
-
-### Person Filter (Ticket List)
-1. Go to **Tickets** → tap **👤 Person** (top right)
-2. Tap **Mine** → only your tickets show
-3. Tap **Ram** → only Ram's tickets show
-4. Tap **All** → everything shows back
-5. ✅ Works combined with the status chips (Open, Accepted, etc.)
-
-### Smart Defaults (by Role)
-- **Factory person** opens Tickets → list automatically shows **only their own tickets**
-- **Logistics / Admin** opens Tickets → list automatically shows **Open** tickets
-- ✅ No need to manually set filters
-
-### Inventory Activity Log
-1. Go to **Inventory** (Logistics or Admin)
-2. Scroll down below the stock table — you'll see the **Recent Activity Log**
-3. Tap **📤 Outgoing** → shows only shipments from HQ to factories
-4. Tap **📥 Incoming** → shows only returns from factories
-5. Tap **💾 SD Cards** → shows only movements that included SD cards
-6. Tap any log row → a detail popup opens with:
-   - Full route (HQ → Factory)
-   - Item counts (devices, SD cards, hubs, cables)
-   - All package codes with status
-   - Team and factory info
-7. ✅ Filters work together (e.g. Incoming + SD Cards)
-
-### QR Code (Mobile Scan)
-1. Open any ticket → **Info / Tracker** → find the package QR code
-2. Scan with your phone camera
-3. ✅ Redirects to `buildai-dlc.vercel.app/qr/[token]` showing package details
-
-### Scanner Station (Hardware Scanner)
-1. Open `buildai-dlc.vercel.app/scan` in a browser (or click **Scanner Station** in the sidebar)
-2. The screen is dark with a large ready indicator
-3. Use the red-light scanner to scan a QR code — it types the token into a hidden input
-4. ✅ Package details appear on screen automatically
-5. Screen clears after 60 seconds (15 seconds if there was an error)
-
-### Session Expired
-1. If your session expires, a full-screen overlay appears (dark red)
-2. Tap **Log In Again** — or wait 3 seconds, it dismisses automatically
-3. ✅ Login screen appears behind it immediately
+1. As **Logistics**, on an `Accepted` ticket, click **"Ship to Factory"**.
+2. **Expected:** A popup appears asking for:
+   - Carrier name (e.g. DTDC, Porter, Manual)
+   - Tracking number (optional)
+   - Actual quantities: Devices, SD Cards, Cables, USB Hubs, Extension Boxes
+3. Fill in the quantities (they may differ from what was requested — e.g., requested 10, sending 8).
+4. Click **Confirm / Ship**.
+5. **Expected:**
+   - Ticket status changes to `Outbound Shipped`.
+   - The ticket **title updates** to reflect the actual quantities shipped.
+   - A timeline event is added.
 
 ---
 
-## What Should Work — Full Checklist
+## PART 6 — FACTORY: CONFIRM RECEIPT
 
-| Feature | Expected |
-|---|---|
-| Register with OTP | OTP arrives in email, you're logged in after verifying |
-| Login / logout | Session saves on refresh (up to 30 days) |
-| Mobile login screen | Slides up from bottom, OTP input is large and easy |
-| Create ticket | Appears in list immediately, factory person is auto-added to group |
-| Editable ticket title | Change the date or name before submitting |
-| Logistics claims ticket | Name badge appears in list and tracker |
-| Real-time chat | Messages appear instantly in both windows |
-| Voice message | Records, uploads, plays with waveform |
-| Photo / video / PDF in chat | Uploads, shows preview, opens on tap |
-| Ticket status flow | Each button appears only for the correct role and status |
-| Ingestion batch logging | QR scan auto-fills, counts recorded per batch, progress bar updates |
-| Ingestion role visibility | Ingestion users only see tickets in Pending/Processing/Done state |
-| Batch sub-tracking | Each batch shows separately with Good/Bad/Missing counts and timestamp |
-| Auto-add creator to group | Members tab shows factory person after ticket creation |
-| Invite by email | Members tab → type email → Add → person joins group |
-| Person filter | Shows all people, Mine + individual names work |
-| Smart role defaults | Factory sees mine, Logistics sees open tickets by default |
-| Home quick actions | Unassigned count for logistics, Request Devices for factory |
-| Inventory activity log | Filters by direction + item type, tap shows full detail |
-| QR code (phone) | Scan → opens frontend `/qr/[token]` page |
-| Scanner Station | Hardware scan → details appear on `/scan` page |
-| Session expired overlay | Full screen overlay → auto-dismisses after 3s |
-| Mobile navigation | Bottom tab bar, back chevron, slide animations |
-| Mobile sidebar | Slides in from left, frosted-glass overlay behind it |
+### Test 6.1 — Factory marks shipment as "Received"
+
+1. As **Factory Operator**, open the ticket (status: `Outbound Shipped`).
+2. Click **"Mark as Received"**.
+3. **Expected:** Status changes to `Factory Received`. Timeline updated.
 
 ---
 
-## Common Issues
+## PART 7 — FACTORY: SHIP ITEMS BACK TO HQ
 
-**Status button not showing**
-→ Check you're logged in with the right role. Each button is role-gated and status-gated.
+### Test 7.1 — Factory ships items back
 
-**Chat not updating live**
-→ WebSocket reconnects automatically (up to 6 retries). Check internet connection.
-
-**"No user found" when adding member**
-→ That person hasn't registered yet. Register first, then add by email.
-
-**QR code not scanning**
-→ The backend is now using `segno` (pure Python). Should work after Railway re-deploys. Check Railway build logs if still failing.
-
-**Session expired too quickly**
-→ Sessions last 30 days. If Railway re-deployed, Redis restarts and clears sessions — just log in again.
-
-**Inventory log is empty**
-→ Activity log shows data from movement records. If no tickets have been shipped yet, the log will be empty.
-
-**Ingestion team can't see any tickets**
-→ Tickets only appear for ingestion once the Logistics person taps "Send to Ingestion Team" (Step 9). Before that the ticket is invisible to ingestion.
-
-**Ingestion batch counts seem wrong**
-→ Missing = Total − Good − Bad. The field is auto-calculated and shown in the form. Good + Bad must not exceed Total.
-
-**"Mark Ingestion Done" not showing**
-→ This button is in the Tracker (Info tab). It appears when the ticket is in `ingestion_processing` status and the role is `ingestion` or `admin`.
+1. As **Factory Operator**, on a `Factory Received` ticket, click **"Ship Return to HQ"**.
+2. **Expected:** A popup appears asking:
+   - Carrier name and tracking number
+   - Quantities being returned: Devices, SD Cards, Cables, USB Hubs, Extension Boxes
+   - A note field for "Items NOT returned / sent elsewhere" (e.g., 2 devices sent to nearby factory)
+3. Fill in quantities and add a note if items were not returned.
+4. Click **Confirm / Ship**.
+5. **Expected:** Ticket status changes to `Return Shipped`. Timeline updated.
 
 ---
 
-*All steps above work end-to-end. Deploy with confidence.*
+## PART 8 — LOGISTICS: CONFIRM RECEIPT AT HQ (Partial allowed)
+
+### Test 8.1 — Logistics confirms items received at HQ
+
+1. As **Logistics**, on a `Return Shipped` ticket, click **"Confirm HQ Receipt"**.
+2. **Expected:** A popup appears with fields for:
+   - SD Cards received
+   - Devices received
+   - Cables received
+   - USB Hubs received
+   - Extension Boxes received
+   - Optional note
+3. You can enter **partial quantities** (e.g., only SD cards arrived today, devices arriving tomorrow).
+4. Click **Confirm**.
+5. **Expected:** Status changes to `HQ Received`. Timeline shows what was received.
+
+---
+
+## PART 9 — LOGISTICS: TRANSFER TO INGESTION
+
+### Test 9.1 — Transfer ticket to Ingestion team
+
+1. As **Logistics**, on an `HQ Received` ticket, click **"Transfer to Ingestion"**.
+2. **Expected:** Status changes to `Transferred to Ingestion`.
+
+### Test 9.2 — Ingestion team now sees the ticket
+
+1. Switch to **Ingestion** window.
+2. **Expected:** The ticket now appears in the Ingestion dashboard.
+3. **Expected:** Tickets in shipping/HQ stages are still NOT visible to Ingestion.
+
+---
+
+## PART 10 — INGESTION: CONFIRM PHYSICAL RECEIPT & START PROCESSING
+
+### Test 10.1 — Ingestion confirms they received the packet
+
+1. As **Ingestion**, open the transferred ticket.
+2. See the warning banner: *"Confirm you have physically received the SD card packets from Logistics before starting."*
+3. Click **"✅ Confirm Receipt & Start Processing"**.
+4. **Expected:** Status changes to `Ingestion Processing`.
+
+---
+
+## PART 11 — INGESTION: LOG PROCESSING BATCHES
+
+### Test 11.1 — Log first batch
+
+1. As **Ingestion**, on an `Ingestion Processing` ticket, find the **"+ Log New Batch"** form.
+2. Fill in:
+   - QR Code: scan or type the code from the packet label (or leave blank)
+   - Package Label: e.g., `PKG-001`
+   - Total SD Cards in Packet: `100`
+   - Good SD Cards: `85`
+   - Bad SD Cards: `10`
+   - **Expected:** Missing SD Cards auto-calculates as `5`.
+   - Notes: optional
+3. Click **"Save Batch (Continue Later)"**.
+4. **Expected:** Batch appears in the "Processing Batches" list (Batch 1). Progress bar updates.
+
+### Test 11.2 — Log second batch
+
+1. Add another batch with 100 total, 90 good, 8 bad → 2 missing.
+2. Click **"Save Batch (Continue Later)"**.
+3. **Expected:** Batch 2 appears. Progress bar shows cumulative progress.
+
+### Test 11.3 — Mark Ingestion Done
+
+1. On the last batch, instead of "Save Batch", click **"Save & Mark Ingestion Done"**.
+2. **Expected:** Status changes to `Ingestion Completed`. 
+3. If total processed (good + bad across all batches) equals the originally requested SD card count, completion is triggered automatically.
+
+---
+
+## PART 12 — CLOSE THE TICKET
+
+### Test 12.1 — Close ticket (Admin or Logistics)
+
+1. As **Admin** or **Logistics**, on an `Ingestion Completed` ticket, click **"Close Ticket"**.
+2. **Expected:** Status changes to `Closed`. Ticket can still be viewed but no further actions.
+
+---
+
+## PART 13 — ADMIN FEATURES
+
+### Test 13.1 — Admin can edit ticket title
+
+1. Log in as **Admin**.
+2. Open any ticket.
+3. See the **ticket title** displayed at the very top (read-only for all other roles).
+4. Click the **"✎ Edit"** button next to the title.
+5. Change the title text and click Save.
+6. **Expected:** Title updates immediately.
+
+### Test 13.2 — Inventory page
+
+1. As **Admin**, navigate to **Inventory**.
+2. **Expected:** See a list of inventory items (devices, SD cards, cables, hubs, extension boxes) with quantities.
+3. Click on an item to edit quantities.
+4. **Expected:** Quantity updates and saves.
+
+### Test 13.3 — Activity log on Inventory page
+
+1. As **Admin**, on the Inventory page, scroll down to **"Recent Activities Log"**.
+2. **Expected:** See a log of incoming/outgoing inventory events.
+3. Use the filter buttons to filter by item type (SD Cards, Devices, etc.) or direction (Incoming, Outgoing).
+4. Click on a log entry — **Expected:** A popup shows full details.
+
+---
+
+## PART 14 — QR CODE SCANNING
+
+### Test 14.1 — View QR code for a ticket
+
+1. Open any ticket with packages.
+2. Find the QR code displayed (or click "Generate QR").
+3. **Expected:** A scannable QR code image appears (not a broken/fallback SVG).
+
+### Test 14.2 — Scan with mobile phone
+
+1. Use your phone camera or QR scanner app.
+2. Scan the QR code on screen.
+3. **Expected:** Phone opens a browser link to the frontend app showing the ticket/package details.
+
+### Test 14.3 — Scan with hardware scanner (red-light scanner)
+
+1. Click on the **Scan** page or look for a QR input field.
+2. Point the hardware scanner at the QR code.
+3. **Expected:** The scanner "types" the code into the input field automatically, and the corresponding ticket/package details appear on screen.
+
+---
+
+## PART 15 — MOBILE RESPONSIVENESS
+
+### Test 15.1 — Check all pages on mobile
+
+1. Open the app on a mobile phone or use browser DevTools mobile simulation (F12 → Toggle Device Toolbar).
+2. Navigate through each page:
+   - Login / Register
+   - Dashboard (home)
+   - Ticket List
+   - Ticket Detail + Chat
+   - Inventory
+   - Ingestion workspace
+3. **Expected for each page:** All content is visible, no text is cut off, buttons are tappable, and the layout is clean.
+
+---
+
+## PART 16 — SERVER WAKE-UP (KEEP-ALIVE)
+
+### Test 16.1 — Cold start banner
+
+1. If the backend has been idle (Railway free tier), the app may show a **"Waking up server..."** banner when you first open it.
+2. **Expected:** Banner disappears within 30–60 seconds once the server responds.
+3. **Expected:** The app then loads normally.
+
+---
+
+## PART 17 — SIDEBAR & NAVIGATION
+
+### Test 17.1 — Sidebar shows correct menu items per role
+
+| Role | Should see |
+|------|------------|
+| Factory Operator | Dashboard, Tickets |
+| Logistics | Dashboard, Tickets, Inventory |
+| Ingestion | Dashboard, Tickets (ingestion stage only) |
+| Admin | Dashboard, Tickets, Inventory, Admin panel |
+
+### Test 17.2 — App version in sidebar
+
+1. Look at the bottom of the sidebar.
+2. **Expected:** See version like `v1.5.1 · 2026-04-01`.
+
+---
+
+## FULL END-TO-END FLOW SUMMARY
+
+This is the complete lifecycle of one ticket from start to finish:
+
+```
+Factory creates ticket
+       ↓
+Logistics sees it (auto-poll within 30s)
+       ↓
+Logistics claims + accepts
+       ↓
+Chat between both (real-time)
+       ↓
+Logistics ships devices → enters quantities → title updates
+       ↓
+Factory marks as received
+       ↓
+Factory ships back → enters quantities + notes about items not returned
+       ↓
+Logistics confirms HQ receipt (can be partial)
+       ↓
+Logistics transfers to Ingestion
+       ↓
+Ingestion sees ticket for the first time
+       ↓
+Ingestion confirms physical receipt
+       ↓
+Ingestion logs batches (QR scan + good/bad/missing counts)
+       ↓
+Ingestion marks done (or auto-completes when 100% processed)
+       ↓
+Admin or Logistics closes the ticket
+```
+
+---
+
+## KNOWN LIMITATIONS / THINGS TO VERIFY
+
+| Issue | Status | What to check |
+|-------|--------|---------------|
+| Chat messages real-time | ✅ Fixed | Send a message, check it appears on other screen without refresh |
+| Admin title edit | ✅ Fixed | Admin can now edit title from detail panel |
+| Image upload speed | ✅ Fixed | Images auto-compressed to <200KB |
+| Voice recording cancel button | ✅ Fixed | Grey ✕ cancels, red ■ sends |
+| Ingestion only sees their stage | ✅ Working | Ingestion cannot see open/shipping/HQ tickets |
+| Factory only sees their tickets | ✅ Working | Factory only sees tickets they created or were invited to |
+| New ticket visibility for Logistics | ✅ Fixed | 30s auto-poll shows new tickets |
+| Session expired handling | ✅ Working | Expired JWT → logout → login page |
+| Backend keep-alive | ✅ Working | Ping every 4 min from client |
+
+---
+
+## TROUBLESHOOTING
+
+**"Session expired" on login** → This was a bug, now fixed. If still happening, clear localStorage and try again.
+
+**Ticket not appearing for Logistics** → Wait 30 seconds. It auto-refreshes. If still not showing, refresh the page once.
+
+**Image/video not sending** → Check file size. Images are auto-compressed. Videos should be under 10MB.
+
+**QR code shows a broken image** → The QR library may be generating fallback SVG. Check that the `segno` library is installed on the backend.
+
+**"403 Forbidden" errors** → Check you are logged in with the correct role. Certain actions are role-restricted.
+
+**Backend "Waking up..."** → Railway free tier puts the server to sleep after inactivity. Wait 30–60 seconds for it to wake up.
+
+---
+
+*Last updated: 2026-04-01 | Build AI Operations Platform v1.5.1*
