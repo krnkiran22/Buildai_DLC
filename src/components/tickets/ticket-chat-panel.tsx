@@ -192,7 +192,7 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
       ticket.id,
       session,
       (ev: LiveTicketEvent) => {
-        if (ev.eventType === "new_message" && ev.messageRecord) {
+        if (ev.eventType === "ticket.message" && ev.messageRecord) {
           const r = ev.messageRecord;
           const msg: ChatMessage = {
             id: r.id, author: r.author, role: r.role,
