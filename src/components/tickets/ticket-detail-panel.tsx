@@ -94,6 +94,67 @@ function getActions(role: string, status: TicketStatus): Action[] {
 const CARRIERS = ["", "DTDC", "Porter", "FedEx", "BlueDart", "Delhivery", "Ecom Express", "Xpressbees", "DHL", "Other / Hand Delivery"];
 
 /* ─── Component ────────────────────────────────────────── */
+/* ─── Admin-editable Title Bar ─────────────────────────── */
+function TitleBar({ ticket, role, session, onTicketUpdated }: { ticket: TicketRecord; role: string; session: AuthSession; onTicketUpdated: (t: TicketRecord) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(ticket.title);
+  const [saving, setSaving] = useState(false);
+  const canEdit = role === "admin";
+
+  async function save() {
+    if (!draft.trim() || draft === ticket.title) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      const updated = await updateTicketStatus(ticket.id, {
+        status: ticket.status as import("@/lib/operations-types").TicketStatus,
+        newTitle: draft.trim(),
+      }, session);
+      if (updated) onTicketUpdated(updated);
+      setEditing(false);
+    } catch { /* silent — title edit is best-effort */ }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #f0f2f5", flexShrink: 0, background: "#fafafa" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <div style={{ fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", color: "#8696a0" }}>
+          Ticket Title
+        </div>
+        {canEdit && !editing && (
+          <button onClick={() => { setDraft(ticket.title); setEditing(true); }}
+            style={{ background: "none", cursor: "pointer", fontSize: 10, color: "#128C7E", fontFamily: "var(--font-mono)", padding: "1px 6px", borderRadius: 4, border: "1px solid #bbf7d0" }}>
+            ✎ Edit
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div style={{ display: "flex", gap: 6 }}>
+          <input className="input" style={{ flex: 1, fontSize: 12, fontFamily: "var(--font-mono)" }}
+            value={draft} onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void save(); if (e.key === "Escape") setEditing(false); }}
+            autoFocus />
+          <button onClick={() => void save()} disabled={saving}
+            style={{ padding: "0 10px", background: "#128C7E", border: "none", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", borderRadius: 4 }}>
+            {saving ? "…" : "Save"}
+          </button>
+          <button onClick={() => setEditing(false)}
+            style={{ padding: "0 10px", background: "#f0f2f5", border: "none", color: "#667781", fontSize: 11, cursor: "pointer", borderRadius: 4 }}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div style={{ width: "100%", padding: "7px 10px", background: "#f0f2f5", border: "1px solid #e9edef", borderRadius: 6,
+          fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 600, color: "#111b21", lineHeight: 1.4, wordBreak: "break-word",
+          userSelect: "text", pointerEvents: canEdit ? "auto" : "none" }}
+          onClick={() => { if (canEdit) { setDraft(ticket.title); setEditing(true); } }}>
+          {ticket.title || `Ticket #${ticket.id.slice(0, 8).toUpperCase()}`}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type Props = {
   ticket: TicketRecord;
   session: AuthSession;
@@ -113,6 +174,11 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const [trackingNo, setTrackingNo] = useState("");
   const [carrierNote, setCarrierNote] = useState("");
   const [shipQty, setShipQty] = useState({ devices: 0, sdCards: 0, cables: 0, usbHubs: 0, extensionBoxes: 0 });
+
+  /* HQ Partial Receipt */
+  const [showHqReceipt, setShowHqReceipt] = useState(false);
+  const [hqQty, setHqQty] = useState({ sdCards: 0, devices: 0, cables: 0, usbHubs: 0, extensionBoxes: 0 });
+  const [hqNote, setHqNote] = useState("");
 
   /* Close confirm */
   const [showClose, setShowClose] = useState(false);
@@ -157,12 +223,25 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
 
   function handleActionClick(action: Action) {
     if (action.targetStatus === "closed") { setShowClose(true); return; }
+    if (action.targetStatus === "hq_received") {
+      // Pre-fill with shipped quantities (approved_qty) or requested
+      const getQty = (type: string) => ticket.items?.find((i) => i.itemType?.toLowerCase().includes(type))?.approvedQty ?? 0;
+      setHqQty({
+        sdCards: getQty("sd") || ticket.sdCardsRequested,
+        devices: getQty("device") || ticket.devicesRequested,
+        cables: getQty("cable") || 0,
+        usbHubs: getQty("hub") || 0,
+        extensionBoxes: getQty("extension") || 0,
+      });
+      setHqNote("");
+      setShowHqReceipt(true);
+      return;
+    }
     if (action.needsCarrier) {
-      // Pre-fill quantities from ticket data
       setShipQty({
         devices: ticket.devicesRequested,
         sdCards: ticket.sdCardsRequested,
-        cables: ticket.devicesRequested, // 1 cable per device is default
+        cables: ticket.devicesRequested,
         usbHubs: 0,
         extensionBoxes: 0,
       });
@@ -170,6 +249,30 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
       return;
     }
     void executeAction(action);
+  }
+
+  async function handleHqReceiptSubmit() {
+    setActionLoading("hq_received");
+    setActionError("");
+    try {
+      const parts: string[] = [];
+      if (hqQty.sdCards > 0)       parts.push(`SD Cards: ${hqQty.sdCards}`);
+      if (hqQty.devices > 0)       parts.push(`Devices: ${hqQty.devices}`);
+      if (hqQty.cables > 0)        parts.push(`Cables: ${hqQty.cables}`);
+      if (hqQty.usbHubs > 0)      parts.push(`USB Hubs: ${hqQty.usbHubs}`);
+      if (hqQty.extensionBoxes > 0) parts.push(`Ext. Boxes: ${hqQty.extensionBoxes}`);
+      if (hqNote) parts.push(hqNote);
+      const updated = await updateTicketStatus(ticket.id, {
+        status: "hq_received",
+        note: `HQ received: ${parts.join(" | ")}`,
+        shippedQuantities: hqQty,
+      }, session);
+      if (updated) onTicketUpdated(updated);
+      setShowHqReceipt(false);
+    } catch (err) {
+      if (isSessionExpiredError(err)) setActionError("Your session has expired.");
+      else setActionError(err instanceof Error ? err.message : "Action failed.");
+    } finally { setActionLoading(null); }
   }
 
   async function handleCarrierSubmit() {
@@ -255,30 +358,8 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
         borderLeft: "1px solid #e9edef",
       }}
     >
-      {/* ── Ticket Title — read-only, always visible at the top ── */}
-      <div style={{
-        padding: "10px 14px 8px",
-        borderBottom: "1px solid #f0f2f5",
-        flexShrink: 0,
-        background: "#fafafa",
-      }}>
-        <div style={{
-          fontSize: 9, fontFamily: "var(--font-mono)", textTransform: "uppercase",
-          letterSpacing: "0.08em", color: "#8696a0", marginBottom: 4,
-        }}>
-          Ticket Title
-        </div>
-        <div style={{
-          width: "100%", padding: "7px 10px",
-          background: "#f0f2f5", border: "1px solid #e9edef", borderRadius: 6,
-          fontSize: 12, fontFamily: "var(--font-mono)", fontWeight: 600,
-          color: "#111b21", lineHeight: 1.4,
-          userSelect: "text", pointerEvents: "none",
-          wordBreak: "break-word",
-        }}>
-          {ticket.title || `Ticket #${ticket.id.slice(0, 8).toUpperCase()}`}
-        </div>
-      </div>
+      {/* ── Ticket Title — read-only for all; editable for admin ── */}
+      <TitleBar ticket={ticket} role={role} session={session} onTicketUpdated={onTicketUpdated} />
 
       {/* Tab strip — bigger touch targets */}
       <div style={{
@@ -682,7 +763,7 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
               {["outbound_shipped", "return_shipped"].includes(pendingAction?.targetStatus ?? "") && (
                 <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 12px", borderRadius: 4 }}>
                   <div style={{ fontSize: 10, color: "#15803d", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, fontWeight: 700 }}>
-                    Actual Quantities Being Shipped
+                    {pendingAction?.targetStatus === "return_shipped" ? "Quantities Being Returned to HQ" : "Actual Quantities Being Shipped"}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     {[
@@ -706,8 +787,20 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
                     ))}
                   </div>
                   <div style={{ marginTop: 8, fontSize: 10, color: "#667781", fontStyle: "italic" }}>
-                    Ticket title and item records will be updated with these numbers.
+                    {pendingAction?.targetStatus === "return_shipped"
+                      ? "Only enter what is going back to HQ. Items sent elsewhere will be noted in the timeline."
+                      : "Ticket title and item records will be updated with these numbers."}
                   </div>
+                  {pendingAction?.targetStatus === "return_shipped" && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>
+                        Items NOT returned (sent elsewhere / kept at factory)
+                      </div>
+                      <input className="input" style={{ fontSize: 12 }}
+                        placeholder="e.g. 10 devices sent to Pune Factory 3"
+                        value={carrierNote} onChange={(e) => setCarrierNote(e.target.value)} />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -767,6 +860,50 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
                 }}
               >
                 {actionLoading ? "Updating..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── HQ Partial Receipt Modal ─── */}
+      {showHqReceipt && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowHqReceipt(false); }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 420, overflow: "hidden" }}>
+            <div style={{ background: "#075e54", padding: "14px 18px", color: "#fff" }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>HQ Received Return</div>
+              <div style={{ fontSize: 11, marginTop: 2, opacity: 0.8 }}>Enter exactly what arrived — you can confirm items separately if shipped in batches</div>
+            </div>
+            <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12, maxHeight: "65vh", overflowY: "auto" }}>
+              {actionError && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "6px 10px", fontSize: 12, color: "#dc2626" }}>{actionError}</div>}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {([
+                  { label: "SD Cards Received", key: "sdCards" as const },
+                  { label: "Devices Received", key: "devices" as const },
+                  { label: "Cables Received", key: "cables" as const },
+                  { label: "USB Hubs Received", key: "usbHubs" as const },
+                  { label: "Extension Boxes", key: "extensionBoxes" as const },
+                ] as const).map(({ label, key }) => (
+                  <div key={key}>
+                    <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>{label}</div>
+                    <input type="number" className="input" style={{ fontSize: 13, fontFamily: "var(--font-mono)" }} min={0}
+                      value={hqQty[key]}
+                      onChange={(e) => setHqQty((q) => ({ ...q, [key]: parseInt(e.target.value, 10) || 0 }))} />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>Note (optional)</div>
+                <input className="input" style={{ fontSize: 13 }} placeholder="e.g. Devices arriving separately tomorrow"
+                  value={hqNote} onChange={(e) => setHqNote(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display: "flex", borderTop: "1px solid #e9edef" }}>
+              <button onClick={() => setShowHqReceipt(false)} style={{ flex: 1, padding: 12, border: "none", background: "#f9fafb", fontSize: 13, color: "#667781", cursor: "pointer", borderRight: "1px solid #e9edef" }}>Cancel</button>
+              <button onClick={() => void handleHqReceiptSubmit()} disabled={!!actionLoading}
+                style={{ flex: 1, padding: 12, border: "none", background: "#128C7E", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
+                {actionLoading ? "Confirming..." : "Confirm Receipt"}
               </button>
             </div>
           </div>

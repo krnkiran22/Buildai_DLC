@@ -350,9 +350,14 @@ export function IngestionWorkspace({ snapshot, session, onTicketUpdate }: Props)
                   </div>
                   <div style={{ padding: "12px 14px", display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {selectedTicket.status === "transferred_to_ingestion" && (
-                      <button onClick={() => void handleMarkTransferred()} className="btn btn-primary" disabled={loading} style={{ fontSize: 12 }}>
-                        {loading ? "Working..." : "▶ Start Processing"}
-                      </button>
+                      <>
+                        <div style={{ width: "100%", padding: "8px 10px", background: "#fff8e1", border: "1px solid #f59e0b", borderRadius: 4, fontSize: 11, color: "#92400e", marginBottom: 4 }}>
+                          ⚠️ Confirm you have physically received the SD card packets from Logistics before starting.
+                        </div>
+                        <button onClick={() => void handleMarkTransferred()} className="btn btn-primary" disabled={loading} style={{ fontSize: 12 }}>
+                          {loading ? "Working..." : "✅ Confirm Receipt & Start Processing"}
+                        </button>
+                      </>
                     )}
                     {(selectedTicket.status === "transferred_to_ingestion" || selectedTicket.status === "ingestion_processing") && (
                       <button

@@ -36,18 +36,27 @@ function parseMessage(raw: string): { type: MediaType; content: string } {
   return { type: "text", content: raw };
 }
 
-async function compressImage(file: File, maxPx = 900, quality = 0.78): Promise<string> {
+async function compressImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        // Target: max 1280px on the longest side, then reduce quality until < 200KB
+        const MAX_PX = 1280;
+        const ratio = Math.min(MAX_PX / img.width, MAX_PX / img.height, 1);
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * ratio);
         canvas.height = Math.round(img.height * ratio);
         canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        // Try decreasing quality until under 200KB
+        let quality = 0.82;
+        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+        while (dataUrl.length > 200 * 1024 * 1.37 && quality > 0.3) {
+          quality -= 0.08;
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+        resolve(dataUrl);
       };
       img.onerror = reject;
       img.src = e.target?.result as string;
@@ -820,6 +829,7 @@ function VoicePlayer({ src, isSelf }: { src: string; isSelf: boolean; author: st
     <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 180, paddingRight: 4 }}>
       <audio
         ref={audioRef} src={src} preload="metadata"
+        playsInline
         onEnded={() => { setPlaying(false); setProgress(0); }}
         onTimeUpdate={() => {
           const a = audioRef.current;
