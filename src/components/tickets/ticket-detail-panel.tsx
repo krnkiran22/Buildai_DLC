@@ -194,6 +194,13 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState("");
 
+  // Clear any stale error when the ticket changes (status update received)
+  const [prevTicketStatus, setPrevTicketStatus] = useState(ticket.status);
+  if (ticket.status !== prevTicketStatus) {
+    setPrevTicketStatus(ticket.status);
+    setActionError("");
+  }
+
   const currentIdx = ORDER.indexOf(ticket.status);
   const actions = getActions(role, ticket.status);
   const canGenerateQr = (role === "logistics" || role === "admin") &&
