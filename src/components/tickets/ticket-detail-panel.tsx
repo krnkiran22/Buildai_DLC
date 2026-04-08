@@ -59,10 +59,10 @@ function getActions(role: string, status: TicketStatus): Action[] {
       a.push({ label: "Ship to Factory", sublabel: "Mark as dispatched", targetStatus: "outbound_shipped", variant: "primary", needsCarrier: true });
     }
     if (status === "return_shipped") {
-      a.push({ label: "HQ Received Return", sublabel: "Package arrived at HQ", targetStatus: "hq_received", variant: "primary" });
+      a.push({ label: "Confirm Receipt at HQ", sublabel: "Verify items returned from factory", targetStatus: "hq_received", variant: "primary" });
     }
     if (status === "hq_received") {
-      a.push({ label: "Send to Ingestion Team", sublabel: "Transfer SD cards for processing", targetStatus: "transferred_to_ingestion", variant: "primary" });
+      a.push({ label: "Hand Off to Ingestion Team", sublabel: "Walk SD cards to ingestion floor", targetStatus: "transferred_to_ingestion", variant: "primary" });
     }
     if (!["closed", "rejected"].includes(status)) {
       a.push({ label: "Close Ticket", sublabel: "", targetStatus: "closed", variant: "danger" });
@@ -71,19 +71,19 @@ function getActions(role: string, status: TicketStatus): Action[] {
 
   if (role === "factory_operator" || role === "admin") {
     if (status === "outbound_shipped") {
-      a.push({ label: "I've Received the Shipment", sublabel: "Confirm delivery at factory", targetStatus: "factory_received", variant: "primary" });
+      a.push({ label: "Shipment Received at Factory", sublabel: "Confirm you have the devices and SD cards", targetStatus: "factory_received", variant: "primary" });
     }
     if (status === "factory_received") {
-      a.push({ label: "Ship Return to HQ", sublabel: "Mark return as dispatched", targetStatus: "return_shipped", variant: "primary", needsCarrier: true });
+      a.push({ label: "Ship Items Back to HQ", sublabel: "Return devices, SD cards, cables, etc.", targetStatus: "return_shipped", variant: "primary", needsCarrier: true });
     }
   }
 
   if (role === "ingestion" || role === "admin") {
     if (status === "transferred_to_ingestion") {
-      a.push({ label: "Start Processing SD Cards", sublabel: "Begin ingestion", targetStatus: "ingestion_processing", variant: "primary" });
+      a.push({ label: "📦 Received SD Cards — Start Processing", sublabel: "Confirm physical receipt from logistics", targetStatus: "ingestion_processing", variant: "primary" });
     }
     if (status === "ingestion_processing") {
-      a.push({ label: "Mark Ingestion Done", sublabel: "Processing completed", targetStatus: "ingestion_completed", variant: "primary" });
+      a.push({ label: "✅ Mark Ingestion Complete", sublabel: "All SD cards processed", targetStatus: "ingestion_completed", variant: "primary" });
     }
     // Ingestion role cannot close tickets — only logistics/admin can
   }
@@ -838,10 +838,10 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
                   {pendingAction?.targetStatus === "return_shipped" && (
                     <div style={{ marginTop: 10 }}>
                       <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>
-                        Items NOT returned (sent elsewhere / kept at factory)
+                        📌 Items being kept at factory / sent elsewhere
                       </div>
                       <input className="input" style={{ fontSize: 12 }}
-                        placeholder="e.g. 10 devices sent to Pune Factory 3"
+                        placeholder="e.g. 50 devices kept for next deployment batch"
                         value={carrierNote} onChange={(e) => setCarrierNote(e.target.value)} />
                     </div>
                   )}
@@ -914,32 +914,44 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
       {showHqReceipt && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowHqReceipt(false); }}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 420, overflow: "hidden" }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 440, overflow: "hidden", borderRadius: 4 }}>
             <div style={{ background: "#075e54", padding: "14px 18px", color: "#fff" }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>HQ Received Return</div>
-              <div style={{ fontSize: 11, marginTop: 2, opacity: 0.8 }}>Enter exactly what arrived — you can confirm items separately if shipped in batches</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>✅ Confirm Receipt at HQ</div>
+              <div style={{ fontSize: 11, marginTop: 2, opacity: 0.85 }}>
+                Enter only what physically arrived today. Leave items at 0 if they haven&apos;t arrived yet — they can be confirmed in a later shipment.
+              </div>
             </div>
             <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12, maxHeight: "65vh", overflowY: "auto" }}>
               {actionError && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "6px 10px", fontSize: 12, color: "#dc2626" }}>{actionError}</div>}
+              {/* Context: what was originally shipped */}
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "8px 12px", borderRadius: 4, fontSize: 11, color: "#166534" }}>
+                <strong>Originally shipped:</strong> {ticket.devicesRequested} devices · {ticket.sdCardsRequested} SD cards
+                {ticket.items && ticket.items.length > 0 && (
+                  <span> · {ticket.items.find(i => i.itemType?.toLowerCase().includes("cable"))?.approvedQty ?? 0} cables</span>
+                )}
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {([
-                  { label: "SD Cards Received", key: "sdCards" as const },
-                  { label: "Devices Received", key: "devices" as const },
-                  { label: "Cables Received", key: "cables" as const },
-                  { label: "USB Hubs Received", key: "usbHubs" as const },
-                  { label: "Extension Boxes", key: "extensionBoxes" as const },
-                ] as const).map(({ label, key }) => (
+                  { label: "SD Cards Received", key: "sdCards" as const, emoji: "💾" },
+                  { label: "Devices Received", key: "devices" as const, emoji: "📱" },
+                  { label: "Cables Received", key: "cables" as const, emoji: "🔌" },
+                  { label: "USB Hubs Received", key: "usbHubs" as const, emoji: "🔗" },
+                  { label: "Extension Boxes", key: "extensionBoxes" as const, emoji: "📦" },
+                ] as const).map(({ label, key, emoji }) => (
                   <div key={key}>
-                    <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>{label}</div>
+                    <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>{emoji} {label}</div>
                     <input type="number" className="input" style={{ fontSize: 13, fontFamily: "var(--font-mono)" }} min={0}
                       value={hqQty[key]}
                       onChange={(e) => setHqQty((q) => ({ ...q, [key]: parseInt(e.target.value, 10) || 0 }))} />
                   </div>
                 ))}
               </div>
+              <div style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "7px 10px", borderRadius: 4, fontSize: 11, color: "#92400e" }}>
+                💡 <strong>Tip:</strong> If SD cards and devices are coming in separate shipments, enter only what arrived now and confirm the rest later.
+              </div>
               <div>
                 <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>Note (optional)</div>
-                <input className="input" style={{ fontSize: 13 }} placeholder="e.g. Devices arriving separately tomorrow"
+                <input className="input" style={{ fontSize: 13 }} placeholder="e.g. Devices arriving separately on Friday"
                   value={hqNote} onChange={(e) => setHqNote(e.target.value)} />
               </div>
             </div>
@@ -947,7 +959,7 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
               <button onClick={() => setShowHqReceipt(false)} style={{ flex: 1, padding: 12, border: "none", background: "#f9fafb", fontSize: 13, color: "#667781", cursor: "pointer", borderRight: "1px solid #e9edef" }}>Cancel</button>
               <button onClick={() => void handleHqReceiptSubmit()} disabled={!!actionLoading}
                 style={{ flex: 1, padding: 12, border: "none", background: "#128C7E", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer" }}>
-                {actionLoading ? "Confirming..." : "Confirm Receipt"}
+                {actionLoading ? "Confirming…" : "✅ Confirm Receipt"}
               </button>
             </div>
           </div>

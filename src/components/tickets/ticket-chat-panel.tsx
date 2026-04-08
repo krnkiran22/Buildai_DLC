@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isSessionExpiredError, openTicketStream, sendTicketMessage } from "@/lib/backend";
+import { isSessionExpiredError, openTicketStream, sendTicketMessage, updateTicketStatus } from "@/lib/backend";
 import type {
   AuthSession,
   ChatMessage,
@@ -181,6 +181,28 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
 
   const canSend = session.permissions.includes("ticket.message");
   const selfName = session.user.displayName;
+  const role = session.user.role;
+
+  /* ── Ingestion action (confirm SD card receipt, directly from chat) ── */
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const actionSubmitting = useRef(false);
+
+  async function handleIngestionReceive() {
+    if (actionSubmitting.current) return;
+    actionSubmitting.current = true;
+    setActionLoading(true);
+    setActionError("");
+    try {
+      const updated = await updateTicketStatus(ticket.id, { status: "ingestion_processing" }, session);
+      if (updated) onTicketUpdated(updated);
+    } catch (err) {
+      setActionError(isSessionExpiredError(err) ? "Session expired." : (err instanceof Error ? err.message : "Action failed."));
+    } finally {
+      setActionLoading(false);
+      actionSubmitting.current = false;
+    }
+  }
 
   useEffect(() => { setMessages(ticket.messages ?? []); }, [ticket.id, ticket.messages]);
   // Instant scroll when switching tickets; smooth scroll on new messages
@@ -382,6 +404,55 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
           {statusLabel}
         </span>
       </div>
+
+      {/* ── Ingestion action banner — shown INSIDE the chat so ingestion can act without leaving ── */}
+      {(role === "ingestion" || role === "admin") && ticket.status === "transferred_to_ingestion" && (
+        <div style={{
+          background: "#f0fdf4", borderBottom: "2px solid #22c55e",
+          padding: "12px 16px", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 12,
+        }}>
+          <span style={{ fontSize: 24, flexShrink: 0 }}>📦</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#15803d", marginBottom: 2 }}>
+              SD Cards received from Logistics?
+            </div>
+            <div style={{ fontSize: 11, color: "#4ade80" }}>
+              Tap the button to confirm receipt and start processing.
+            </div>
+            {actionError && (
+              <div style={{ fontSize: 11, color: "#dc2626", marginTop: 4 }}>{actionError}</div>
+            )}
+          </div>
+          <button
+            disabled={actionLoading}
+            onClick={() => void handleIngestionReceive()}
+            style={{
+              padding: "9px 18px", background: actionLoading ? "#86efac" : "#16a34a",
+              border: "none", borderRadius: 8, color: "#fff",
+              fontSize: 13, fontWeight: 700, cursor: actionLoading ? "not-allowed" : "pointer",
+              flexShrink: 0, whiteSpace: "nowrap",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            {actionLoading ? "Confirming…" : "✅ Received SD Cards"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Ingestion processing hint banner ── */}
+      {(role === "ingestion" || role === "admin") && ticket.status === "ingestion_processing" && (
+        <div style={{
+          background: "#eff6ff", borderBottom: "2px solid #3b82f6",
+          padding: "10px 16px", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>⚙️</span>
+          <div style={{ flex: 1, fontSize: 12, color: "#1d4ed8", fontWeight: 600 }}>
+            Processing in progress — go to the <strong>Ingestion</strong> section to log batches and track progress.
+          </div>
+        </div>
+      )}
 
       {/* ── Messages area ── */}
       <div style={{

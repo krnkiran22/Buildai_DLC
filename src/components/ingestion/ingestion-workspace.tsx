@@ -355,7 +355,7 @@ export function IngestionWorkspace({ snapshot, session, onTicketUpdate }: Props)
                           ⚠️ Confirm you have physically received the SD card packets from Logistics before starting.
                         </div>
                         <button onClick={() => void handleMarkTransferred()} className="btn btn-primary" disabled={loading} style={{ fontSize: 12 }}>
-                          {loading ? "Working..." : "✅ Confirm Receipt & Start Processing"}
+                          {loading ? "Working…" : "📦 Received SD Cards — Start Processing"}
                         </button>
                       </>
                     )}
