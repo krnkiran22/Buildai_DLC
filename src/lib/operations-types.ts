@@ -163,6 +163,19 @@ export type TicketRecord = {
   members: TicketMember[];
   assignedToEmail?: string | null;
   assignedToName?: string | null;
+  /** Full postal address for map (set when logistics ships to factory) */
+  factoryMapAddress?: string | null;
+  factoryLatitude?: number | null;
+  factoryLongitude?: number | null;
+  liveDevicesShipped?: number | null;
+  liveSdCardsShipped?: number | null;
+  liveDevicesDeployed?: number | null;
+  liveSdCardsInUse?: number | null;
+  liveReturnedDevicesEstimate?: number | null;
+  liveReturnedSdCardsEstimate?: number | null;
+  liveUtilizationNote?: string | null;
+  liveUtilizationUpdatedAt?: string | null;
+  liveUtilizationUpdatedBy?: string | null;
 };
 
 export type UserProfile = {
@@ -351,6 +364,16 @@ export type TicketStatusUpdateInput = {
   note?: string;
   newTitle?: string;
   shippedQuantities?: ShippedQuantities;
+  /** Required for accurate map pin when shipping to factory */
+  factoryMapAddress?: string;
+};
+
+export type TicketLiveUtilizationInput = {
+  devicesDeployed?: number;
+  sdCardsInUse?: number;
+  returnedDevicesEstimate?: number;
+  returnedSdCardsEstimate?: number;
+  note?: string;
 };
 
 export type PackageCreateInput = {

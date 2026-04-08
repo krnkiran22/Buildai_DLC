@@ -14,6 +14,7 @@ import type {
   QrPackageDetail,
   RegistrationChallenge,
   TicketCreateInput,
+  TicketLiveUtilizationInput,
   TicketRecord,
   TicketStatusUpdateInput,
 } from "@/lib/operations-types";
@@ -476,6 +477,7 @@ export async function updateTicketStatus(
       status: payload.status,
       note: payload.note,
       new_title: payload.newTitle,
+      factory_map_address: payload.factoryMapAddress,
       shipped_quantities: payload.shippedQuantities ? {
         devices: payload.shippedQuantities.devices,
         sd_cards: payload.shippedQuantities.sdCards,
@@ -483,6 +485,31 @@ export async function updateTicketStatus(
         usb_hubs: payload.shippedQuantities.usbHubs,
         extension_boxes: payload.shippedQuantities.extensionBoxes,
       } : undefined,
+    }),
+  });
+}
+
+export async function updateTicketLiveUtilization(
+  ticketId: string,
+  payload: TicketLiveUtilizationInput,
+  session?: AuthSession | null,
+): Promise<TicketRecord | null> {
+  if (!API_BASE_URL) {
+    return null;
+  }
+
+  return requestJson<TicketRecord>(`/api/v1/tickets/${ticketId}/live`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...requestHeaders(session),
+    },
+    body: JSON.stringify({
+      devices_deployed: payload.devicesDeployed,
+      sd_cards_in_use: payload.sdCardsInUse,
+      returned_devices_estimate: payload.returnedDevicesEstimate,
+      returned_sd_cards_estimate: payload.returnedSdCardsEstimate,
+      note: payload.note,
     }),
   });
 }

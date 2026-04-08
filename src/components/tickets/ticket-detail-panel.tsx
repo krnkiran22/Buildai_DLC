@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addTicketMember,
   claimTicket,
@@ -10,6 +10,7 @@ import {
   lookupUserByEmail,
   qrSvgUrl,
   removeTicketMember,
+  updateTicketLiveUtilization,
   updateTicketStatus,
 } from "@/lib/backend";
 import { printQrSticker } from "@/lib/print-sticker";
@@ -37,6 +38,16 @@ const STAGES: { status: TicketStatus; label: string; icon: string }[] = [
 ];
 
 const ORDER = STAGES.map((s) => s.status);
+
+const LIVE_UTIL_TICKET_STATUSES: Set<TicketStatus> = new Set([
+  "outbound_shipped",
+  "factory_received",
+  "return_shipped",
+  "hq_received",
+  "transferred_to_ingestion",
+  "ingestion_processing",
+  "ingestion_completed",
+]);
 
 /* ─── Actions per role + status ───────────────────────── */
 type Action = {
@@ -177,6 +188,15 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const [trackingNo, setTrackingNo] = useState("");
   const [carrierNote, setCarrierNote] = useState("");
   const [shipQty, setShipQty] = useState({ devices: 0, sdCards: 0, cables: 0, usbHubs: 0, extensionBoxes: 0 });
+  const [factoryMapAddress, setFactoryMapAddress] = useState("");
+
+  /* Live utilization (logistics phone check-in → admin Live map) */
+  const [utilDevices, setUtilDevices] = useState(0);
+  const [utilSd, setUtilSd] = useState(0);
+  const [utilRetDev, setUtilRetDev] = useState(0);
+  const [utilRetSd, setUtilRetSd] = useState(0);
+  const [utilNote, setUtilNote] = useState("");
+  const [utilSaving, setUtilSaving] = useState(false);
 
   /* HQ Partial Receipt */
   const [showHqReceipt, setShowHqReceipt] = useState(false);
@@ -202,6 +222,14 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
     setPrevTicketStatus(ticket.status);
     setActionError("");
   }
+
+  useEffect(() => {
+    setUtilDevices(ticket.liveDevicesDeployed ?? 0);
+    setUtilSd(ticket.liveSdCardsInUse ?? 0);
+    setUtilRetDev(ticket.liveReturnedDevicesEstimate ?? 0);
+    setUtilRetSd(ticket.liveReturnedSdCardsEstimate ?? 0);
+    setUtilNote(ticket.liveUtilizationNote ?? "");
+  }, [ticket.id, ticket.liveDevicesDeployed, ticket.liveSdCardsInUse, ticket.liveReturnedDevicesEstimate, ticket.liveReturnedSdCardsEstimate, ticket.liveUtilizationNote]);
 
   const currentIdx = ORDER.indexOf(ticket.status);
   const actions = getActions(role, ticket.status);
@@ -255,6 +283,11 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
         usbHubs: 0,
         extensionBoxes: 0,
       });
+      setFactoryMapAddress(
+        action.targetStatus === "outbound_shipped"
+          ? (ticket.factoryMapAddress || `${ticket.factoryName}, India`)
+          : "",
+      );
       setPendingAction(action);
       return;
     }
@@ -294,6 +327,15 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
     if (!pendingAction || submittingRef.current) return;
     submittingRef.current = true;
 
+    if (pendingAction.targetStatus === "outbound_shipped") {
+      const addr = factoryMapAddress.trim();
+      if (addr.length < 12) {
+        setActionError("Enter the full factory street address (India) for the Live map — at least 12 characters.");
+        submittingRef.current = false;
+        return;
+      }
+    }
+
     const noteParts: string[] = [];
     if (carrier) noteParts.push(`Carrier: ${carrier}`);
     if (trackingNo) noteParts.push(`Tracking: ${trackingNo}`);
@@ -317,10 +359,12 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
         note: noteParts.join(" | ") || undefined,
         newTitle,
         shippedQuantities: isShipAction ? shipQty : undefined,
+        factoryMapAddress:
+          pendingAction.targetStatus === "outbound_shipped" ? factoryMapAddress.trim() : undefined,
       }, session);
       if (updated) onTicketUpdated(updated);
       setPendingAction(null);
-      setCarrier(""); setTrackingNo(""); setCarrierNote("");
+      setCarrier(""); setTrackingNo(""); setCarrierNote(""); setFactoryMapAddress("");
     } catch (err) {
       if (isSessionExpiredError(err)) {
         setActionError("Your session has expired. Redirecting to login…");
@@ -339,6 +383,30 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
     } finally {
       setActionLoading(null);
       submittingRef.current = false;
+    }
+  }
+
+  async function saveLiveUtilization() {
+    setUtilSaving(true);
+    setActionError("");
+    try {
+      const updated = await updateTicketLiveUtilization(
+        ticket.id,
+        {
+          devicesDeployed: utilDevices,
+          sdCardsInUse: utilSd,
+          returnedDevicesEstimate: utilRetDev,
+          returnedSdCardsEstimate: utilRetSd,
+          note: utilNote.trim() || undefined,
+        },
+        session,
+      );
+      if (updated) onTicketUpdated(updated);
+    } catch (err) {
+      if (isSessionExpiredError(err)) setActionError("Your session has expired.");
+      else setActionError(err instanceof Error ? err.message : "Could not save utilization.");
+    } finally {
+      setUtilSaving(false);
     }
   }
 
@@ -549,6 +617,74 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
               }}>
                 <span style={{ flexShrink: 0 }}>⚠️</span>
                 <span>{actionError}</span>
+              </div>
+            )}
+
+            {/* Live map utilization — logistics phone check-in with factory */}
+            {(role === "logistics" || role === "admin") && LIVE_UTIL_TICKET_STATUSES.has(ticket.status) && (
+              <div style={{
+                marginBottom: 14,
+                padding: 12,
+                border: "1px solid #e9edef",
+                borderRadius: 10,
+                background: "#fafafa",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2, color: "#111b21" }}>◎ Live map utilization</div>
+                <div style={{ fontSize: 10, color: "#667781", marginBottom: 10, lineHeight: 1.4 }}>
+                  After calling the factory, record deployed devices and SD cards in use. Shown on the admin <strong>Live</strong> map.
+                  {ticket.liveUtilizationUpdatedAt && (
+                    <span style={{ display: "block", marginTop: 4, fontFamily: "var(--font-mono)", fontSize: 9 }}>
+                      Last update: {ticket.liveUtilizationUpdatedBy} · {ticket.liveUtilizationUpdatedAt?.slice(0, 16).replace("T", " ")}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>Devices deployed</div>
+                    <input type="number" className="input" style={{ fontSize: 13, fontFamily: "var(--font-mono)" }} min={0}
+                      value={utilDevices} onChange={(e) => setUtilDevices(parseInt(e.target.value, 10) || 0)} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>SD cards in use</div>
+                    <input type="number" className="input" style={{ fontSize: 13, fontFamily: "var(--font-mono)" }} min={0}
+                      value={utilSd} onChange={(e) => setUtilSd(parseInt(e.target.value, 10) || 0)} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>Returned dev. (est.)</div>
+                    <input type="number" className="input" style={{ fontSize: 13, fontFamily: "var(--font-mono)" }} min={0}
+                      value={utilRetDev} onChange={(e) => setUtilRetDev(parseInt(e.target.value, 10) || 0)} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>Returned SD (est.)</div>
+                    <input type="number" className="input" style={{ fontSize: 13, fontFamily: "var(--font-mono)" }} min={0}
+                      value={utilRetSd} onChange={(e) => setUtilRetSd(parseInt(e.target.value, 10) || 0)} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 9, color: "#8696a0", fontFamily: "var(--font-mono)", textTransform: "uppercase", marginBottom: 3 }}>Note</div>
+                  <input className="input" style={{ fontSize: 12 }} placeholder="Optional context from factory call…"
+                    value={utilNote} onChange={(e) => setUtilNote(e.target.value)} />
+                </div>
+                <button
+                  type="button"
+                  disabled={utilSaving}
+                  onClick={() => void saveLiveUtilization()}
+                  style={{
+                    marginTop: 10,
+                    width: "100%",
+                    padding: "9px 12px",
+                    border: "none",
+                    borderRadius: 8,
+                    background: "#111",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: utilSaving ? "not-allowed" : "pointer",
+                    opacity: utilSaving ? 0.7 : 1,
+                  }}
+                >
+                  {utilSaving ? "Saving…" : "Save utilization"}
+                </button>
               </div>
             )}
 
@@ -845,6 +981,24 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
                         value={carrierNote} onChange={(e) => setCarrierNote(e.target.value)} />
                     </div>
                   )}
+                </div>
+              )}
+
+              {pendingAction?.targetStatus === "outbound_shipped" && (
+                <div style={{ background: "#fafafa", border: "1px solid var(--border)", padding: "10px 12px", borderRadius: 4 }}>
+                  <div style={{ fontSize: 10, color: "#15803d", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, fontWeight: 700 }}>
+                    Factory address (India) — Live map
+                  </div>
+                  <textarea
+                    className="textarea"
+                    style={{ fontSize: 13, minHeight: 72, width: "100%" }}
+                    placeholder="e.g. Plot 12, MIDC Phase 2, Pune, Maharashtra 411018"
+                    value={factoryMapAddress}
+                    onChange={(e) => setFactoryMapAddress(e.target.value)}
+                  />
+                  <div style={{ fontSize: 10, color: "#667781", marginTop: 6, lineHeight: 1.4 }}>
+                    Used to place a pin on the admin <strong>Live</strong> map. Include city and PIN for accurate geocoding.
+                  </div>
                 </div>
               )}
 

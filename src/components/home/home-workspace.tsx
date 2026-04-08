@@ -281,6 +281,7 @@ function RoleQuickActions({ role, tickets }: { role: UserRole; tickets: { status
   } else if (role === "admin") {
     if (unassigned > 0) actions.push({ label: `${unassigned} Unassigned`, desc: "Open tickets waiting for logistics to claim", href: "/tickets", icon: "🔔", highlight: true });
     actions.push({ label: "All Tickets", desc: "Manage all deployment requests", href: "/tickets", icon: "📋" });
+    actions.push({ label: "Live", desc: "India map of factory deployments and utilization", href: "/live", icon: "◎" });
     actions.push({ label: "Inventory", desc: "Manage stock levels", href: "/inventory", icon: "📊" });
     actions.push({ label: "Merit Scores", desc: "Team performance overview", href: "/merit", icon: "⭐" });
   }

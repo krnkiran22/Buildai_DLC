@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { HomeWorkspace } from "@/components/home/home-workspace";
 import { IngestionWorkspace } from "@/components/ingestion/ingestion-workspace";
 import { InventoryWorkspace } from "@/components/inventory/inventory-workspace";
+import { LiveWorkspace } from "@/components/live/live-workspace";
 import { MeritWorkspace } from "@/components/merit/merit-workspace";
 import { MovementWorkspace } from "@/components/movement/movement-workspace";
 import { TicketWorkspace } from "@/components/tickets/ticket-workspace";
@@ -42,7 +44,8 @@ export type WorkspaceId =
   | "ingestion"
   | "movement"
   | "merit"
-  | "inventory";
+  | "inventory"
+  | "live";
 
 function sessionsEqual(a: AuthSession | null, b: AuthSession | null) {
   if (a === b) return true;
@@ -80,6 +83,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "movement", label: "Movement", href: "/movement", roles: ["admin", "logistics"], icon: "⇌" },
   { id: "merit", label: "Merit Scores", href: "/merit", roles: ["admin", "logistics", "ingestion"], icon: "◈" },
   { id: "inventory", label: "Inventory", href: "/inventory", roles: ["admin", "logistics"], icon: "⊟" },
+  { id: "live", label: "Live", href: "/live", roles: ["admin"], icon: "◎" },
 ];
 
 type Props = {
@@ -89,6 +93,7 @@ type Props = {
 const SESSION_RECHECK_MS = 3 * 60 * 1000; // re-verify token every 3 minutes
 
 export function AppShell({ workspace }: Props) {
+  const router = useRouter();
   const [session, setSession] = useState<AuthSession | null>(null);
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [health, setHealth] = useState<BackendHealth>({
@@ -250,6 +255,12 @@ export function AppShell({ workspace }: Props) {
     return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.token]);
+
+  useEffect(() => {
+    if (workspace === "live" && session && session.user.role !== "admin") {
+      router.replace("/");
+    }
+  }, [workspace, session, router]);
 
   function handleAuthenticated(s: AuthSession) {
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(s));
@@ -548,6 +559,12 @@ export function AppShell({ workspace }: Props) {
           {workspace === "movement" && <MovementWorkspace snapshot={snapshot} session={session} />}
           {workspace === "merit" && <MeritWorkspace snapshot={snapshot} session={session} />}
           {workspace === "inventory" && <InventoryWorkspace snapshot={snapshot} session={session} />}
+          {workspace === "live" && session.user.role === "admin" && (
+            <LiveWorkspace snapshot={snapshot} session={session} />
+          )}
+          {workspace === "live" && session.user.role !== "admin" && (
+            <HomeWorkspace snapshot={snapshot} session={session} />
+          )}
         </div>
       </div>
     </div>
