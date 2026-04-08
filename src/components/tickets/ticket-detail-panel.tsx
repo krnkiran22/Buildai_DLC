@@ -12,6 +12,7 @@ import {
   removeTicketMember,
   updateTicketStatus,
 } from "@/lib/backend";
+import { printQrSticker } from "@/lib/print-sticker";
 import type {
   AuthSession,
   PackageBatchCreateInput,
@@ -726,13 +727,30 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
                         }}>
                           Open QR Page ↗
                         </a>
-                        <a href={qrSvgUrl(pkg.qrToken)} target="_blank" rel="noreferrer" style={{
-                          padding: "5px 8px", border: "1px solid #e9edef",
-                          background: "#f9fafb", fontSize: 11, color: "#667781",
-                          textDecoration: "none",
-                        }}>
-                          SVG
-                        </a>
+                        <button
+                          onClick={() => printQrSticker({
+                            qrToken: pkg.qrToken!,
+                            packageCode: pkg.packageCode,
+                            title: ticket.title,
+                            teamName: ticket.teamName,
+                            factoryName: ticket.factoryName,
+                            deploymentDate: ticket.deploymentDate,
+                            devices: pkg.shippedDevicesCount,
+                            sdCards: pkg.shippedSdCardsCount,
+                            cables: pkg.shippedCablesCount,
+                            usbHubs: pkg.shippedUsbHubsCount,
+                            direction: pkg.direction,
+                            qrImageUrl: qrSvgUrl(pkg.qrToken!),
+                          })}
+                          style={{
+                            padding: "5px 10px", border: "1px solid #111",
+                            background: "#111", fontSize: 11, color: "#fff",
+                            fontWeight: 700, cursor: "pointer",
+                          }}
+                          title="Print QR sticker label"
+                        >
+                          🖨 Print
+                        </button>
                       </div>
                     )}
                   </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getQrPackageDetail, qrSvgUrl, updateQrPackageDetail } from "@/lib/backend";
 import type { PublicQrPackagePatch, QrPackageDetail } from "@/lib/operations-types";
+import { printQrSticker } from "@/lib/print-sticker";
 
 type Props = {
   qrToken: string;
@@ -107,11 +108,38 @@ export function PublicQrPage({ qrToken }: Props) {
     <div style={{ minHeight: "100vh", background: "var(--bg-subtle)", padding: "24px 16px" }}>
       <div style={{ maxWidth: 520, margin: "0 auto" }}>
         {/* Brand header */}
-        <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Build AI</div>
-          <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 1 }}>
-            QR Package Record
+        <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Build AI</div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 1 }}>
+              QR Package Record
+            </div>
           </div>
+          <button
+            onClick={() => detail && printQrSticker({
+              qrToken: qrToken,
+              packageCode: detail.package.packageCode,
+              title: detail.title,
+              teamName: detail.teamName,
+              factoryName: detail.factoryName,
+              deploymentDate: detail.deploymentDate,
+              devices: detail.package.shippedDevicesCount,
+              sdCards: detail.package.shippedSdCardsCount,
+              cables: detail.package.shippedCablesCount,
+              usbHubs: detail.package.shippedUsbHubsCount,
+              direction: detail.package.direction,
+              qrImageUrl: qrSvgUrl(qrToken),
+            })}
+            disabled={!detail}
+            style={{
+              padding: "8px 16px", background: "#111", color: "#fff",
+              border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
+              borderRadius: 6, display: "flex", alignItems: "center", gap: 6,
+              opacity: detail ? 1 : 0.4,
+            }}
+          >
+            🖨 Print Label
+          </button>
         </div>
 
         {/* QR + identity */}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getQrPackageDetail } from "@/lib/backend";
+import { getQrPackageDetail, qrSvgUrl } from "@/lib/backend";
 import type { QrPackageDetail } from "@/lib/operations-types";
+import { printQrSticker } from "@/lib/print-sticker";
 
 /* ─── Token extraction ──────────────────────────────────────────── */
 /**
@@ -384,8 +385,27 @@ function PackageResult({
         </div>
       </div>
 
-      {/* Scan again */}
-      <div style={{ marginTop: 16, textAlign: "center" }}>
+      {/* Actions */}
+      <div style={{ marginTop: 16, display: "flex", gap: 10, justifyContent: "center" }}>
+        <button
+          onClick={() => printQrSticker({
+            qrToken: pkg.qrToken ?? "",
+            packageCode: pkg.packageCode,
+            title: detail.title,
+            teamName: detail.teamName,
+            factoryName: detail.factoryName,
+            deploymentDate: detail.deploymentDate,
+            devices: pkg.shippedDevicesCount,
+            sdCards: pkg.shippedSdCardsCount,
+            cables: pkg.shippedCablesCount,
+            usbHubs: pkg.shippedUsbHubsCount,
+            direction: pkg.direction,
+            qrImageUrl: qrSvgUrl(pkg.qrToken ?? ""),
+          })}
+          style={btnStyle("#f8fafc", "#0f172a")}
+        >
+          🖨 Print Label
+        </button>
         <button onClick={onClear} style={btnStyle("#22c55e", "#0f172a")}>
           ↩ Scan Next Package
         </button>
