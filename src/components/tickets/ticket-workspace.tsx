@@ -23,9 +23,9 @@ type Props = {
 
 export function TicketWorkspace({ snapshot, session, onSessionChange }: Props) {
   const [tickets, setTickets] = useState<TicketRecord[]>(snapshot.tickets ?? []);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    snapshot.highlightedTicketId || tickets[0]?.id || null,
-  );
+  // Don't auto-select a ticket on load — let the user pick
+  // (auto-selection of a stale ID causes "Ticket not found" errors)
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>("list");
   const [isMobile, setIsMobile] = useState(false);

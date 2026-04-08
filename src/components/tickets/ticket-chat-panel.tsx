@@ -183,6 +183,8 @@ export function TicketChatPanel({ ticket, session, onTicketUpdated }: Props) {
   const selfName = session.user.displayName;
 
   useEffect(() => { setMessages(ticket.messages ?? []); }, [ticket.id, ticket.messages]);
+  // Instant scroll when switching tickets; smooth scroll on new messages
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior }); }, [ticket.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   /* WebSocket stream */

@@ -129,8 +129,8 @@ export function TicketListPanel({ tickets, selectedId, session, onSelect, onCrea
   const role = session.user.role;
   const myName = session.user.displayName;
 
-  // Smart defaults: factory → show mine; logistics/admin → show all active
-  const defaultStatus = (role === "logistics" || role === "admin") ? "open" : "";
+  // Default: show all tickets for every role (user can filter manually)
+  const defaultStatus = "";
   const defaultPerson = role === "factory_operator" ? "__mine__" : "";
 
   const [search, setSearch] = useState("");

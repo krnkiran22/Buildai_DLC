@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   addTicketMember,
   claimTicket,
@@ -168,6 +168,8 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   const [claiming, setClaiming] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
+  // Guard against accidental double-submission (persists across renders)
+  const submittingRef = useRef(false);
 
   /* Carrier modal */
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
@@ -260,6 +262,8 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
   }
 
   async function handleHqReceiptSubmit() {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setActionLoading("hq_received");
     setActionError("");
     try {
@@ -280,11 +284,16 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
     } catch (err) {
       if (isSessionExpiredError(err)) setActionError("Your session has expired.");
       else setActionError(err instanceof Error ? err.message : "Action failed.");
-    } finally { setActionLoading(null); }
+    } finally {
+      setActionLoading(null);
+      submittingRef.current = false;
+    }
   }
 
   async function handleCarrierSubmit() {
-    if (!pendingAction) return;
+    if (!pendingAction || submittingRef.current) return;
+    submittingRef.current = true;
+
     const noteParts: string[] = [];
     if (carrier) noteParts.push(`Carrier: ${carrier}`);
     if (trackingNo) noteParts.push(`Tracking: ${trackingNo}`);
@@ -316,10 +325,20 @@ export function TicketDetailPanel({ ticket, session, onTicketUpdated }: Props) {
       if (isSessionExpiredError(err)) {
         setActionError("Your session has expired. Redirecting to login…");
       } else {
-        setActionError(err instanceof Error ? err.message : "Action failed.");
+        const msg = err instanceof Error ? err.message : "Action failed.";
+        // Distinguish transient failures (server waking up) from real errors
+        const isTransient = msg.toLowerCase().includes("network") ||
+          msg.toLowerCase().includes("fetch") ||
+          msg.toLowerCase().includes("503") ||
+          msg.toLowerCase().includes("502");
+        setActionError(isTransient
+          ? "Server is starting up — please wait a moment and try again."
+          : msg
+        );
       }
     } finally {
       setActionLoading(null);
+      submittingRef.current = false;
     }
   }
 
